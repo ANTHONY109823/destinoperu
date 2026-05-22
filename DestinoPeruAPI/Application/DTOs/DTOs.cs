@@ -1,0 +1,14 @@
+﻿namespace DestinoPeruAPI.Application.DTOs;
+public record RegisterRequest(string Name, string Email, string Password, string Role = "Cliente");
+public record LoginRequest(string Email, string Password);
+public record AuthResponse(string Token, string Name, string Email, string Role, int UserId);
+public record TourDto(int Id, int AgencyId, string AgencyName, string Title, string Description, decimal Price, string Location, DateTime Date, int Capacity, string? ImageUrl, bool IsActive, DateTime CreatedAt);
+public record CreateTourRequest(string Title, string Description, decimal Price, string Location, DateTime Date, int Capacity, string? ImageUrl);
+public record UpdateTourRequest(string Title, string Description, decimal Price, string Location, DateTime Date, int Capacity, string? ImageUrl, bool IsActive);
+public record AgencyDto(int Id, int UserId, string UserName, string Name, string RUC, string Status, DateTime CreatedAt);
+public record CreateAgencyRequest(string Name, string RUC);
+public record ReservationDto(int Id, int UserId, string UserName, int TourId, string TourTitle, string TourLocation, DateTime TourDate, int Quantity, decimal Total, decimal Commission, string Status, DateTime CreatedAt);
+public record CreateReservationRequest(int TourId, int Quantity);
+public record PaymentDto(int Id, int ReservationId, decimal Amount, string Method, string Status, string? TransactionId, DateTime CreatedAt);
+public record CreatePaymentRequest(int ReservationId, string Method);
+public record ApiResponse<T>(bool Success, string? Message, T? Data);

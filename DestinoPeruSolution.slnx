@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="DestinoPeruAPI/DestinoPeruAPI.csproj" />
+  <Project Path="DestinoPeruBlazor/DestinoPeruBlazor.csproj" />
+</Solution>
