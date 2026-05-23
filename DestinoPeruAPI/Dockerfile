@@ -17,6 +17,13 @@ RUN dotnet publish -c Release -o /app/publish --no-restore
 
 # Etapa 2: imagen final liviana (solo runtime)
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
+
+# --- INICIO DE LA CORRECCIÓN ---
+# Instalamos la librería faltante para que PostgreSQL funcione correctamente
+USER root
+RUN apt-get update && apt-get install -y libgssapi-krb5-2 && rm -rf /var/lib/apt/lists/*
+# --- FIN DE LA CORRECCIÓN ---
+
 WORKDIR /app
 COPY --from=build /app/publish ./
 
