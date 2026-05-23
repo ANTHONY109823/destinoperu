@@ -10,6 +10,7 @@ public class PartnerQueryRepository(IDbConnectionFactory connectionFactory) : IP
     public async Task<IReadOnlyList<PartnerDto>> GetPendingAsync()
     {
         using var conn = connectionFactory.CreateConnection();
+        conn.Open();
         const string sql = """
             SELECT p."Id", p."UserId", u."Name" AS "UserName", p."Name", p."RUC",
                    p."PartnerType", p."Status", p."VerificationStatus", p."CommissionRate", p."CreatedAt",
@@ -25,6 +26,7 @@ public class PartnerQueryRepository(IDbConnectionFactory connectionFactory) : IP
     public async Task<AdminMetricsDto> GetAdminMetricsAsync()
     {
         using var conn = connectionFactory.CreateConnection();
+        conn.Open();
         const string sql = """
             SELECT
                 (SELECT COUNT(*) FROM "Partners") AS "TotalPartners",

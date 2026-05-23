@@ -173,17 +173,33 @@ builder.Services.AddCors(options =>
 
 static string[] GetCorsAllowedOrigins(IConfiguration configuration)
 {
-    // En Railway: AllowedHosts=https://tu-frontend.up.railway.app,https://tu-api.up.railway.app
-    var raw = Environment.GetEnvironmentVariable("AllowedHosts")
-        ?? configuration["Cors:AllowedOrigins"];
-    if (string.IsNullOrWhiteSpace(raw) || raw == "*")
+    // Railway: AllowedHosts=https://tu-blazor.up.railway.app (URL exacta del frontend WASM)
+    var origins = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+    void AddFromRaw(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw) || raw == "*") return;
+        foreach (var o in raw.Split([';', ','], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            origins.Add(o.TrimEnd('/'));
+    }
+
+    AddFromRaw(Environment.GetEnvironmentVariable("AllowedHosts"));
+    AddFromRaw(Environment.GetEnvironmentVariable("CORS_ALLOWED_ORIGINS"));
+    AddFromRaw(Environment.GetEnvironmentVariable("FRONTEND_URL"));
+    AddFromRaw(Environment.GetEnvironmentVariable("BLAZOR_URL"));
+    AddFromRaw(configuration["Cors:AllowedOrigins"]);
+
+    if (origins.Count == 0)
+    {
         return
         [
             "http://localhost:5073",
             "http://localhost:8080",
             "https://localhost:7185"
         ];
-    return raw.Split([';', ','], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    }
+
+    return origins.ToArray();
 }
 
 // -------------------------------------------------------
@@ -229,7 +245,36 @@ builder.Services.AddSwaggerGen(c =>
 var app = builder.Build();
 
 // -------------------------------------------------------
-// 6. Middleware pipeline
+// 6. Migraciones + Seed (antes de aceptar tráfico)
+// -------------------------------------------------------
+var csbLog = new NpgsqlConnectionStringBuilder(connectionString);
+app.Logger.LogInformation("PostgreSQL: {Host}:{Port} / {Database}", csbLog.Host, csbLog.Port, csbLog.Database);
+
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    var initLogger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("DbInit");
+    try
+    {
+        var pending = (await db.Database.GetPendingMigrationsAsync()).ToList();
+        if (pending.Count > 0)
+            initLogger.LogInformation("Migraciones pendientes ({Count}): {Names}", pending.Count, string.Join(", ", pending));
+        else
+            initLogger.LogInformation("No hay migraciones pendientes.");
+
+        await db.Database.MigrateAsync();
+        initLogger.LogInformation("Esquema actualizado correctamente.");
+        await DbInitializer.SeedAsync(db, initLogger);
+    }
+    catch (Exception ex)
+    {
+        initLogger.LogError(ex, "Fallo al aplicar migraciones o seed en PostgreSQL.");
+        throw;
+    }
+}
+
+// -------------------------------------------------------
+// 7. Middleware pipeline
 // -------------------------------------------------------
 if (app.Environment.IsDevelopment())
 {
@@ -244,17 +289,4 @@ app.UseCors("BlazorPolicy");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
-
-// -------------------------------------------------------
-// 7. Aplicar migraciones automáticamente al iniciar
-// -------------------------------------------------------
-var csbLog = new NpgsqlConnectionStringBuilder(connectionString);
-app.Logger.LogInformation("Conectando a PostgreSQL en {Host}:{Port}, base {Database}", csbLog.Host, csbLog.Port, csbLog.Database);
-
-using (var scope = app.Services.CreateScope())
-{
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    await db.Database.MigrateAsync();
-}
-
 app.Run();

@@ -19,6 +19,7 @@ public class TourQueryRepository(IDbConnectionFactory connectionFactory) : ITour
     public async Task<PagedResult<TourDto>> SearchPagedAsync(TourSearchQuery query)
     {
         using var conn = connectionFactory.CreateConnection();
+        conn.Open();
         var where = """ WHERE t."IsActive" = true AND t."Date" > NOW() AND t."AvailableCapacity" > 0 """;
         var parameters = new DynamicParameters();
 
@@ -48,7 +49,12 @@ public class TourQueryRepository(IDbConnectionFactory connectionFactory) : ITour
             parameters.Add("MaxPrice", query.MaxPrice.Value);
         }
 
-        var countSql = $"""SELECT COUNT(*) FROM "Tours" t {where}""";
+        var countSql = $"""
+            SELECT COUNT(*)
+            FROM "Tours" t
+            INNER JOIN "Partners" p ON p."Id" = t."PartnerId"
+            {where}
+            """;
         var total = await conn.ExecuteScalarAsync<int>(countSql, parameters);
 
         var page = Math.Max(1, query.Page);
@@ -71,6 +77,7 @@ public class TourQueryRepository(IDbConnectionFactory connectionFactory) : ITour
     public async Task<TourDto?> GetByIdAsync(int id)
     {
         using var conn = connectionFactory.CreateConnection();
+        conn.Open();
         var sql = $"""{TourSelect} WHERE t."Id" = @Id""";
         return await conn.QueryFirstOrDefaultAsync<TourDto>(sql, new { Id = id });
     }
@@ -78,6 +85,7 @@ public class TourQueryRepository(IDbConnectionFactory connectionFactory) : ITour
     public async Task<TourDto?> GetBySlugAsync(string slug)
     {
         using var conn = connectionFactory.CreateConnection();
+        conn.Open();
         var sql = $"""{TourSelect} WHERE t."Slug" = @Slug""";
         return await conn.QueryFirstOrDefaultAsync<TourDto>(sql, new { Slug = slug });
     }

@@ -92,8 +92,8 @@ public class ApiService
         _http = http;
         _auth = auth;
         _toast = toast;
-        _baseUrl = config["ApiBaseUrl"]?.TrimEnd('/') + "/api"
-            ?? "https://destinoperu-production.up.railway.app/api";
+        var apiRoot = (config["ApiBaseUrl"] ?? "https://destinoperu-production.up.railway.app/").TrimEnd('/');
+        _baseUrl = $"{apiRoot}/api";
     }
 
     private void PrepareRequest() => _auth.ApplyAuth(_http);
