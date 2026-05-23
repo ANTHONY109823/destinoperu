@@ -245,36 +245,7 @@ builder.Services.AddSwaggerGen(c =>
 var app = builder.Build();
 
 // -------------------------------------------------------
-// 6. Migraciones + Seed (antes de aceptar tráfico)
-// -------------------------------------------------------
-var csbLog = new NpgsqlConnectionStringBuilder(connectionString);
-app.Logger.LogInformation("PostgreSQL: {Host}:{Port} / {Database}", csbLog.Host, csbLog.Port, csbLog.Database);
-
-using (var scope = app.Services.CreateScope())
-{
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    var initLogger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("DbInit");
-    try
-    {
-        var pending = (await db.Database.GetPendingMigrationsAsync()).ToList();
-        if (pending.Count > 0)
-            initLogger.LogInformation("Migraciones pendientes ({Count}): {Names}", pending.Count, string.Join(", ", pending));
-        else
-            initLogger.LogInformation("No hay migraciones pendientes.");
-
-        await db.Database.MigrateAsync();
-        initLogger.LogInformation("Esquema actualizado correctamente.");
-        await DbInitializer.SeedAsync(db, initLogger);
-    }
-    catch (Exception ex)
-    {
-        initLogger.LogError(ex, "Fallo al aplicar migraciones o seed en PostgreSQL.");
-        throw;
-    }
-}
-
-// -------------------------------------------------------
-// 7. Middleware pipeline
+// 6. Middleware pipeline
 // -------------------------------------------------------
 if (app.Environment.IsDevelopment())
 {
@@ -289,4 +260,27 @@ app.UseCors("BlazorPolicy");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+
+// -------------------------------------------------------
+// 7. Migraciones + Seed (justo antes de app.Run — vital en Railway)
+// -------------------------------------------------------
+var csbLog = new NpgsqlConnectionStringBuilder(connectionString);
+app.Logger.LogInformation("PostgreSQL: {Host}:{Port} / {Database}", csbLog.Host, csbLog.Port, csbLog.Database);
+
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    var context = services.GetRequiredService<AppDbContext>();
+    var initLogger = services.GetRequiredService<ILoggerFactory>().CreateLogger("DbInit");
+    try
+    {
+        await DatabaseBootstrap.InitializeAsync(context, initLogger);
+    }
+    catch (Exception ex)
+    {
+        initLogger.LogError(ex, "Fallo al inicializar PostgreSQL (Migrate/Seed).");
+        throw;
+    }
+}
+
 app.Run();

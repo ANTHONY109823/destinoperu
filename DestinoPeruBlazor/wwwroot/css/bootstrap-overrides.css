@@ -1,0 +1,41 @@
+/* Sobrescribe Bootstrap: sin naranja/azul por defecto — Natural Premium */
+:root {
+    --bs-primary: #004D40;
+    --bs-primary-rgb: 0, 77, 64;
+    --bs-success: #00695C;
+    --bs-warning: #FFC107;
+    --bs-warning-rgb: 255, 193, 7;
+    --bs-link-color: #004D40;
+    --bs-link-hover-color: #00695C;
+    --bs-focus-ring-color: rgba(0, 77, 64, 0.25);
+    --bs-orange: #004D40;
+}
+
+.btn-primary {
+    --bs-btn-bg: #004D40;
+    --bs-btn-border-color: #004D40;
+    --bs-btn-hover-bg: #00695C;
+    --bs-btn-hover-border-color: #00695C;
+    --bs-btn-active-bg: #00332a;
+    --bs-btn-active-border-color: #00332a;
+}
+
+.btn-outline-primary {
+    --bs-btn-color: #004D40;
+    --bs-btn-border-color: #004D40;
+    --bs-btn-hover-bg: #E8F5F3;
+    --bs-btn-hover-border-color: #00695C;
+    --bs-btn-hover-color: #004D40;
+}
+
+.btn-warning,
+.bg-warning,
+.text-bg-warning {
+    --bs-warning: #FFC107;
+    background-color: #FFC107 !important;
+    border-color: #FFC107 !important;
+    color: #00332a !important;
+}
+
+.text-primary { color: #004D40 !important; }
+.border-primary { border-color: #004D40 !important; }

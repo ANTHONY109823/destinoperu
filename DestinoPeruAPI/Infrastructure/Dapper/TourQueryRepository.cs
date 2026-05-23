@@ -5,6 +5,7 @@ using DestinoPeruAPI.Application.Interfaces;
 
 namespace DestinoPeruAPI.Infrastructure.Dapper;
 
+/// <summary>Lecturas Dapper — tablas EF: "Tours" + "Partners" (no Agencies).</summary>
 public class TourQueryRepository(IDbConnectionFactory connectionFactory) : ITourQueryRepository
 {
     private const string TourSelect = """

@@ -11,8 +11,17 @@ namespace DestinoPeruAPI.API.Controllers;
 public class ToursController(TourService tourService) : ControllerBase
 {
     [HttpGet]
-    public async Task<IActionResult> GetAll([FromQuery] TourSearchQuery query) =>
-        Ok(await tourService.SearchPagedAsync(query));
+    public async Task<IActionResult> GetAll([FromQuery] TourSearchQuery query)
+    {
+        try
+        {
+            return Ok(await tourService.SearchPagedAsync(query));
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Error al listar tours.", detail = ex.Message });
+        }
+    }
 
     [HttpGet("slug/{slug}")]
     public async Task<IActionResult> GetBySlug(string slug)
