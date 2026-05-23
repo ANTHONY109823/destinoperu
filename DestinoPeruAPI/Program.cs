@@ -25,25 +25,74 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 static string ResolveConnectionString(IConfiguration configuration)
 {
-    // Railway inyecta DATABASE_PRIVATE_URL (red interna) o DATABASE_URL
-    var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_PRIVATE_URL")
-        ?? Environment.GetEnvironmentVariable("DATABASE_URL");
-    if (!string.IsNullOrWhiteSpace(databaseUrl))
-        return ParseRailwayDatabaseUrl(databaseUrl);
+    // 1) URLs que Railway inyecta al vincular PostgreSQL
+    foreach (var envName in new[] { "DATABASE_PRIVATE_URL", "DATABASE_URL", "DATABASE_PUBLIC_URL" })
+    {
+        var url = Environment.GetEnvironmentVariable(envName);
+        if (!string.IsNullOrWhiteSpace(url))
+            return ParsePostgresUrl(url);
+    }
 
+    // 2) Variable de entorno explicita (copiada desde el plugin Postgres)
+    var envConnection = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection");
+    if (!string.IsNullOrWhiteSpace(envConnection))
+        return NormalizeConnectionString(envConnection);
+
+    // 3) Variables PGHOST, PGPORT, etc. (referencia al servicio Postgres en Railway)
+    var fromPgVars = BuildFromPgEnvironmentVariables();
+    if (fromPgVars is not null)
+        return fromPgVars;
+
+    // 4) appsettings — solo valido en desarrollo local
     var fromConfig = configuration.GetConnectionString("DefaultConnection");
-    if (!string.IsNullOrWhiteSpace(fromConfig))
-        return fromConfig;
+    if (!string.IsNullOrWhiteSpace(fromConfig) && !IsProductionHostMissing(fromConfig))
+        return NormalizeConnectionString(fromConfig);
 
     throw new InvalidOperationException(
-        "No hay cadena de conexion. En Railway: vincula el servicio PostgreSQL a la API o define ConnectionStrings__DefaultConnection.");
+        "PostgreSQL no configurado en Railway. En el servicio API: Settings → Connect → agrega una referencia al servicio PostgreSQL (no uses localhost).");
 }
 
-static string ParseRailwayDatabaseUrl(string databaseUrl)
+static string NormalizeConnectionString(string value) =>
+    value.StartsWith("postgres", StringComparison.OrdinalIgnoreCase)
+        ? ParsePostgresUrl(value)
+        : value;
+
+static bool IsProductionHostMissing(string connectionString)
+{
+    if (!string.Equals(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"), "Production", StringComparison.OrdinalIgnoreCase))
+        return false;
+
+    var csb = new NpgsqlConnectionStringBuilder(connectionString);
+    return csb.Host is "localhost" or "127.0.0.1";
+}
+
+static string? BuildFromPgEnvironmentVariables()
+{
+    var host = Environment.GetEnvironmentVariable("PGHOST")
+        ?? Environment.GetEnvironmentVariable("POSTGRES_HOST");
+    if (string.IsNullOrWhiteSpace(host))
+        return null;
+
+    var port = int.TryParse(Environment.GetEnvironmentVariable("PGPORT"), out var p) ? p : 5432;
+    return new NpgsqlConnectionStringBuilder
+    {
+        Host = host,
+        Port = port,
+        Username = Environment.GetEnvironmentVariable("PGUSER")
+            ?? Environment.GetEnvironmentVariable("POSTGRES_USER") ?? "postgres",
+        Password = Environment.GetEnvironmentVariable("PGPASSWORD")
+            ?? Environment.GetEnvironmentVariable("POSTGRES_PASSWORD") ?? "",
+        Database = Environment.GetEnvironmentVariable("PGDATABASE")
+            ?? Environment.GetEnvironmentVariable("POSTGRES_DB") ?? "railway",
+        SslMode = SslMode.Require
+    }.ConnectionString;
+}
+
+static string ParsePostgresUrl(string databaseUrl)
 {
     var uri = new Uri(databaseUrl);
     var userInfo = uri.UserInfo.Split(':', 2);
-    var builder = new NpgsqlConnectionStringBuilder
+    return new NpgsqlConnectionStringBuilder
     {
         Host = uri.Host,
         Port = uri.Port > 0 ? uri.Port : 5432,
@@ -51,8 +100,7 @@ static string ParseRailwayDatabaseUrl(string databaseUrl)
         Username = Uri.UnescapeDataString(userInfo[0]),
         Password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : "",
         SslMode = SslMode.Require
-    };
-    return builder.ConnectionString;
+    }.ConnectionString;
 }
 
 // -------------------------------------------------------
@@ -177,6 +225,9 @@ app.MapControllers();
 // -------------------------------------------------------
 // 7. Aplicar migraciones automáticamente al iniciar
 // -------------------------------------------------------
+var csbLog = new NpgsqlConnectionStringBuilder(connectionString);
+app.Logger.LogInformation("Conectando a PostgreSQL en {Host}:{Port}, base {Database}", csbLog.Host, csbLog.Port, csbLog.Database);
+
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
