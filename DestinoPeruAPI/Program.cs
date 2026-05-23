@@ -156,7 +156,9 @@ builder.Services.AddCors(options =>
                 origin.StartsWith("http://localhost:", StringComparison.OrdinalIgnoreCase)
                 || origin.StartsWith("https://localhost:", StringComparison.OrdinalIgnoreCase)
                 || (origin.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
-                    && origin.EndsWith(".vercel.app", StringComparison.OrdinalIgnoreCase)))
+                    && (origin.EndsWith(".railway.app", StringComparison.OrdinalIgnoreCase)
+                        || origin.Contains(".up.railway.app", StringComparison.OrdinalIgnoreCase)
+                        || origin.EndsWith(".vercel.app", StringComparison.OrdinalIgnoreCase))))
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();

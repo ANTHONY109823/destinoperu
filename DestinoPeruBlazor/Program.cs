@@ -7,7 +7,9 @@ var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
-var apiUrl = builder.Configuration["ApiBaseUrl"] ?? "https://localhost:7000";
+// ApiBaseUrl: wwwroot/appsettings.json (local) o appsettings.Production.json (Railway)
+var apiUrl = builder.Configuration["ApiBaseUrl"]
+    ?? "https://destinoperu-production.up.railway.app/";
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(apiUrl) });
 builder.Services.AddScoped<AuthStateService>();
 builder.Services.AddScoped<ApiService>();
