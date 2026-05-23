@@ -1,23 +1,28 @@
-## .NET
+# .NET
 bin/
 obj/
 *.user
 *.suo
-*.userosscache
-*.sln.docstates
-
-## IDE
 .vs/
-.vscode/
-.idea/
+*.swp
 
-## Secrets
-appsettings.*.local.json
-*.pfx
+# Configuración local
+appsettings.Development.json
+appsettings.Local.json
+*.local.json
 
-## Docker
+# Docker volumes
 pgdata/
 
-## OS
-Thumbs.db
+# Logs
+*.log
+logs/
+
+# OS
 .DS_Store
+Thumbs.db
+
+# Publish output
+publish/
+dist/
+out/
