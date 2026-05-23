@@ -1,57 +1,120 @@
-﻿@page "/weather"
-@inject HttpClient Http
+﻿@page "/login"
+@page "/register"
+@using DestinoPeruBlazor.Models
+@using DestinoPeruBlazor.Services
+@inject ApiService Api
+@inject AuthStateService Auth
+@inject NavigationManager Nav
 
-<PageTitle>Weather</PageTitle>
+<PageTitle>@(IsRegister ? "Registro" : "Login") - DestinoPeru</PageTitle>
 
-<h1>Weather</h1>
+<div class="container auth-container">
+    <div class="auth-card">
+        <h2>@(IsRegister ? "Crear cuenta" : "Iniciar sesion")</h2>
 
-<p>This component demonstrates fetching data from the server.</p>
+        <div class="auth-tabs">
+            <a class="@(!IsRegister ? "active" : "")" href="login">Ingresar</a>
+            <a class="@(IsRegister ? "active" : "")" href="register">Registrarse</a>
+        </div>
 
-@if (forecasts == null)
-{
-    <p><em>Loading...</em></p>
-}
-else
-{
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Date</th>
-                <th aria-label="Temperature in Celsius">Temp. (C)</th>
-                <th aria-label="Temperature in Fahrenheit">Temp. (F)</th>
-                <th>Summary</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var forecast in forecasts)
-            {
-                <tr>
-                    <td>@forecast.Date.ToShortDateString()</td>
-                    <td>@forecast.TemperatureC</td>
-                    <td>@forecast.TemperatureF</td>
-                    <td>@forecast.Summary</td>
-                </tr>
-            }
-        </tbody>
-    </table>
-}
+        @if (!string.IsNullOrEmpty(message))
+        {
+            <div class="alert alert-danger">@message</div>
+        }
+
+        @if (Auth.IsAuthenticated)
+        {
+            <div class="alert alert-success">
+                Sesion activa como <strong>@Auth.Name</strong> (@Auth.Role).
+            </div>
+            <button class="btn btn-outline-danger" @onclick="Logout">Cerrar sesion</button>
+        }
+        else if (IsRegister)
+        {
+            <EditForm Model="registerModel" OnValidSubmit="DoRegister">
+                <div class="mb-3">
+                    <label class="form-label">Nombre</label>
+                    <InputText class="form-control" @bind-Value="registerModel.Name" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Email</label>
+                    <InputText class="form-control" @bind-Value="registerModel.Email" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Contrasena</label>
+                    <InputText type="password" class="form-control" @bind-Value="registerModel.Password" />
+                </div>
+                <button class="btn btn-primary w-100" disabled="@loading">@(loading ? "..." : "Registrarse")</button>
+            </EditForm>
+        }
+        else
+        {
+            <EditForm Model="loginModel" OnValidSubmit="DoLogin">
+                <div class="mb-3">
+                    <label class="form-label">Email</label>
+                    <InputText class="form-control" @bind-Value="loginModel.Email" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Contrasena</label>
+                    <InputText type="password" class="form-control" @bind-Value="loginModel.Password" />
+                </div>
+                <button class="btn btn-primary w-100" disabled="@loading">@(loading ? "..." : "Ingresar")</button>
+            </EditForm>
+        }
+    </div>
+</div>
 
 @code {
-    private WeatherForecast[]? forecasts;
+    private LoginRequest loginModel = new();
+    private RegisterRequest registerModel = new();
+    private bool loading;
+    private string? message;
 
-    protected override async Task OnInitializedAsync()
+    private bool IsRegister => Nav.Uri.Contains("/register", StringComparison.OrdinalIgnoreCase);
+
+    protected override async Task OnInitializedAsync() => await Auth.InitializeAsync();
+
+    private async Task DoLogin()
     {
-        forecasts = await Http.GetFromJsonAsync<WeatherForecast[]>("sample-data/weather.json");
+        loading = true;
+        message = null;
+        try
+        {
+            var result = await Api.LoginAsync(loginModel);
+            if (result?.Success == true && result.Data is not null)
+            {
+                await Auth.SetAuthAsync(result.Data);
+                Nav.NavigateTo("/");
+            }
+            else
+                message = result?.Message ?? "Credenciales incorrectas.";
+        }
+        catch (Exception ex) { message = ex.Message; }
+        finally { loading = false; }
     }
 
-    public class WeatherForecast
+    private async Task DoRegister()
     {
-        public DateOnly Date { get; set; }
+        loading = true;
+        message = null;
+        try
+        {
+            var result = await Api.RegisterAsync(registerModel);
+            if (result?.Success == true && result.Data is not null)
+            {
+                await Auth.SetAuthAsync(result.Data);
+                Nav.NavigateTo("/");
+            }
+            else
+                message = result?.Message ?? "No se pudo registrar.";
+        }
+        catch (Exception ex) { message = ex.Message; }
+        finally { loading = false; }
+    }
 
-        public int TemperatureC { get; set; }
-
-        public string? Summary { get; set; }
-
-        public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
+    private async Task Logout()
+    {
+        await Auth.LogoutAsync();
+        message = null;
     }
 }

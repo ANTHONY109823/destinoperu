@@ -1,5 +1,27 @@
-﻿<h3>TourCard</h3>
+﻿@using DestinoPeruBlazor.Models
+
+<article class="tour-card">
+    <div class="tour-card-image" style="@ImageStyle">
+        <span class="tour-card-badge">@Tour.Location</span>
+    </div>
+    <div class="tour-card-body">
+        <h3>@Tour.Title</h3>
+        <p class="tour-card-agency">@Tour.AgencyName</p>
+        <p class="tour-card-desc">@(Tour.Description.Length > 100 ? Tour.Description[..100] + "..." : Tour.Description)</p>
+        <div class="tour-card-footer">
+            <div>
+                <span class="tour-price">S/ @Tour.Price.ToString("N0")</span>
+                <small>@Tour.Date.ToString("dd MMM yyyy")</small>
+            </div>
+            <a class="btn btn-primary btn-sm" href="tour/@Tour.Id">Ver tour</a>
+        </div>
+    </div>
+</article>
 
 @code {
+    [Parameter, EditorRequired] public TourDto Tour { get; set; } = default!;
 
+    private string ImageStyle => string.IsNullOrEmpty(Tour.ImageUrl)
+        ? "background-image: linear-gradient(135deg, #c2410c, #ea580c)"
+        : $"background-image: url('{Tour.ImageUrl}')";
 }

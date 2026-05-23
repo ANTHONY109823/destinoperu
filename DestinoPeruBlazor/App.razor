@@ -1,6 +1,14 @@
-﻿<Router AppAssembly="@typeof(App).Assembly" NotFoundPage="typeof(Pages.Checkout)">
+﻿<Router AppAssembly="@typeof(App).Assembly">
     <Found Context="routeData">
-        <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)"/>
+        <RouteView RouteData="@routeData" DefaultLayout="@typeof(Layout.MainLayout)" />
         <FocusOnNavigate RouteData="@routeData" Selector="h1" />
     </Found>
+    <NotFound>
+        <LayoutView Layout="@typeof(Layout.MainLayout)">
+            <div class="container py-5 text-center">
+                <h1>Pagina no encontrada</h1>
+                <a href="/" class="btn btn-primary mt-3">Ir al inicio</a>
+            </div>
+        </LayoutView>
+    </NotFound>
 </Router>

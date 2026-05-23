@@ -1,7 +1,87 @@
 ﻿@page "/"
+@using DestinoPeruBlazor.Models
+@using DestinoPeruBlazor.Services
+@using DestinoPeruBlazor.Components
+@inject ApiService Api
 
-<PageTitle>Home</PageTitle>
+<PageTitle>DestinoPeru - Tours en Peru</PageTitle>
 
-<h1>Hello, world!</h1>
+<section class="hero">
+    <div class="hero-content">
+        <h1>Descubre el Peru</h1>
+        <p>Tours, experiencias y aventuras con agencias verificadas.</p>
+    </div>
+</section>
 
-Welcome to your new app.
+<section class="filters container">
+    <div class="row g-3">
+        <div class="col-md-4">
+            <input class="form-control" placeholder="Destino (Cusco, Lima...)" @bind="location" />
+        </div>
+        <div class="col-md-3">
+            <input type="date" class="form-control" @bind="fromDate" />
+        </div>
+        <div class="col-md-3">
+            <input type="number" class="form-control" placeholder="Precio max (S/)" @bind="maxPrice" />
+        </div>
+        <div class="col-md-2">
+            <button class="btn btn-primary w-100" @onclick="Search">Buscar</button>
+        </div>
+    </div>
+</section>
+
+<section class="container tours-section">
+    @if (loading)
+    {
+        <p class="text-center py-5">Cargando tours...</p>
+    }
+    else if (!string.IsNullOrEmpty(error))
+    {
+        <div class="alert alert-danger">@error</div>
+    }
+    else if (tours.Count == 0)
+    {
+        <p class="text-center py-5 text-muted">No hay tours disponibles.</p>
+    }
+    else
+    {
+        <div class="tours-grid">
+            @foreach (var tour in tours)
+            {
+                <TourCard Tour="tour" />
+            }
+        </div>
+    }
+</section>
+
+@code {
+    private List<TourDto> tours = [];
+    private string? location;
+    private DateTime? fromDate;
+    private decimal? maxPrice;
+    private bool loading = true;
+    private string? error;
+
+    protected override async Task OnInitializedAsync() => await LoadTours();
+
+    private async Task Search() => await LoadTours();
+
+    private async Task LoadTours()
+    {
+        loading = true;
+        error = null;
+        try
+        {
+            tours = await Api.GetToursAsync(location, fromDate, maxPrice);
+        }
+        catch (Exception ex)
+        {
+            error = "No se pudo conectar con la API. " + ex.Message;
+            tours = [];
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+}

@@ -1,5 +1,160 @@
-﻿@page "/not-found"
-@layout MainLayout
+﻿@page "/checkout/{ReservationId:int}"
+@page "/mis-reservas"
+@using DestinoPeruBlazor.Models
+@using DestinoPeruBlazor.Services
+@inject ApiService Api
+@inject AuthStateService Auth
+@inject NavigationManager Nav
 
-<h3>Not Found</h3>
-<p>Sorry, the content you are looking for does not exist.</p>
+<PageTitle>Pago - DestinoPeru</PageTitle>
+
+<div class="container py-4">
+    @if (!Auth.IsAuthenticated)
+    {
+        <div class="alert alert-warning">Debes <a href="login">iniciar sesion</a> para continuar.</div>
+    }
+    else if (loading)
+    {
+        <p>Cargando...</p>
+    }
+    else if (IsReservationsList)
+    {
+        <h2>Mis reservas</h2>
+        @if (reservations.Count == 0)
+        {
+            <p class="text-muted">No tienes reservas.</p>
+        }
+        else
+        {
+            @foreach (var r in reservations)
+            {
+                <div class="reservation-item">
+                    <div>
+                        <strong>@r.TourTitle</strong>
+                        <p class="mb-0 text-muted">@r.TourLocation · @r.TourDate.ToString("dd/MM/yyyy") · @r.Status</p>
+                    </div>
+                    <div class="text-end">
+                        <span>S/ @r.Total.ToString("N2")</span>
+                        @if (r.Status == "Pending")
+                        {
+                            <a class="btn btn-primary btn-sm ms-2" href="checkout/@r.Id">Pagar</a>
+                        }
+                    </div>
+                </div>
+            }
+        }
+    }
+    else if (reservation is not null)
+    {
+        <h2>Confirmar pago</h2>
+        <div class="checkout-card">
+            <h4>@reservation.TourTitle</h4>
+            <p>@reservation.TourLocation · @reservation.Quantity persona(s)</p>
+            <p class="checkout-total">Total a pagar: <strong>S/ @reservation.Total.ToString("N2")</strong></p>
+
+            <div class="mb-3">
+                <label class="form-label">Metodo de pago</label>
+                <select class="form-select" @bind="paymentMethod">
+                    <option value="Tarjeta">Tarjeta</option>
+                    <option value="Yape">Yape</option>
+                    <option value="Plin">Plin</option>
+                    <option value="Transferencia">Transferencia</option>
+                </select>
+            </div>
+
+            @if (!string.IsNullOrEmpty(message))
+            {
+                <div class="alert @(paid ? "alert-success" : "alert-danger")">@message</div>
+            }
+
+            @if (!paid)
+            {
+                <button class="btn btn-primary btn-lg" disabled="@paying" @onclick="Pay">
+                    @(paying ? "Procesando..." : "Pagar ahora")
+                </button>
+            }
+            else
+            {
+                <a class="btn btn-outline-primary" href="/">Volver a tours</a>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-danger">@message</div>
+    }
+</div>
+
+@code {
+    [Parameter] public int ReservationId { get; set; }
+
+    private ReservationDto? reservation;
+    private List<ReservationDto> reservations = [];
+    private bool loading = true;
+    private bool paying;
+    private bool paid;
+    private string paymentMethod = "Tarjeta";
+    private string? message;
+
+    private bool IsReservationsList => Nav.Uri.Contains("mis-reservas", StringComparison.OrdinalIgnoreCase);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Auth.InitializeAsync();
+        if (!Auth.IsAuthenticated)
+        {
+            loading = false;
+            return;
+        }
+
+        try
+        {
+            reservations = await Api.GetUserReservationsAsync();
+            if (!IsReservationsList)
+            {
+                reservation = reservations.FirstOrDefault(r => r.Id == ReservationId);
+                if (reservation is null)
+                    message = "Reserva no encontrada.";
+            }
+        }
+        catch (Exception ex)
+        {
+            message = "Error: " + ex.Message;
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private async Task Pay()
+    {
+        if (reservation is null) return;
+        paying = true;
+        message = null;
+        try
+        {
+            var result = await Api.ProcessPaymentAsync(new CreatePaymentRequest
+            {
+                ReservationId = reservation.Id,
+                Method = paymentMethod
+            });
+            if (result?.Success == true)
+            {
+                paid = true;
+                message = "Pago exitoso. ID: " + result.Data?.TransactionId;
+                reservation.Status = "Paid";
+            }
+            else
+                message = result?.Message ?? "Error al procesar el pago.";
+        }
+        catch (Exception ex)
+        {
+            message = ex.Message;
+        }
+        finally
+        {
+            paying = false;
+        }
+    }
+}

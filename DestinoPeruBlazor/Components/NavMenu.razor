@@ -1,5 +1,45 @@
-﻿<h3>NavMenu</h3>
+﻿@using DestinoPeruBlazor.Services
+@inject AuthStateService Auth
+@inject NavigationManager Nav
+@implements IDisposable
+
+<nav class="dp-nav">
+    <a class="dp-brand" href="/">
+        <span class="dp-brand-icon">🇵🇪</span>
+        <span>DestinoPeru</span>
+    </a>
+
+    <button class="dp-nav-toggle" @onclick="ToggleMenu" aria-label="Menu">
+        <span></span><span></span><span></span>
+    </button>
+
+    <div class="dp-nav-links @(menuOpen ? "open" : "")">
+        <NavLink class="dp-link" href="/" Match="NavLinkMatch.All">Tours</NavLink>
+        @if (Auth.IsAuthenticated)
+        {
+            <NavLink class="dp-link" href="mis-reservas">Mis reservas</NavLink>
+        }
+        <NavLink class="dp-link" href="login">@(Auth.IsAuthenticated ? "Cuenta" : "Ingresar")</NavLink>
+        @if (Auth.IsAuthenticated)
+        {
+            <span class="dp-user">Hola, @Auth.Name</span>
+            <button class="btn btn-outline-light btn-sm" @onclick="Logout">Salir</button>
+        }
+    </div>
+</nav>
 
 @code {
+    private bool menuOpen;
 
+    protected override void OnInitialized() => Auth.OnChange += StateHasChanged;
+
+    private void ToggleMenu() => menuOpen = !menuOpen;
+
+    private async Task Logout()
+    {
+        await Auth.LogoutAsync();
+        Nav.NavigateTo("/");
+    }
+
+    public void Dispose() => Auth.OnChange -= StateHasChanged;
 }
