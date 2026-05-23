@@ -3,6 +3,7 @@
 // Configuración principal — compatible con .NET 8
 // ============================================================
 using System.Text;
+using Npgsql;
 using DestinoPeruAPI.Application.Interfaces;
 using DestinoPeruAPI.Application.Services;
 using DestinoPeruAPI.Infrastructure;
@@ -18,8 +19,41 @@ var builder = WebApplication.CreateBuilder(args);
 // -------------------------------------------------------
 // 1. Base de Datos — PostgreSQL con Entity Framework Core
 // -------------------------------------------------------
+var connectionString = ResolveConnectionString(builder.Configuration);
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(connectionString));
+
+static string ResolveConnectionString(IConfiguration configuration)
+{
+    // Railway inyecta DATABASE_PRIVATE_URL (red interna) o DATABASE_URL
+    var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_PRIVATE_URL")
+        ?? Environment.GetEnvironmentVariable("DATABASE_URL");
+    if (!string.IsNullOrWhiteSpace(databaseUrl))
+        return ParseRailwayDatabaseUrl(databaseUrl);
+
+    var fromConfig = configuration.GetConnectionString("DefaultConnection");
+    if (!string.IsNullOrWhiteSpace(fromConfig))
+        return fromConfig;
+
+    throw new InvalidOperationException(
+        "No hay cadena de conexion. En Railway: vincula el servicio PostgreSQL a la API o define ConnectionStrings__DefaultConnection.");
+}
+
+static string ParseRailwayDatabaseUrl(string databaseUrl)
+{
+    var uri = new Uri(databaseUrl);
+    var userInfo = uri.UserInfo.Split(':', 2);
+    var builder = new NpgsqlConnectionStringBuilder
+    {
+        Host = uri.Host,
+        Port = uri.Port > 0 ? uri.Port : 5432,
+        Database = uri.AbsolutePath.TrimStart('/').Split('?')[0],
+        Username = Uri.UnescapeDataString(userInfo[0]),
+        Password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : "",
+        SslMode = SslMode.Require
+    };
+    return builder.ConnectionString;
+}
 
 // -------------------------------------------------------
 // 2. Inyección de Dependencias

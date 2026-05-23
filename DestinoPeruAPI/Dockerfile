@@ -20,8 +20,9 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 COPY --from=build /app/publish ./
 
-# Puerto que Railway espera
+# Puerto y ajustes para Railway
 ENV ASPNETCORE_URLS=http://+:8080
+ENV DisableHttpsRedirection=true
 EXPOSE 8080
 
 ENTRYPOINT ["dotnet", "DestinoPeruAPI.dll"]
