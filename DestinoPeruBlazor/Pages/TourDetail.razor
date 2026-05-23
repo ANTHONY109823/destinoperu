@@ -79,22 +79,12 @@
     protected override async Task OnInitializedAsync()
     {
         await Auth.InitializeAsync();
-        try
-        {
-            var response = await Api.GetTourAsync(Id);
-            if (response?.Success == true && response.Data is not null)
-                tour = response.Data;
-            else
-                error = response?.Message ?? "Tour no encontrado.";
-        }
-        catch (Exception ex)
-        {
-            error = "Error al cargar el tour: " + ex.Message;
-        }
-        finally
-        {
-            loading = false;
-        }
+        var response = await Api.GetTourAsync(Id);
+        if (response.Success && response.Data is not null)
+            tour = response.Data;
+        else
+            error = response.ErrorMessage ?? "Tour no encontrado.";
+        loading = false;
     }
 
     private async Task Reserve()
@@ -102,21 +92,11 @@
         if (tour is null) return;
         booking = true;
         bookingError = null;
-        try
-        {
-            var result = await Api.CreateReservationAsync(new CreateReservationRequest { TourId = tour.Id, Quantity = quantity });
-            if (result?.Success == true && result.Data is not null)
-                Nav.NavigateTo($"checkout/{result.Data.Id}");
-            else
-                bookingError = result?.Message ?? "No se pudo crear la reserva.";
-        }
-        catch (Exception ex)
-        {
-            bookingError = ex.Message;
-        }
-        finally
-        {
-            booking = false;
-        }
+        var result = await Api.CreateReservationAsync(new CreateReservationRequest { TourId = tour.Id, Quantity = quantity });
+        if (result.Success && result.Data is not null)
+            Nav.NavigateTo($"checkout/{result.Data.Id}");
+        else
+            bookingError = result.ErrorMessage;
+        booking = false;
     }
 }

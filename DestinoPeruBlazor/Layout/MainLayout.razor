@@ -1,12 +1,14 @@
 ﻿@inherits LayoutComponentBase
 @using DestinoPeruBlazor.Services
+@using DestinoPeruBlazor.Components
 @inject AuthStateService Auth
 
 <div class="dp-layout">
-    <DestinoPeruBlazor.Components.NavMenu />
+    <NavMenu />
     <main class="dp-main">
         @Body
     </main>
+    <ToastContainer />
 </div>
 
 @code {

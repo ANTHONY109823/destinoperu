@@ -3,30 +3,38 @@
 @inject NavigationManager Nav
 @implements IDisposable
 
-<nav class="dp-nav">
-    <a class="dp-brand" href="/">
-        <span class="dp-brand-icon">🇵🇪</span>
-        <span>DestinoPeru</span>
-    </a>
+<header class="dp-nav">
+    <div class="dp-nav-inner container">
+        <a class="dp-brand" href="/" @onclick="CloseMenu">
+            <span class="dp-brand-icon" aria-hidden="true">🇵🇪</span>
+            <span class="dp-brand-text">Destino<strong>Peru</strong></span>
+        </a>
 
-    <button class="dp-nav-toggle" @onclick="ToggleMenu" aria-label="Menu">
-        <span></span><span></span><span></span>
-    </button>
+        <button class="dp-nav-toggle @(menuOpen ? "open" : "")"
+                @onclick="ToggleMenu"
+                aria-expanded="@menuOpen"
+                aria-controls="dp-nav-menu"
+                aria-label="Abrir menu">
+            <span></span><span></span><span></span>
+        </button>
 
-    <div class="dp-nav-links @(menuOpen ? "open" : "")">
-        <NavLink class="dp-link" href="/" Match="NavLinkMatch.All">Tours</NavLink>
-        @if (Auth.IsAuthenticated)
-        {
-            <NavLink class="dp-link" href="mis-reservas">Mis reservas</NavLink>
-        }
-        <NavLink class="dp-link" href="login">@(Auth.IsAuthenticated ? "Cuenta" : "Ingresar")</NavLink>
-        @if (Auth.IsAuthenticated)
-        {
-            <span class="dp-user">Hola, @Auth.Name</span>
-            <button class="btn btn-outline-light btn-sm" @onclick="Logout">Salir</button>
-        }
+        <nav id="dp-nav-menu" class="dp-nav-links @(menuOpen ? "open" : "")">
+            <NavLink class="dp-link" href="/" Match="NavLinkMatch.All" @onclick="CloseMenu">Tours</NavLink>
+            @if (Auth.IsAuthenticated)
+            {
+                <NavLink class="dp-link" href="mis-reservas" @onclick="CloseMenu">Mis reservas</NavLink>
+            }
+            <NavLink class="dp-link" href="login" @onclick="CloseMenu">
+                @(Auth.IsAuthenticated ? "Mi cuenta" : "Ingresar")
+            </NavLink>
+            @if (Auth.IsAuthenticated)
+            {
+                <span class="dp-user">Hola, @Auth.Name</span>
+                <button type="button" class="btn btn-nav-outline btn-sm" @onclick="Logout">Salir</button>
+            }
+        </nav>
     </div>
-</nav>
+</header>
 
 @code {
     private bool menuOpen;
@@ -34,10 +42,12 @@
     protected override void OnInitialized() => Auth.OnChange += StateHasChanged;
 
     private void ToggleMenu() => menuOpen = !menuOpen;
+    private void CloseMenu() => menuOpen = false;
 
     private async Task Logout()
     {
         await Auth.LogoutAsync();
+        CloseMenu();
         Nav.NavigateTo("/");
     }
 

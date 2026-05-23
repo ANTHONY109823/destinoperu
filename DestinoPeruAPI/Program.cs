@@ -146,24 +146,34 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorization();
 
 // -------------------------------------------------------
-// 4. CORS — permite llamadas desde Blazor
+// 4. CORS — origenes permitidos desde variable AllowedHosts (Railway)
 // -------------------------------------------------------
+var corsOrigins = GetCorsAllowedOrigins(builder.Configuration);
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("BlazorPolicy", policy =>
     {
-        policy.SetIsOriginAllowed(origin =>
-                origin.StartsWith("http://localhost:", StringComparison.OrdinalIgnoreCase)
-                || origin.StartsWith("https://localhost:", StringComparison.OrdinalIgnoreCase)
-                || (origin.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
-                    && (origin.EndsWith(".railway.app", StringComparison.OrdinalIgnoreCase)
-                        || origin.Contains(".up.railway.app", StringComparison.OrdinalIgnoreCase)
-                        || origin.EndsWith(".vercel.app", StringComparison.OrdinalIgnoreCase))))
+        policy.WithOrigins(corsOrigins)
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
     });
 });
+
+static string[] GetCorsAllowedOrigins(IConfiguration configuration)
+{
+    // En Railway: AllowedHosts=https://tu-frontend.up.railway.app,https://tu-api.up.railway.app
+    var raw = Environment.GetEnvironmentVariable("AllowedHosts")
+        ?? configuration["Cors:AllowedOrigins"];
+    if (string.IsNullOrWhiteSpace(raw) || raw == "*")
+        return
+        [
+            "http://localhost:5073",
+            "http://localhost:8080",
+            "https://localhost:7185"
+        ];
+    return raw.Split([';', ','], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+}
 
 // -------------------------------------------------------
 // 5. Controllers + Swagger (compatible .NET 8)

@@ -4,47 +4,52 @@
 @using DestinoPeruBlazor.Components
 @inject ApiService Api
 
-<PageTitle>DestinoPeru - Tours en Peru</PageTitle>
+<PageTitle>Destino Peru - Tours</PageTitle>
 
 <section class="hero">
-    <div class="hero-content">
+    <div class="hero-content container">
+        <span class="hero-badge">Destino Peru</span>
         <h1>Descubre el Peru</h1>
         <p>Tours, experiencias y aventuras con agencias verificadas.</p>
     </div>
 </section>
 
 <section class="filters container">
-    <div class="row g-3">
-        <div class="col-md-4">
-            <input class="form-control" placeholder="Destino (Cusco, Lima...)" @bind="location" />
-        </div>
-        <div class="col-md-3">
-            <input type="date" class="form-control" @bind="fromDate" />
-        </div>
-        <div class="col-md-3">
-            <input type="number" class="form-control" placeholder="Precio max (S/)" @bind="maxPrice" />
-        </div>
-        <div class="col-md-2">
-            <button class="btn btn-primary w-100" @onclick="Search">Buscar</button>
-        </div>
+    <div class="filters-grid">
+        <input class="form-control" placeholder="Destino (Cusco, Lima...)" @bind="location" />
+        <input type="date" class="form-control" @bind="fromDate" />
+        <input type="number" class="form-control" placeholder="Precio max (S/)" @bind="maxPrice" />
+        <button class="btn btn-primary w-100" @onclick="Search" disabled="@loading">Buscar</button>
     </div>
 </section>
 
 <section class="container tours-section">
     @if (loading)
     {
-        <p class="text-center py-5">Cargando tours...</p>
+        <div class="tours-grid" aria-busy="true" aria-label="Cargando tours">
+            @for (var i = 0; i < 6; i++)
+            {
+                <TourCardSkeleton />
+            }
+        </div>
     }
-    else if (!string.IsNullOrEmpty(error))
+    else if (!loadSuccess)
     {
-        <div class="alert alert-danger">@error</div>
+        <EmptyState Icon="⚠️" Title="No pudimos cargar los tours"
+                    Message="Revisa tu conexion o intenta de nuevo en unos segundos.">
+            <button class="btn btn-primary" @onclick="Search">Reintentar</button>
+        </EmptyState>
     }
     else if (tours.Count == 0)
     {
-        <p class="text-center py-5 text-muted">No hay tours disponibles.</p>
+        <EmptyState Icon="🏔️" Title="No hay visitas disponibles"
+                    Message="No encontramos tours con esos filtros. Prueba otra ciudad, fecha o amplia el precio maximo.">
+            <button class="btn btn-outline-primary" @onclick="ClearFilters">Ver todos los tours</button>
+        </EmptyState>
     }
     else
     {
+        <p class="tours-count">@tours.Count tour@(tours.Count == 1 ? "" : "s") disponible@(tours.Count == 1 ? "" : "s")</p>
         <div class="tours-grid">
             @foreach (var tour in tours)
             {
@@ -60,28 +65,35 @@
     private DateTime? fromDate;
     private decimal? maxPrice;
     private bool loading = true;
-    private string? error;
+    private bool loadSuccess = true;
 
     protected override async Task OnInitializedAsync() => await LoadTours();
 
     private async Task Search() => await LoadTours();
 
+    private async Task ClearFilters()
+    {
+        location = null;
+        fromDate = null;
+        maxPrice = null;
+        await LoadTours();
+    }
+
     private async Task LoadTours()
     {
         loading = true;
-        error = null;
-        try
+        loadSuccess = true;
+        StateHasChanged();
+
+        var result = await Api.GetToursAsync(location, fromDate, maxPrice);
+        if (result.Success && result.Data is not null)
+            tours = result.Data;
+        else
         {
-            tours = await Api.GetToursAsync(location, fromDate, maxPrice);
-        }
-        catch (Exception ex)
-        {
-            error = "No se pudo conectar con la API. " + ex.Message;
             tours = [];
+            loadSuccess = false;
         }
-        finally
-        {
-            loading = false;
-        }
+
+        loading = false;
     }
 }

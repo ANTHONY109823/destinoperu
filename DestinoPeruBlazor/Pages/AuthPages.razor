@@ -78,38 +78,30 @@
     {
         loading = true;
         message = null;
-        try
+        var result = await Api.LoginAsync(loginModel);
+        if (result.Success && result.Data is not null)
         {
-            var result = await Api.LoginAsync(loginModel);
-            if (result?.Success == true && result.Data is not null)
-            {
-                await Auth.SetAuthAsync(result.Data);
-                Nav.NavigateTo("/");
-            }
-            else
-                message = result?.Message ?? "Credenciales incorrectas.";
+            await Auth.SetAuthAsync(result.Data);
+            Nav.NavigateTo("/");
         }
-        catch (Exception ex) { message = ex.Message; }
-        finally { loading = false; }
+        else
+            message = result.ErrorMessage;
+        loading = false;
     }
 
     private async Task DoRegister()
     {
         loading = true;
         message = null;
-        try
+        var result = await Api.RegisterAsync(registerModel);
+        if (result.Success && result.Data is not null)
         {
-            var result = await Api.RegisterAsync(registerModel);
-            if (result?.Success == true && result.Data is not null)
-            {
-                await Auth.SetAuthAsync(result.Data);
-                Nav.NavigateTo("/");
-            }
-            else
-                message = result?.Message ?? "No se pudo registrar.";
+            await Auth.SetAuthAsync(result.Data);
+            Nav.NavigateTo("/");
         }
-        catch (Exception ex) { message = ex.Message; }
-        finally { loading = false; }
+        else
+            message = result.ErrorMessage;
+        loading = false;
     }
 
     private async Task Logout()

@@ -107,9 +107,10 @@
             return;
         }
 
-        try
+        var result = await Api.GetUserReservationsAsync();
+        if (result.Success && result.Data is not null)
         {
-            reservations = await Api.GetUserReservationsAsync();
+            reservations = result.Data;
             if (!IsReservationsList)
             {
                 reservation = reservations.FirstOrDefault(r => r.Id == ReservationId);
@@ -117,14 +118,9 @@
                     message = "Reserva no encontrada.";
             }
         }
-        catch (Exception ex)
-        {
-            message = "Error: " + ex.Message;
-        }
-        finally
-        {
-            loading = false;
-        }
+        else
+            message = result.ErrorMessage;
+        loading = false;
     }
 
     private async Task Pay()
@@ -132,29 +128,19 @@
         if (reservation is null) return;
         paying = true;
         message = null;
-        try
+        var result = await Api.ProcessPaymentAsync(new CreatePaymentRequest
         {
-            var result = await Api.ProcessPaymentAsync(new CreatePaymentRequest
-            {
-                ReservationId = reservation.Id,
-                Method = paymentMethod
-            });
-            if (result?.Success == true)
-            {
-                paid = true;
-                message = "Pago exitoso. ID: " + result.Data?.TransactionId;
-                reservation.Status = "Paid";
-            }
-            else
-                message = result?.Message ?? "Error al procesar el pago.";
-        }
-        catch (Exception ex)
+            ReservationId = reservation.Id,
+            Method = paymentMethod
+        });
+        if (result.Success)
         {
-            message = ex.Message;
+            paid = true;
+            message = "Pago exitoso. ID: " + result.Data?.TransactionId;
+            reservation.Status = "Paid";
         }
-        finally
-        {
-            paying = false;
-        }
+        else
+            message = result.ErrorMessage;
+        paying = false;
     }
 }

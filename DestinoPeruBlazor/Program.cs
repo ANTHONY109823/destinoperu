@@ -11,6 +11,7 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 var apiUrl = builder.Configuration["ApiBaseUrl"]
     ?? "https://destinoperu-production.up.railway.app/";
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(apiUrl) });
+builder.Services.AddScoped<ToastService>();
 builder.Services.AddScoped<AuthStateService>();
 builder.Services.AddScoped<ApiService>();
 

@@ -1,0 +1,18 @@
+@using DestinoPeruBlazor.Services
+@inject ToastService Toast
+@implements IDisposable
+
+<div class="toast-container" aria-live="polite">
+    @foreach (var msg in Toast.Messages)
+    {
+        <div class="toast-item toast-@msg.Level.ToString().ToLower()" role="alert">
+            <span class="toast-text">@msg.Text</span>
+            <button type="button" class="toast-close" @onclick="() => Toast.Remove(msg.Id)" aria-label="Cerrar">&times;</button>
+        </div>
+    }
+</div>
+
+@code {
+    protected override void OnInitialized() => Toast.OnChange += StateHasChanged;
+    public void Dispose() => Toast.OnChange -= StateHasChanged;
+}

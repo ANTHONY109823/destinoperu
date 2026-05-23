@@ -1,0 +1,16 @@
+<div class="empty-state">
+    <div class="empty-state-icon" aria-hidden="true">@Icon</div>
+    <h3>@Title</h3>
+    <p>@Message</p>
+    @if (ChildContent is not null)
+    {
+        <div class="empty-state-action">@ChildContent</div>
+    }
+</div>
+
+@code {
+    [Parameter] public string Icon { get; set; } = "🗺️";
+    [Parameter] public string Title { get; set; } = "Sin resultados";
+    [Parameter] public string Message { get; set; } = "";
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}
