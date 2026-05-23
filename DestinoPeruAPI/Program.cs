@@ -1,5 +1,5 @@
 // ============================================================
-// DestinoPerú - Program.cs
+// DestinoPeru - Program.cs
 // Configuración principal — compatible con .NET 8
 // ============================================================
 using System.Text;
@@ -90,7 +90,7 @@ builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo
     {
-        Title       = "DestinoPerú API",
+        Title       = "DestinoPeru API",
         Version     = "v1",
         Description = "Marketplace de turismo peruano"
     });
@@ -130,7 +130,7 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI(c =>
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "DestinoPerú API v1"));
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "DestinoPeru API v1"));
 }
 
 if (!app.Configuration.GetValue<bool>("DisableHttpsRedirection"))
