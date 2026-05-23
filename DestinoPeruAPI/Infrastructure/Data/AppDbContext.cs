@@ -1,45 +1,87 @@
 ﻿using DestinoPeruAPI.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+
 namespace DestinoPeruAPI.Infrastructure.Data;
+
 public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
     public DbSet<User> Users => Set<User>();
-    public DbSet<Agency> Agencies => Set<Agency>();
+    public DbSet<Partner> Partners => Set<Partner>();
+    public DbSet<PartnerDocument> PartnerDocuments => Set<PartnerDocument>();
     public DbSet<Tour> Tours => Set<Tour>();
     public DbSet<Reservation> Reservations => Set<Reservation>();
     public DbSet<Payment> Payments => Set<Payment>();
+    public DbSet<LoyaltyAccount> LoyaltyAccounts => Set<LoyaltyAccount>();
+    public DbSet<PassengerManifest> PassengerManifests => Set<PassengerManifest>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-        modelBuilder.Entity<User>(e => {
+
+        modelBuilder.Entity<User>(e =>
+        {
             e.HasIndex(u => u.Email).IsUnique();
             e.Property(u => u.Role).HasDefaultValue("Cliente");
         });
-        modelBuilder.Entity<Agency>(e => {
-            e.HasIndex(a => a.RUC).IsUnique();
-            e.Property(a => a.Status).HasDefaultValue("Pending");
-            e.HasOne(a => a.User).WithOne(u => u.Agency)
-             .HasForeignKey<Agency>(a => a.UserId).OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<Partner>(e =>
+        {
+            e.ToTable("Partners");
+            e.HasIndex(p => p.RUC).IsUnique();
+            e.Property(p => p.Status).HasDefaultValue("Pending");
+            e.Property(p => p.VerificationStatus).HasDefaultValue("Pending");
+            e.Property(p => p.CommissionRate).HasPrecision(5, 4);
+            e.HasOne(p => p.User).WithOne(u => u.Partner)
+                .HasForeignKey<Partner>(p => p.UserId).OnDelete(DeleteBehavior.Cascade);
         });
-        modelBuilder.Entity<Tour>(e => {
+
+        modelBuilder.Entity<PartnerDocument>(e =>
+        {
+            e.HasIndex(d => new { d.PartnerId, d.DocumentType });
+            e.HasOne(d => d.Partner).WithMany(p => p.Documents)
+                .HasForeignKey(d => d.PartnerId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Tour>(e =>
+        {
             e.Property(t => t.Price).HasPrecision(10, 2);
-            e.HasOne(t => t.Agency).WithMany(a => a.Tours)
-             .HasForeignKey(t => t.AgencyId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(t => t.Slug).IsUnique();
+            e.HasIndex(t => new { t.Department, t.IsActive, t.Date });
+            e.HasIndex(t => t.AdventureType);
+            e.Property(t => t.RowVersion).IsRowVersion();
+            e.HasOne(t => t.Partner).WithMany(p => p.Tours)
+                .HasForeignKey(t => t.PartnerId).OnDelete(DeleteBehavior.Cascade);
         });
-        modelBuilder.Entity<Reservation>(e => {
+
+        modelBuilder.Entity<LoyaltyAccount>(e =>
+        {
+            e.HasIndex(l => l.UserId).IsUnique();
+            e.HasOne(l => l.User).WithOne(u => u.LoyaltyAccount)
+                .HasForeignKey<LoyaltyAccount>(l => l.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Reservation>(e =>
+        {
             e.Property(r => r.Total).HasPrecision(10, 2);
             e.Property(r => r.Commission).HasPrecision(10, 2);
             e.Property(r => r.Status).HasDefaultValue("Pending");
             e.HasOne(r => r.User).WithMany(u => u.Reservations)
-             .HasForeignKey(r => r.UserId).OnDelete(DeleteBehavior.Restrict);
+                .HasForeignKey(r => r.UserId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne(r => r.Tour).WithMany(t => t.Reservations)
-             .HasForeignKey(r => r.TourId).OnDelete(DeleteBehavior.Restrict);
+                .HasForeignKey(r => r.TourId).OnDelete(DeleteBehavior.Restrict);
         });
-        modelBuilder.Entity<Payment>(e => {
+
+        modelBuilder.Entity<PassengerManifest>(e =>
+        {
+            e.HasOne(p => p.Reservation).WithMany(r => r.Passengers)
+                .HasForeignKey(p => p.ReservationId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Payment>(e =>
+        {
             e.Property(p => p.Amount).HasPrecision(10, 2);
             e.HasOne(p => p.Reservation).WithOne(r => r.Payment)
-             .HasForeignKey<Payment>(p => p.ReservationId).OnDelete(DeleteBehavior.Cascade);
+                .HasForeignKey<Payment>(p => p.ReservationId).OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

@@ -2,51 +2,112 @@
 using DestinoPeruAPI.Domain.Entities;
 using DestinoPeruAPI.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+
 namespace DestinoPeruAPI.Infrastructure.Repositories;
-public class Repository<T>(AppDbContext context) : IRepository<T> where T : class
+
+public class UserRepository(AppDbContext context) : IUserRepository
 {
-    protected readonly AppDbContext _context = context;
-    protected readonly DbSet<T> _dbSet = context.Set<T>();
-    public virtual async Task<T?> GetByIdAsync(int id) => await _dbSet.FindAsync(id);
-    public virtual async Task<IEnumerable<T>> GetAllAsync() => await _dbSet.ToListAsync();
-    public virtual async Task<T> AddAsync(T entity) { await _dbSet.AddAsync(entity); await _context.SaveChangesAsync(); return entity; }
-    public virtual async Task UpdateAsync(T entity) { _dbSet.Update(entity); await _context.SaveChangesAsync(); }
-    public virtual async Task DeleteAsync(int id) { var e = await GetByIdAsync(id); if (e != null) { _dbSet.Remove(e); await _context.SaveChangesAsync(); } }
+    public async Task<User?> GetByIdAsync(int id) => await context.Users.FindAsync(id);
+    public async Task<User?> GetByEmailAsync(string email) => await context.Users.FirstOrDefaultAsync(u => u.Email == email);
+    public async Task<bool> ExistsEmailAsync(string email) => await context.Users.AnyAsync(u => u.Email == email);
+    public async Task<User> AddAsync(User entity) { await context.Users.AddAsync(entity); await context.SaveChangesAsync(); return entity; }
+    public async Task UpdateAsync(User entity) { context.Users.Update(entity); await context.SaveChangesAsync(); }
 }
-public class UserRepository(AppDbContext context) : Repository<User>(context), IUserRepository
+
+public class PartnerRepository(AppDbContext context) : IPartnerRepository
 {
-    public async Task<User?> GetByEmailAsync(string email) => await _dbSet.FirstOrDefaultAsync(u => u.Email == email);
-    public async Task<bool> ExistsEmailAsync(string email) => await _dbSet.AnyAsync(u => u.Email == email);
+    public async Task<Partner?> GetByIdAsync(int id) => await context.Partners.Include(p => p.User).FirstOrDefaultAsync(p => p.Id == id);
+    public async Task<Partner?> GetByUserIdAsync(int userId) => await context.Partners.Include(p => p.User).FirstOrDefaultAsync(p => p.UserId == userId);
+    public async Task<Partner?> GetWithToursAsync(int id) => await context.Partners.Include(p => p.Tours).Include(p => p.User).Include(p => p.Documents).FirstOrDefaultAsync(p => p.Id == id);
+    public async Task<IEnumerable<Partner>> GetAllAsync() => await context.Partners.Include(p => p.User).ToListAsync();
+    public async Task<Partner> AddAsync(Partner entity) { await context.Partners.AddAsync(entity); await context.SaveChangesAsync(); return entity; }
+    public async Task UpdateAsync(Partner entity) { context.Partners.Update(entity); await context.SaveChangesAsync(); }
+    public async Task<PartnerDocument> AddDocumentAsync(PartnerDocument doc) { await context.PartnerDocuments.AddAsync(doc); await context.SaveChangesAsync(); return doc; }
+    public async Task<PartnerDocument?> GetDocumentAsync(int id) => await context.PartnerDocuments.FindAsync(id);
+    public async Task UpdateDocumentAsync(PartnerDocument doc) { context.PartnerDocuments.Update(doc); await context.SaveChangesAsync(); }
 }
-public class AgencyRepository(AppDbContext context) : Repository<Agency>(context), IAgencyRepository
+
+public class TourRepository(AppDbContext context) : ITourRepository
 {
-    public async Task<Agency?> GetByUserIdAsync(int userId) => await _dbSet.Include(a => a.User).FirstOrDefaultAsync(a => a.UserId == userId);
-    public async Task<Agency?> GetWithToursAsync(int id) => await _dbSet.Include(a => a.Tours).Include(a => a.User).FirstOrDefaultAsync(a => a.Id == id);
-    public async Task<IEnumerable<Agency>> GetPendingAsync() => await _dbSet.Where(a => a.Status == "Pending").Include(a => a.User).ToListAsync();
-    public override async Task<IEnumerable<Agency>> GetAllAsync() => await _dbSet.Include(a => a.User).ToListAsync();
-}
-public class TourRepository(AppDbContext context) : Repository<Tour>(context), ITourRepository
-{
-    public async Task<IEnumerable<Tour>> GetActiveAsync() => await _dbSet.Where(t => t.IsActive && t.Date > DateTime.UtcNow).Include(t => t.Agency).OrderBy(t => t.Date).ToListAsync();
-    public async Task<IEnumerable<Tour>> GetByAgencyAsync(int agencyId) => await _dbSet.Where(t => t.AgencyId == agencyId).Include(t => t.Agency).ToListAsync();
-    public async Task<Tour?> GetWithAgencyAsync(int id) => await _dbSet.Include(t => t.Agency).FirstOrDefaultAsync(t => t.Id == id);
-    public async Task<IEnumerable<Tour>> SearchAsync(string? location, DateTime? fromDate, decimal? maxPrice)
+    public async Task<Tour?> GetByIdAsync(int id) => await context.Tours.FindAsync(id);
+    public async Task<Tour?> GetBySlugAsync(string slug) => await context.Tours.FirstOrDefaultAsync(t => t.Slug == slug);
+    public async Task<Tour> AddAsync(Tour entity) { await context.Tours.AddAsync(entity); await context.SaveChangesAsync(); return entity; }
+    public async Task UpdateAsync(Tour entity) { context.Tours.Update(entity); await context.SaveChangesAsync(); }
+    public async Task DeleteAsync(int id) { var e = await GetByIdAsync(id); if (e != null) { context.Tours.Remove(e); await context.SaveChangesAsync(); } }
+
+    public async Task<bool> TryReserveCapacityAsync(int tourId, int quantity)
     {
-        var q = _dbSet.Where(t => t.IsActive && t.Date > DateTime.UtcNow).Include(t => t.Agency).AsQueryable();
-        if (!string.IsNullOrWhiteSpace(location)) q = q.Where(t => t.Location.Contains(location) || t.Title.Contains(location));
-        if (fromDate.HasValue) q = q.Where(t => t.Date >= fromDate.Value);
-        if (maxPrice.HasValue) q = q.Where(t => t.Price <= maxPrice.Value);
-        return await q.OrderBy(t => t.Date).ToListAsync();
+        var rows = await context.Database.ExecuteSqlInterpolatedAsync($"""
+            UPDATE "Tours"
+            SET "AvailableCapacity" = "AvailableCapacity" - {quantity}
+            WHERE "Id" = {tourId} AND "AvailableCapacity" >= {quantity} AND "IsActive" = true
+            """);
+        return rows > 0;
     }
 }
-public class ReservationRepository(AppDbContext context) : Repository<Reservation>(context), IReservationRepository
+
+public class ReservationRepository(AppDbContext context) : IReservationRepository
 {
-    public async Task<IEnumerable<Reservation>> GetByUserAsync(int userId) => await _dbSet.Where(r => r.UserId == userId).Include(r => r.Tour).ThenInclude(t => t.Agency).Include(r => r.User).OrderByDescending(r => r.CreatedAt).ToListAsync();
-    public async Task<IEnumerable<Reservation>> GetByAgencyAsync(int agencyId) => await _dbSet.Where(r => r.Tour.AgencyId == agencyId).Include(r => r.Tour).Include(r => r.User).OrderByDescending(r => r.CreatedAt).ToListAsync();
-    public async Task<Reservation?> GetWithDetailsAsync(int id) => await _dbSet.Include(r => r.Tour).ThenInclude(t => t.Agency).Include(r => r.User).Include(r => r.Payment).FirstOrDefaultAsync(r => r.Id == id);
-    public async Task<int> GetTotalReservedAsync(int tourId) => await _dbSet.Where(r => r.TourId == tourId && r.Status != "Cancelled").SumAsync(r => r.Quantity);
+    public async Task<IEnumerable<Reservation>> GetByUserAsync(int userId) => await context.Reservations
+        .Where(r => r.UserId == userId)
+        .Include(r => r.Tour).ThenInclude(t => t.Partner)
+        .Include(r => r.User)
+        .OrderByDescending(r => r.CreatedAt)
+        .ToListAsync();
+
+    public async Task<Reservation?> GetWithDetailsAsync(int id) => await context.Reservations
+        .Include(r => r.Tour).ThenInclude(t => t.Partner)
+        .Include(r => r.User).Include(r => r.Payment).Include(r => r.Passengers)
+        .FirstOrDefaultAsync(r => r.Id == id);
+
+    public async Task<Reservation> AddAsync(Reservation entity)
+    {
+        await context.Reservations.AddAsync(entity);
+        await context.SaveChangesAsync();
+        return entity;
+    }
+
+    public async Task UpdateAsync(Reservation entity) { context.Reservations.Update(entity); await context.SaveChangesAsync(); }
+
+    public async Task AddPassengersAsync(IEnumerable<PassengerManifest> passengers)
+    {
+        await context.PassengerManifests.AddRangeAsync(passengers);
+        await context.SaveChangesAsync();
+    }
+
+    public async Task<IEnumerable<Reservation>> GetByPartnerAsync(int partnerId) => await context.Reservations
+        .Where(r => r.Tour.PartnerId == partnerId)
+        .Include(r => r.Tour).Include(r => r.User).Include(r => r.Passengers)
+        .OrderByDescending(r => r.CreatedAt).ToListAsync();
 }
-public class PaymentRepository(AppDbContext context) : Repository<Payment>(context), IPaymentRepository
+
+public class LoyaltyRepository(AppDbContext context) : ILoyaltyRepository
 {
-    public async Task<Payment?> GetByReservationAsync(int reservationId) => await _dbSet.FirstOrDefaultAsync(p => p.ReservationId == reservationId);
+    public async Task<LoyaltyAccount?> GetByUserAsync(int userId) => await context.LoyaltyAccounts.FirstOrDefaultAsync(l => l.UserId == userId);
+
+    public async Task AddPointsAsync(int userId, int points)
+    {
+        var account = await GetByUserAsync(userId);
+        if (account == null)
+        {
+            account = new LoyaltyAccount { UserId = userId, Points = points, LifetimePoints = points };
+            await context.LoyaltyAccounts.AddAsync(account);
+        }
+        else
+        {
+            account.Points += points;
+            account.LifetimePoints += points;
+            account.UpdatedAt = DateTime.UtcNow;
+            context.LoyaltyAccounts.Update(account);
+        }
+        await context.SaveChangesAsync();
+    }
+}
+
+public class PaymentRepository(AppDbContext context) : IPaymentRepository
+{
+    public async Task<Payment?> GetByIdAsync(int id) => await context.Payments.FindAsync(id);
+    public async Task<Payment?> GetByReservationAsync(int reservationId) => await context.Payments.FirstOrDefaultAsync(p => p.ReservationId == reservationId);
+    public async Task<Payment> AddAsync(Payment entity) { await context.Payments.AddAsync(entity); await context.SaveChangesAsync(); return entity; }
+    public async Task UpdateAsync(Payment entity) { context.Payments.Update(entity); await context.SaveChangesAsync(); }
 }

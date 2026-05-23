@@ -7,6 +7,15 @@ public class ApiResponse<T>
     public T? Data { get; set; }
 }
 
+public class PagedResult<T>
+{
+    public List<T> Items { get; set; } = [];
+    public int TotalCount { get; set; }
+    public int Page { get; set; }
+    public int PageSize { get; set; }
+    public int TotalPages => PageSize > 0 ? (int)Math.Ceiling(TotalCount / (double)PageSize) : 0;
+}
+
 public class AuthResponse
 {
     public string Token { get; set; } = "";
@@ -19,14 +28,20 @@ public class AuthResponse
 public class TourDto
 {
     public int Id { get; set; }
-    public int AgencyId { get; set; }
-    public string AgencyName { get; set; } = "";
+    public int PartnerId { get; set; }
+    public string PartnerName { get; set; } = "";
+    public string Slug { get; set; } = "";
     public string Title { get; set; } = "";
     public string Description { get; set; } = "";
+    public string MetaTitle { get; set; } = "";
+    public string MetaDescription { get; set; } = "";
     public decimal Price { get; set; }
     public string Location { get; set; } = "";
+    public string Department { get; set; } = "";
+    public string AdventureType { get; set; } = "";
     public DateTime Date { get; set; }
     public int Capacity { get; set; }
+    public int AvailableCapacity { get; set; }
     public string? ImageUrl { get; set; }
     public bool IsActive { get; set; }
     public DateTime CreatedAt { get; set; }
@@ -39,11 +54,13 @@ public class ReservationDto
     public string UserName { get; set; } = "";
     public int TourId { get; set; }
     public string TourTitle { get; set; } = "";
+    public string TourSlug { get; set; } = "";
     public string TourLocation { get; set; } = "";
     public DateTime TourDate { get; set; }
     public int Quantity { get; set; }
     public decimal Total { get; set; }
     public decimal Commission { get; set; }
+    public int LoyaltyPointsEarned { get; set; }
     public string Status { get; set; } = "";
     public DateTime CreatedAt { get; set; }
 }
@@ -56,31 +73,25 @@ public class PaymentDto
     public string Method { get; set; } = "";
     public string Status { get; set; } = "";
     public string? TransactionId { get; set; }
+    public string? VoucherUrl { get; set; }
+    public string VoucherStatus { get; set; } = "";
+    public string? QrReference { get; set; }
     public DateTime CreatedAt { get; set; }
 }
 
-public class LoginRequest
+public class AdminMetricsDto
 {
-    public string Email { get; set; } = "";
-    public string Password { get; set; } = "";
+    public int TotalPartners { get; set; }
+    public int PendingPartners { get; set; }
+    public int TotalTours { get; set; }
+    public int TotalReservations { get; set; }
+    public decimal TotalCommissions { get; set; }
+    public int ActiveUsers { get; set; }
 }
 
-public class RegisterRequest
-{
-    public string Name { get; set; } = "";
-    public string Email { get; set; } = "";
-    public string Password { get; set; } = "";
-    public string Role { get; set; } = "Cliente";
-}
-
-public class CreateReservationRequest
-{
-    public int TourId { get; set; }
-    public int Quantity { get; set; }
-}
-
-public class CreatePaymentRequest
-{
-    public int ReservationId { get; set; }
-    public string Method { get; set; } = "Tarjeta";
-}
+public class LoginRequest { public string Email { get; set; } = ""; public string Password { get; set; } = ""; }
+public class RegisterRequest { public string Name { get; set; } = ""; public string Email { get; set; } = ""; public string Password { get; set; } = ""; public string Role { get; set; } = "Cliente"; }
+public class CreateReservationRequest { public int TourId { get; set; } public int Quantity { get; set; } public List<PassengerDto>? Passengers { get; set; } }
+public class PassengerDto { public string FullName { get; set; } = ""; public string Dni { get; set; } = ""; public string PickupPoint { get; set; } = ""; }
+public class CreatePaymentRequest { public int ReservationId { get; set; } public string Method { get; set; } = "Tarjeta"; public string? QrReference { get; set; } }
+public class SubmitVoucherRequest { public int PaymentId { get; set; } public string VoucherUrl { get; set; } = ""; }

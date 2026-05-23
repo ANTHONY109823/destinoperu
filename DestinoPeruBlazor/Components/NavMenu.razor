@@ -23,6 +23,14 @@
             @if (Auth.IsAuthenticated)
             {
                 <NavLink class="dp-link" href="mis-reservas" @onclick="CloseMenu">Mis reservas</NavLink>
+                @if (Auth.Role is "Agencia" or "Admin")
+                {
+                    <NavLink class="dp-link" href="partner" @onclick="CloseMenu">Partner</NavLink>
+                }
+                @if (Auth.Role == "Admin")
+                {
+                    <NavLink class="dp-link" href="admin" @onclick="CloseMenu">Admin</NavLink>
+                }
             }
             <NavLink class="dp-link" href="login" @onclick="CloseMenu">
                 @(Auth.IsAuthenticated ? "Mi cuenta" : "Ingresar")

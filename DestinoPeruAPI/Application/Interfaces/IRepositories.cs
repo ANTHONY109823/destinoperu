@@ -1,42 +1,63 @@
 ﻿using DestinoPeruAPI.Domain.Entities;
+
 namespace DestinoPeruAPI.Application.Interfaces;
-public interface IRepository<T> where T : class
+
+public interface IUserRepository
 {
-    Task<T?> GetByIdAsync(int id);
-    Task<IEnumerable<T>> GetAllAsync();
-    Task<T> AddAsync(T entity);
-    Task UpdateAsync(T entity);
-    Task DeleteAsync(int id);
-}
-public interface IUserRepository : IRepository<User>
-{
+    Task<User?> GetByIdAsync(int id);
     Task<User?> GetByEmailAsync(string email);
     Task<bool> ExistsEmailAsync(string email);
+    Task<User> AddAsync(User entity);
+    Task UpdateAsync(User entity);
 }
-public interface IAgencyRepository : IRepository<Agency>
+
+public interface IPartnerRepository
 {
-    Task<Agency?> GetByUserIdAsync(int userId);
-    Task<Agency?> GetWithToursAsync(int id);
-    Task<IEnumerable<Agency>> GetPendingAsync();
+    Task<Partner?> GetByIdAsync(int id);
+    Task<Partner?> GetByUserIdAsync(int userId);
+    Task<Partner?> GetWithToursAsync(int id);
+    Task<IEnumerable<Partner>> GetAllAsync();
+    Task<Partner> AddAsync(Partner entity);
+    Task UpdateAsync(Partner entity);
+    Task<PartnerDocument> AddDocumentAsync(PartnerDocument doc);
+    Task<PartnerDocument?> GetDocumentAsync(int id);
+    Task UpdateDocumentAsync(PartnerDocument doc);
 }
-public interface ITourRepository : IRepository<Tour>
+
+public interface ITourRepository
 {
-    Task<IEnumerable<Tour>> GetActiveAsync();
-    Task<IEnumerable<Tour>> GetByAgencyAsync(int agencyId);
-    Task<Tour?> GetWithAgencyAsync(int id);
-    Task<IEnumerable<Tour>> SearchAsync(string? location, DateTime? fromDate, decimal? maxPrice);
+    Task<Tour?> GetByIdAsync(int id);
+    Task<Tour?> GetBySlugAsync(string slug);
+    Task<Tour> AddAsync(Tour entity);
+    Task UpdateAsync(Tour entity);
+    Task DeleteAsync(int id);
+    Task<bool> TryReserveCapacityAsync(int tourId, int quantity);
 }
-public interface IReservationRepository : IRepository<Reservation>
+
+public interface IReservationRepository
 {
-    Task<IEnumerable<Reservation>> GetByUserAsync(int userId);
-    Task<IEnumerable<Reservation>> GetByAgencyAsync(int agencyId);
     Task<Reservation?> GetWithDetailsAsync(int id);
-    Task<int> GetTotalReservedAsync(int tourId);
+    Task<IEnumerable<Reservation>> GetByUserAsync(int userId);
+    Task<Reservation> AddAsync(Reservation entity);
+    Task UpdateAsync(Reservation entity);
+    Task AddPassengersAsync(IEnumerable<PassengerManifest> passengers);
+    Task<IEnumerable<Reservation>> GetByPartnerAsync(int partnerId);
 }
-public interface IPaymentRepository : IRepository<Payment>
+
+public interface ILoyaltyRepository
 {
-    Task<Payment?> GetByReservationAsync(int reservationId);
+    Task<LoyaltyAccount?> GetByUserAsync(int userId);
+    Task AddPointsAsync(int userId, int points);
 }
+
+public interface IPaymentRepository
+{
+    Task<Payment?> GetByIdAsync(int id);
+    Task<Payment?> GetByReservationAsync(int reservationId);
+    Task<Payment> AddAsync(Payment entity);
+    Task UpdateAsync(Payment entity);
+}
+
 public interface IJwtService
 {
     string GenerateToken(int userId, string email, string role, string name);

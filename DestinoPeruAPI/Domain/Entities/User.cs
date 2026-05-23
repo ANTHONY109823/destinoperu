@@ -8,6 +8,7 @@ public class User
     public string PasswordHash { get; set; } = string.Empty;
     public string Role { get; set; } = "Cliente";
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public Agency? Agency { get; set; }
+    public Partner? Partner { get; set; }
+    public LoyaltyAccount? LoyaltyAccount { get; set; }
     public ICollection<Reservation> Reservations { get; set; } = new List<Reservation>();
 }

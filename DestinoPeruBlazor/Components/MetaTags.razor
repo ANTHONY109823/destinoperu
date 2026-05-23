@@ -1,0 +1,33 @@
+@inject IJSRuntime JS
+
+@if (_ready)
+{
+    <HeadContent>
+        <title>@Title</title>
+        <meta name="description" content="@Description" />
+        <meta property="og:title" content="@Title" />
+        <meta property="og:description" content="@Description" />
+        @if (!string.IsNullOrEmpty(ImageUrl))
+        {
+            <meta property="og:image" content="@ImageUrl" />
+        }
+        <meta name="twitter:card" content="summary_large_image" />
+    </HeadContent>
+}
+
+@code {
+    [Parameter] public string Title { get; set; } = "Destino Peru";
+    [Parameter] public string Description { get; set; } = "Tours y aventuras en Peru";
+    [Parameter] public string? ImageUrl { get; set; }
+
+    private bool _ready;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _ready = true;
+            StateHasChanged();
+        }
+    }
+}

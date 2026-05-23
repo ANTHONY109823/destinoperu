@@ -1,17 +1,26 @@
-﻿using DestinoPeruAPI.Application.DTOs;
+﻿using DestinoPeruAPI.Application.Common;
+using DestinoPeruAPI.Application.DTOs;
 using DestinoPeruAPI.Application.Interfaces;
 using DestinoPeruAPI.Domain.Entities;
+using DestinoPeruAPI.Domain.Enums;
 
 namespace DestinoPeruAPI.Application.Services;
 
-public class AuthService(IUserRepository userRepository, IJwtService jwtService)
+public class AuthService(IUserRepository userRepository, IJwtService jwtService, ILoyaltyRepository loyaltyRepository)
 {
     public async Task<ApiResponse<AuthResponse>> RegisterAsync(RegisterRequest request)
     {
         if (await userRepository.ExistsEmailAsync(request.Email))
             return new ApiResponse<AuthResponse>(false, "El email ya está registrado.", null);
-        var user = new User { Name = request.Name, Email = request.Email.ToLower().Trim(), PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password, 12), Role = request.Role };
+        var user = new User
+        {
+            Name = request.Name,
+            Email = request.Email.ToLower().Trim(),
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password, 12),
+            Role = request.Role
+        };
         await userRepository.AddAsync(user);
+        await loyaltyRepository.AddPointsAsync(user.Id, 0);
         var token = jwtService.GenerateToken(user.Id, user.Email, user.Role, user.Name);
         return new ApiResponse<AuthResponse>(true, "Registro exitoso.", new AuthResponse(token, user.Name, user.Email, user.Role, user.Id));
     }
@@ -26,58 +35,126 @@ public class AuthService(IUserRepository userRepository, IJwtService jwtService)
     }
 }
 
-public class TourService(ITourRepository tourRepository, IAgencyRepository agencyRepository)
+public class TourService(
+    ITourQueryRepository tourQuery,
+    ITourRepository tourCommand,
+    IPartnerRepository partnerRepository,
+    IImageService imageService)
 {
-    public async Task<IEnumerable<TourDto>> GetAllActiveAsync() => (await tourRepository.GetActiveAsync()).Select(MapToDto);
-    public async Task<IEnumerable<TourDto>> SearchAsync(string? location, DateTime? fromDate, decimal? maxPrice) => (await tourRepository.SearchAsync(location, fromDate, maxPrice)).Select(MapToDto);
-    public async Task<ApiResponse<TourDto>> GetByIdAsync(int id) { var t = await tourRepository.GetWithAgencyAsync(id); return t == null ? new ApiResponse<TourDto>(false, "Tour no encontrado.", null) : new ApiResponse<TourDto>(true, null, MapToDto(t)); }
-    public async Task<IEnumerable<TourDto>> GetByAgencyAsync(int agencyId) => (await tourRepository.GetByAgencyAsync(agencyId)).Select(MapToDto);
+    public Task<PagedResult<TourDto>> SearchPagedAsync(TourSearchQuery query) => tourQuery.SearchPagedAsync(query);
+    public Task<TourDto?> GetBySlugAsync(string slug) => tourQuery.GetBySlugAsync(slug);
+    public async Task<ApiResponse<TourDto>> GetByIdAsync(int id)
+    {
+        var t = await tourQuery.GetByIdAsync(id);
+        return t == null ? new ApiResponse<TourDto>(false, "Tour no encontrado.", null) : new ApiResponse<TourDto>(true, null, t);
+    }
 
     public async Task<ApiResponse<TourDto>> CreateAsync(CreateTourRequest request, int userId)
     {
-        var agency = await agencyRepository.GetByUserIdAsync(userId);
-        if (agency == null) return new ApiResponse<TourDto>(false, "No tienes una agencia registrada.", null);
-        if (agency.Status != "Approved") return new ApiResponse<TourDto>(false, "Tu agencia aún no está aprobada.", null);
-        var tour = new Tour { AgencyId = agency.Id, Title = request.Title, Description = request.Description, Price = request.Price, Location = request.Location, Date = request.Date, Capacity = request.Capacity, ImageUrl = request.ImageUrl };
-        await tourRepository.AddAsync(tour);
-        var created = await tourRepository.GetWithAgencyAsync(tour.Id);
-        return new ApiResponse<TourDto>(true, "Tour creado.", MapToDto(created!));
+        var partner = await partnerRepository.GetByUserIdAsync(userId);
+        if (partner == null) return new ApiResponse<TourDto>(false, "No tienes un partner registrado.", null);
+        if (partner.Status != "Approved") return new ApiResponse<TourDto>(false, "Tu cuenta aún no está aprobada.", null);
+
+        var slug = SlugHelper.Generate(request.Title);
+        var existing = await tourCommand.GetBySlugAsync(slug);
+        if (existing != null) slug += $"-{DateTime.UtcNow.Ticks % 10000}";
+
+        var imageUrl = string.IsNullOrEmpty(request.ImageUrl) ? null : imageService.OptimizeUrl(request.ImageUrl);
+        var tour = new Tour
+        {
+            PartnerId = partner.Id,
+            Slug = slug,
+            Title = request.Title,
+            Description = request.Description,
+            MetaTitle = request.MetaTitle ?? request.Title,
+            MetaDescription = request.MetaDescription ?? request.Description[..Math.Min(160, request.Description.Length)],
+            Price = request.Price,
+            Location = request.Location,
+            Department = request.Department,
+            AdventureType = request.AdventureType,
+            Date = request.Date,
+            Capacity = request.Capacity,
+            AvailableCapacity = request.Capacity,
+            ImageUrl = imageUrl
+        };
+        await tourCommand.AddAsync(tour);
+        var created = await tourQuery.GetByIdAsync(tour.Id);
+        return new ApiResponse<TourDto>(true, "Tour creado.", created);
     }
 
     public async Task<ApiResponse<bool>> DeleteAsync(int id, int userId, string role)
     {
-        var tour = await tourRepository.GetByIdAsync(id);
+        var tour = await tourCommand.GetByIdAsync(id);
         if (tour == null) return new ApiResponse<bool>(false, "Tour no encontrado.", false);
-        if (role != "Admin") { var agency = await agencyRepository.GetByUserIdAsync(userId); if (agency == null || tour.AgencyId != agency.Id) return new ApiResponse<bool>(false, "Sin permiso.", false); }
-        await tourRepository.DeleteAsync(id);
+        if (role != "Admin")
+        {
+            var partner = await partnerRepository.GetByUserIdAsync(userId);
+            if (partner == null || tour.PartnerId != partner.Id) return new ApiResponse<bool>(false, "Sin permiso.", false);
+        }
+        await tourCommand.DeleteAsync(id);
         return new ApiResponse<bool>(true, "Tour eliminado.", true);
     }
-
-    private static TourDto MapToDto(Tour t) => new(t.Id, t.AgencyId, t.Agency?.Name ?? "", t.Title, t.Description, t.Price, t.Location, t.Date, t.Capacity, t.ImageUrl, t.IsActive, t.CreatedAt);
 }
 
-public class AgencyService(IAgencyRepository agencyRepository, IUserRepository userRepository)
+public class PartnerService(IPartnerRepository partnerRepository, IPartnerQueryRepository partnerQuery, IUserRepository userRepository)
 {
-    public async Task<IEnumerable<AgencyDto>> GetAllAsync() => (await agencyRepository.GetAllAsync()).Select(MapToDto);
+    public Task<IReadOnlyList<PartnerDto>> GetPendingAsync() => partnerQuery.GetPendingAsync();
+    public Task<AdminMetricsDto> GetAdminMetricsAsync() => partnerQuery.GetAdminMetricsAsync();
 
-    public async Task<ApiResponse<AgencyDto>> CreateAsync(CreateAgencyRequest request, int userId)
+    public async Task<ApiResponse<PartnerDto>> CreateAsync(CreatePartnerRequest request, int userId)
     {
-        var existing = await agencyRepository.GetByUserIdAsync(userId);
-        if (existing != null) return new ApiResponse<AgencyDto>(false, "Ya tienes una agencia.", null);
-        var agency = new Agency { UserId = userId, Name = request.Name, RUC = request.RUC };
-        await agencyRepository.AddAsync(agency);
+        var existing = await partnerRepository.GetByUserIdAsync(userId);
+        if (existing != null) return new ApiResponse<PartnerDto>(false, "Ya tienes un partner registrado.", null);
+        var partner = new Partner
+        {
+            UserId = userId,
+            Name = request.Name,
+            RUC = request.RUC,
+            PartnerType = request.PartnerType
+        };
+        await partnerRepository.AddAsync(partner);
         var user = await userRepository.GetByIdAsync(userId);
-        user!.Role = "Agencia"; await userRepository.UpdateAsync(user);
-        return new ApiResponse<AgencyDto>(true, "Agencia registrada. Pendiente de aprobación.", MapToDto(agency));
+        user!.Role = "Agencia";
+        await userRepository.UpdateAsync(user);
+        return new ApiResponse<PartnerDto>(true, "Partner registrado. Pendiente de verificación.", MapToDto(partner, user.Name));
     }
 
-    public async Task<ApiResponse<AgencyDto>> ApproveAsync(int id)
+    public async Task<ApiResponse<PartnerDto>> ApproveAsync(int id)
     {
-        var agency = await agencyRepository.GetByIdAsync(id);
-        if (agency == null) return new ApiResponse<AgencyDto>(false, "Agencia no encontrada.", null);
-        agency.Status = "Approved"; await agencyRepository.UpdateAsync(agency);
-        return new ApiResponse<AgencyDto>(true, "Agencia aprobada.", MapToDto(agency));
+        var partner = await partnerRepository.GetByIdAsync(id);
+        if (partner == null) return new ApiResponse<PartnerDto>(false, "Partner no encontrado.", null);
+        partner.Status = "Approved";
+        partner.VerificationStatus = "Verified";
+        await partnerRepository.UpdateAsync(partner);
+        return new ApiResponse<PartnerDto>(true, "Partner aprobado.", MapToDto(partner, partner.User?.Name ?? ""));
     }
 
-    private static AgencyDto MapToDto(Agency a) => new(a.Id, a.UserId, a.User?.Name ?? "", a.Name, a.RUC, a.Status, a.CreatedAt);
+    public async Task<ApiResponse<bool>> AddDocumentAsync(int partnerId, int userId, DocumentType type, string fileUrl)
+    {
+        var partner = await partnerRepository.GetByUserIdAsync(userId);
+        if (partner == null || partner.Id != partnerId)
+            return new ApiResponse<bool>(false, "Sin permiso.", false);
+        await partnerRepository.AddDocumentAsync(new PartnerDocument
+        {
+            PartnerId = partnerId,
+            DocumentType = type,
+            FileUrl = fileUrl,
+            Status = "Pending"
+        });
+        return new ApiResponse<bool>(true, "Documento registrado.", true);
+    }
+
+    public async Task<ApiResponse<bool>> VerifyDocumentAsync(int documentId, string adminName, bool approved)
+    {
+        var doc = await partnerRepository.GetDocumentAsync(documentId);
+        if (doc == null) return new ApiResponse<bool>(false, "Documento no encontrado.", false);
+        doc.Status = approved ? "Approved" : "Rejected";
+        doc.ReviewedBy = adminName;
+        doc.ReviewedAt = DateTime.UtcNow;
+        await partnerRepository.UpdateDocumentAsync(doc);
+        return new ApiResponse<bool>(true, "Documento revisado.", true);
+    }
+
+    private static PartnerDto MapToDto(Partner p, string userName) => new(
+        p.Id, p.UserId, userName, p.Name, p.RUC, p.PartnerType, p.Status, p.VerificationStatus, p.CommissionRate, p.CreatedAt);
 }

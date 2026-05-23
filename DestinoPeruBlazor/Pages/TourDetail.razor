@@ -1,25 +1,29 @@
-﻿@page "/tour/{Id:int}"
+﻿@page "/tour/{Slug}"
 @using DestinoPeruBlazor.Models
 @using DestinoPeruBlazor.Services
+@using DestinoPeruBlazor.Helpers
+@using DestinoPeruBlazor.Components
 @inject ApiService Api
 @inject AuthStateService Auth
 @inject NavigationManager Nav
 
-<PageTitle>@(tour?.Title ?? "Tour") - DestinoPeru</PageTitle>
+@if (tour is not null)
+{
+    <MetaTags Title="@(string.IsNullOrWhiteSpace(tour.MetaTitle) ? tour.Title : tour.MetaTitle)"
+              Description="@(string.IsNullOrWhiteSpace(tour.MetaDescription) ? tour.Description : tour.MetaDescription)"
+              ImageUrl="@OptimizedImage" />
+}
+
+<PageTitle>@(tour?.Title ?? "Tour") - Destino Peru</PageTitle>
 
 <div class="container py-4">
-    @if (loading)
-    {
-        <p>Cargando...</p>
-    }
-    else if (!string.IsNullOrEmpty(error))
-    {
-        <div class="alert alert-danger">@error</div>
-    }
+    @if (loading) { <p>Cargando...</p> }
+    else if (!string.IsNullOrEmpty(error)) { <div class="alert alert-danger">@error</div> }
     else if (tour is not null)
     {
         <div class="tour-detail">
             <div class="tour-detail-header" style="@HeaderStyle">
+                <span class="tour-detail-dept">@tour.Department · @tour.AdventureType</span>
                 <h1>@tour.Title</h1>
                 <p>@tour.Location · @tour.Date.ToString("dddd, dd MMMM yyyy")</p>
             </div>
@@ -27,9 +31,9 @@
                 <div class="col-lg-8">
                     <p class="lead">@tour.Description</p>
                     <ul class="tour-meta-list">
-                        <li><strong>Agencia:</strong> @tour.AgencyName</li>
+                        <li><strong>Partner:</strong> @tour.PartnerName</li>
                         <li><strong>Precio:</strong> S/ @tour.Price.ToString("N2") por persona</li>
-                        <li><strong>Cupos:</strong> @tour.Capacity</li>
+                        <li><strong>Cupos disponibles:</strong> @tour.AvailableCapacity / @tour.Capacity</li>
                     </ul>
                 </div>
                 <div class="col-lg-4">
@@ -44,9 +48,10 @@
                         {
                             <div class="mb-3">
                                 <label class="form-label">Cantidad</label>
-                                <input type="number" class="form-control" min="1" max="@tour.Capacity" @bind="quantity" />
+                                <input type="number" class="form-control" min="1" max="@tour.AvailableCapacity" @bind="quantity" />
                             </div>
                             <p class="booking-total">Total: <strong>S/ @((tour.Price * quantity).ToString("N2"))</strong></p>
+                            <p class="text-muted small">Ganas ~@((int)(tour.Price * quantity * 0.01m)) puntos loyalty</p>
                             @if (!string.IsNullOrEmpty(bookingError))
                             {
                                 <div class="alert alert-danger py-2">@bookingError</div>
@@ -63,7 +68,7 @@
 </div>
 
 @code {
-    [Parameter] public int Id { get; set; }
+    [Parameter] public string Slug { get; set; } = "";
 
     private TourDto? tour;
     private bool loading = true;
@@ -72,31 +77,28 @@
     private string? error;
     private string? bookingError;
 
+    private string OptimizedImage => tour?.ImageUrl is not null ? CloudinaryHelper.Optimize(tour.ImageUrl, 1200) : "";
     private string HeaderStyle => tour is null || string.IsNullOrEmpty(tour.ImageUrl)
-        ? "background: linear-gradient(135deg, #9a3412, #c2410c)"
-        : $"background-image: url('{tour.ImageUrl}')";
+        ? "background: linear-gradient(135deg, #004D40, #00695C)"
+        : $"background-image: url('{CloudinaryHelper.Optimize(tour.ImageUrl, 1200)}')";
 
     protected override async Task OnInitializedAsync()
     {
         await Auth.InitializeAsync();
-        var response = await Api.GetTourAsync(Id);
-        if (response.Success && response.Data is not null)
-            tour = response.Data;
-        else
-            error = response.ErrorMessage ?? "Tour no encontrado.";
+        var response = await Api.GetTourBySlugAsync(Slug);
+        if (response.Success && response.Data is not null) tour = response.Data;
+        else error = response.ErrorMessage ?? "Tour no encontrado.";
         loading = false;
     }
 
     private async Task Reserve()
     {
         if (tour is null) return;
-        booking = true;
-        bookingError = null;
+        booking = true; bookingError = null;
         var result = await Api.CreateReservationAsync(new CreateReservationRequest { TourId = tour.Id, Quantity = quantity });
         if (result.Success && result.Data is not null)
             Nav.NavigateTo($"checkout/{result.Data.Id}");
-        else
-            bookingError = result.ErrorMessage;
+        else bookingError = result.ErrorMessage;
         booking = false;
     }
 }

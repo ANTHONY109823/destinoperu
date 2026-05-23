@@ -4,96 +4,124 @@
 @using DestinoPeruBlazor.Components
 @inject ApiService Api
 
-<PageTitle>Destino Peru - Tours</PageTitle>
+<PageTitle>Destino Peru - Super App de Turismo</PageTitle>
 
-<section class="hero">
+<section class="hero hero-premium">
     <div class="hero-content container">
-        <span class="hero-badge">Destino Peru</span>
-        <h1>Descubre el Peru</h1>
-        <p>Tours, experiencias y aventuras con agencias verificadas.</p>
+        <span class="hero-badge">Natural Premium</span>
+        <h1>Explora el Peru sin limites</h1>
+        <p>Full-days, trekking y experiencias con partners verificados.</p>
     </div>
 </section>
 
-<section class="filters container">
-    <div class="filters-grid">
-        <input class="form-control" placeholder="Destino (Cusco, Lima...)" @bind="location" />
-        <input type="date" class="form-control" @bind="fromDate" />
-        <input type="number" class="form-control" placeholder="Precio max (S/)" @bind="maxPrice" />
-        <button class="btn btn-primary w-100" @onclick="Search" disabled="@loading">Buscar</button>
+<section class="search-epic container">
+    <div class="search-epic-inner">
+        <h2 class="search-title">Busca tu proxima aventura</h2>
+        <div class="filters-grid filters-epic">
+            <select class="form-select" @bind="department">
+                <option value="">Todos los departamentos</option>
+                @foreach (var d in departments)
+                {
+                    <option value="@d">@d</option>
+                }
+            </select>
+            <input class="form-control" placeholder="Ciudad o destino" @bind="location" />
+            <select class="form-select" @bind="adventureType">
+                <option value="">Tipo de aventura</option>
+                <option value="FullDay">Full Day</option>
+                <option value="Trekking">Trekking</option>
+                <option value="Cultural">Cultural</option>
+                <option value="Gastronomico">Gastronomico</option>
+            </select>
+            <input type="date" class="form-control" @bind="fromDate" />
+            <input type="number" class="form-control" placeholder="Precio max (S/)" @bind="maxPrice" />
+            <button class="btn btn-primary btn-search" @onclick="Search" disabled="@loading">Buscar</button>
+        </div>
     </div>
 </section>
 
 <section class="container tours-section">
     @if (loading)
     {
-        <div class="tours-grid" aria-busy="true" aria-label="Cargando tours">
-            @for (var i = 0; i < 6; i++)
-            {
-                <TourCardSkeleton />
-            }
+        <div class="tours-grid" aria-busy="true">
+            @for (var i = 0; i < 6; i++) { <TourCardSkeleton /> }
         </div>
     }
     else if (!loadSuccess)
     {
         <EmptyState Icon="⚠️" Title="No pudimos cargar los tours"
-                    Message="Revisa tu conexion o intenta de nuevo en unos segundos.">
+                    Message="Revisa tu conexion o intenta de nuevo.">
             <button class="btn btn-primary" @onclick="Search">Reintentar</button>
         </EmptyState>
     }
     else if (tours.Count == 0)
     {
-        <EmptyState Icon="🏔️" Title="No hay visitas disponibles"
-                    Message="No encontramos tours con esos filtros. Prueba otra ciudad, fecha o amplia el precio maximo.">
-            <button class="btn btn-outline-primary" @onclick="ClearFilters">Ver todos los tours</button>
+        <EmptyState Icon="🏔️" Title="Sin resultados"
+                    Message="Prueba otros filtros o departamento.">
+            <button class="btn btn-outline-primary" @onclick="ClearFilters">Ver todos</button>
         </EmptyState>
     }
     else
     {
-        <p class="tours-count">@tours.Count tour@(tours.Count == 1 ? "" : "s") disponible@(tours.Count == 1 ? "" : "s")</p>
+        <p class="tours-count">@totalCount experiencia@(totalCount == 1 ? "" : "s") · pagina @currentPage / @totalPages</p>
         <div class="tours-grid">
             @foreach (var tour in tours)
             {
                 <TourCard Tour="tour" />
             }
         </div>
+        @if (totalPages > 1)
+        {
+            <div class="pagination-bar">
+                <button class="btn btn-outline-primary btn-sm" disabled="@(currentPage <= 1)" @onclick="PrevPage">Anterior</button>
+                <span>Pagina @currentPage de @totalPages</span>
+                <button class="btn btn-outline-primary btn-sm" disabled="@(currentPage >= totalPages)" @onclick="NextPage">Siguiente</button>
+            </div>
+        }
     }
 </section>
 
 @code {
     private List<TourDto> tours = [];
+    private string? department;
     private string? location;
+    private string? adventureType;
     private DateTime? fromDate;
     private decimal? maxPrice;
+    private int currentPage = 1;
+    private int totalCount;
+    private int totalPages = 1;
     private bool loading = true;
     private bool loadSuccess = true;
 
+    private static readonly string[] departments =
+        ["Lima", "Cusco", "Arequipa", "Ica", "Puno", "La Libertad", "Amazonas", "Junin"];
+
     protected override async Task OnInitializedAsync() => await LoadTours();
 
-    private async Task Search() => await LoadTours();
+    private async Task Search() { currentPage = 1; await LoadTours(); }
+    private async Task PrevPage() { if (currentPage > 1) { currentPage--; await LoadTours(); } }
+    private async Task NextPage() { if (currentPage < totalPages) { currentPage++; await LoadTours(); } }
 
     private async Task ClearFilters()
     {
-        location = null;
-        fromDate = null;
-        maxPrice = null;
+        department = location = adventureType = null;
+        fromDate = null; maxPrice = null; currentPage = 1;
         await LoadTours();
     }
 
     private async Task LoadTours()
     {
-        loading = true;
-        loadSuccess = true;
+        loading = true; loadSuccess = true;
         StateHasChanged();
-
-        var result = await Api.GetToursAsync(location, fromDate, maxPrice);
+        var result = await Api.SearchToursAsync(department, location, adventureType, fromDate, maxPrice, currentPage);
         if (result.Success && result.Data is not null)
-            tours = result.Data;
-        else
         {
-            tours = [];
-            loadSuccess = false;
+            tours = result.Data.Items;
+            totalCount = result.Data.TotalCount;
+            totalPages = Math.Max(1, result.Data.TotalPages);
         }
-
+        else { tours = []; loadSuccess = false; }
         loading = false;
     }
 }

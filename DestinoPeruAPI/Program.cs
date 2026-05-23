@@ -8,6 +8,7 @@ using DestinoPeruAPI.Application.Interfaces;
 using DestinoPeruAPI.Application.Services;
 using DestinoPeruAPI.Infrastructure;
 using DestinoPeruAPI.Infrastructure.Data;
+using DestinoPeruAPI.Infrastructure.Dapper;
 using DestinoPeruAPI.Infrastructure.Repositories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -106,15 +107,25 @@ static string ParsePostgresUrl(string databaseUrl)
 // -------------------------------------------------------
 // 2. Inyección de Dependencias
 // -------------------------------------------------------
+builder.Services.AddSingleton<IDbConnectionFactory>(_ => new DbConnectionFactory(connectionString));
+
 builder.Services.AddScoped<IUserRepository, UserRepository>();
-builder.Services.AddScoped<IAgencyRepository, AgencyRepository>();
+builder.Services.AddScoped<IPartnerRepository, PartnerRepository>();
 builder.Services.AddScoped<ITourRepository, TourRepository>();
 builder.Services.AddScoped<IReservationRepository, ReservationRepository>();
 builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
+builder.Services.AddScoped<ILoyaltyRepository, LoyaltyRepository>();
+
+builder.Services.AddScoped<ITourQueryRepository, TourQueryRepository>();
+builder.Services.AddScoped<IPartnerQueryRepository, PartnerQueryRepository>();
+
+builder.Services.Configure<DestinoPeruAPI.Infrastructure.Media.CloudinarySettings>(
+    builder.Configuration.GetSection("CloudinarySettings"));
+builder.Services.AddScoped<IImageService, DestinoPeruAPI.Infrastructure.Media.CloudinaryImageService>();
 
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<TourService>();
-builder.Services.AddScoped<AgencyService>();
+builder.Services.AddScoped<PartnerService>();
 builder.Services.AddScoped<ReservationService>();
 builder.Services.AddScoped<PaymentService>();
 

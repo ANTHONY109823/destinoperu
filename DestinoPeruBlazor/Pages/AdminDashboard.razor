@@ -1,0 +1,50 @@
+@page "/admin"
+@using DestinoPeruBlazor.Models
+@using DestinoPeruBlazor.Services
+@inject ApiService Api
+@inject AuthStateService Auth
+@inject NavigationManager Nav
+
+<PageTitle>Panel Super Admin - Destino Peru</PageTitle>
+
+<div class="container py-4 dashboard-page">
+    @if (!Auth.IsAuthenticated || Auth.Role != "Admin")
+    {
+        <div class="alert alert-warning">Acceso solo para Super Admin.</div>
+    }
+    else if (loading) { <p>Cargando metricas...</p> }
+    else if (metrics is not null)
+    {
+        <h1 class="dashboard-title">Panel maestro</h1>
+        <p class="text-muted">Comision fija 10% · Crecimiento nacional</p>
+        <div class="metrics-grid">
+            <div class="metric-card"><span class="metric-value">@metrics.TotalPartners</span><span class="metric-label">Partners</span></div>
+            <div class="metric-card metric-warn"><span class="metric-value">@metrics.PendingPartners</span><span class="metric-label">Pendientes</span></div>
+            <div class="metric-card"><span class="metric-value">@metrics.TotalTours</span><span class="metric-label">Tours activos</span></div>
+            <div class="metric-card"><span class="metric-value">@metrics.TotalReservations</span><span class="metric-label">Reservas</span></div>
+            <div class="metric-card metric-highlight"><span class="metric-value">S/ @metrics.TotalCommissions.ToString("N0")</span><span class="metric-label">Comisiones</span></div>
+            <div class="metric-card"><span class="metric-value">@metrics.ActiveUsers</span><span class="metric-label">Usuarios</span></div>
+        </div>
+        <p class="mt-4 text-muted small">Aprueba partners y documentos desde la API o amplia este panel en la siguiente iteracion.</p>
+    }
+    else
+    {
+        <div class="alert alert-danger">@error</div>
+    }
+</div>
+
+@code {
+    private AdminMetricsDto? metrics;
+    private bool loading = true;
+    private string? error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Auth.InitializeAsync();
+        if (Auth.Role != "Admin") { loading = false; return; }
+        var r = await Api.GetAdminMetricsAsync();
+        if (r.Success) metrics = r.Data;
+        else error = r.ErrorMessage;
+        loading = false;
+    }
+}

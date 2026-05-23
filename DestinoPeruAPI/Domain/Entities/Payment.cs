@@ -8,6 +8,9 @@ public class Payment
     public string Method { get; set; } = string.Empty;
     public string Status { get; set; } = "Pending";
     public string? TransactionId { get; set; }
+    public string? VoucherUrl { get; set; }
+    public string VoucherStatus { get; set; } = "None";
+    public string? QrReference { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public Reservation Reservation { get; set; } = null!;
 }

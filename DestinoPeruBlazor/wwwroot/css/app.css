@@ -1,14 +1,18 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
-/* Paleta Peru: Terracota, Oro, Verde Alpino */
+/* Natural Premium — Booking/Klook style */
 :root {
-    --dp-terracota: #A0522D;
-    --dp-terracota-dark: #7a3d20;
+    --dp-primary: #004D40;
+    --dp-primary-light: #00695C;
+    --dp-primary-dark: #00332a;
+    --dp-accent: #D4AF37;
+    --dp-terracota: #004D40;
+    --dp-terracota-dark: #00332a;
     --dp-oro: #D4AF37;
     --dp-oro-light: #e8c96a;
-    --dp-verde: #2E8B57;
-    --dp-verde-dark: #1e6b42;
-    --dp-bg: #faf8f5;
+    --dp-verde: #004D40;
+    --dp-verde-dark: #00332a;
+    --dp-bg: #FAFAFA;
     --dp-surface: #ffffff;
     --dp-text: #2c2419;
     --dp-muted: #6b5e52;
@@ -524,3 +528,53 @@ a:hover { color: var(--dp-terracota-dark); }
     font-weight: bold;
     inset: calc(20vh + 3.25rem) 0 auto 0.2rem;
 }
+
+/* Super-App UI */
+.search-epic { margin-top: -2.5rem; position: relative; z-index: 2; }
+.search-epic-inner {
+    background: var(--dp-surface);
+    border-radius: var(--dp-radius);
+    padding: 1.5rem;
+    box-shadow: var(--dp-shadow-hover);
+}
+.search-title { margin: 0 0 1rem; font-size: 1.25rem; }
+.filters-epic { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+.btn-search { grid-column: 1 / -1; }
+.pagination-bar { display: flex; align-items: center; justify-content: center; gap: 1rem; margin: 2rem 0; }
+.metrics-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 1rem; margin-top: 1.5rem; }
+.metric-card {
+    background: var(--dp-surface);
+    padding: 1.25rem;
+    border-radius: var(--dp-radius-sm);
+    text-align: center;
+    box-shadow: var(--dp-shadow);
+}
+.metric-value { display: block; font-size: 1.75rem; font-weight: 800; color: var(--dp-primary); }
+.metric-label { font-size: 0.85rem; color: var(--dp-muted); }
+.metric-warn .metric-value { color: #c62828; }
+.metric-highlight .metric-value { color: var(--dp-oro); }
+.dashboard-title { color: var(--dp-primary); }
+.dash-panel { background: var(--dp-surface); padding: 1.25rem; border-radius: var(--dp-radius-sm); margin-bottom: 1rem; box-shadow: var(--dp-shadow); }
+.upload-zone {
+    border: 2px dashed var(--dp-primary-light);
+    border-radius: var(--dp-radius-sm);
+    padding: 1.5rem;
+    text-align: center;
+    background: #f5f9f8;
+}
+.upload-preview { max-width: 100%; max-height: 200px; border-radius: 8px; }
+.qr-box { background: #f0f7f5; padding: 1rem; border-radius: var(--dp-radius-sm); margin-bottom: 1rem; }
+.qr-placeholder {
+    width: 160px; height: 160px; margin: 0 auto 0.75rem;
+    background: repeating-linear-gradient(45deg, #ccc, #ccc 4px, #eee 4px, #eee 8px);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; color: var(--dp-primary);
+}
+.btn-primary {
+    background: var(--dp-primary) !important;
+    border-color: var(--dp-primary) !important;
+}
+.btn-primary:hover { background: var(--dp-primary-light) !important; border-color: var(--dp-primary-light) !important; }
+.btn-outline-primary { color: var(--dp-primary) !important; border-color: var(--dp-primary) !important; }
+.hero-premium { background: linear-gradient(135deg, var(--dp-primary-dark), var(--dp-primary-light)); }
+.tour-detail-dept { display: inline-block; background: rgba(255,255,255,0.2); padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.85rem; margin-bottom: 0.5rem; }

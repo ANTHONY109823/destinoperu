@@ -2,28 +2,23 @@
 @page "/mis-reservas"
 @using DestinoPeruBlazor.Models
 @using DestinoPeruBlazor.Services
+@using DestinoPeruBlazor.Helpers
 @inject ApiService Api
 @inject AuthStateService Auth
 @inject NavigationManager Nav
 
-<PageTitle>Pago - DestinoPeru</PageTitle>
+<PageTitle>Pago - Destino Peru</PageTitle>
 
 <div class="container py-4">
     @if (!Auth.IsAuthenticated)
     {
         <div class="alert alert-warning">Debes <a href="login">iniciar sesion</a> para continuar.</div>
     }
-    else if (loading)
-    {
-        <p>Cargando...</p>
-    }
+    else if (loading) { <p>Cargando...</p> }
     else if (IsReservationsList)
     {
         <h2>Mis reservas</h2>
-        @if (reservations.Count == 0)
-        {
-            <p class="text-muted">No tienes reservas.</p>
-        }
+        @if (reservations.Count == 0) { <p class="text-muted">No tienes reservas.</p> }
         else
         {
             @foreach (var r in reservations)
@@ -32,6 +27,7 @@
                     <div>
                         <strong>@r.TourTitle</strong>
                         <p class="mb-0 text-muted">@r.TourLocation · @r.TourDate.ToString("dd/MM/yyyy") · @r.Status</p>
+                        @if (r.LoyaltyPointsEarned > 0) { <small class="text-success">+@r.LoyaltyPointsEarned pts</small> }
                     </div>
                     <div class="text-end">
                         <span>S/ @r.Total.ToString("N2")</span>
@@ -46,43 +42,63 @@
     }
     else if (reservation is not null)
     {
-        <h2>Confirmar pago</h2>
+        <h2>Checkout One-Tap</h2>
         <div class="checkout-card">
             <h4>@reservation.TourTitle</h4>
             <p>@reservation.TourLocation · @reservation.Quantity persona(s)</p>
-            <p class="checkout-total">Total a pagar: <strong>S/ @reservation.Total.ToString("N2")</strong></p>
+            <p class="checkout-total">Total: <strong>S/ @reservation.Total.ToString("N2")</strong></p>
 
             <div class="mb-3">
                 <label class="form-label">Metodo de pago</label>
-                <select class="form-select" @bind="paymentMethod">
-                    <option value="Tarjeta">Tarjeta</option>
-                    <option value="Yape">Yape</option>
-                    <option value="Plin">Plin</option>
-                    <option value="Transferencia">Transferencia</option>
+                <select class="form-select" @bind="paymentMethod" disabled="@awaitingVoucher">
+                    <option value="Tarjeta">Tarjeta (simulado)</option>
+                    <option value="Yape">Yape QR</option>
+                    <option value="Plin">Plin QR</option>
                 </select>
             </div>
 
-            @if (!string.IsNullOrEmpty(message))
+            @if (IsWallet && !paid && !awaitingVoucher)
             {
-                <div class="alert @(paid ? "alert-success" : "alert-danger")">@message</div>
+                <div class="qr-box">
+                    <div class="qr-placeholder">QR @paymentMethod</div>
+                    <p class="small text-muted">Escanea y paga. Luego sube tu voucher.</p>
+                    <input class="form-control mb-2" placeholder="Referencia / numero operacion" @bind="qrReference" />
+                </div>
             }
 
-            @if (!paid)
+            @if (awaitingVoucher && currentPayment is not null)
+            {
+                <div class="voucher-upload">
+                    <p><strong>Paso 2:</strong> Sube captura del pago @paymentMethod</p>
+                    <InputFile OnChange="OnVoucherSelected" accept="image/*" />
+                    @if (!string.IsNullOrEmpty(voucherPreview))
+                    {
+                        <img src="@voucherPreview" class="upload-preview mt-2" alt="Voucher" />
+                    }
+                    <button class="btn btn-primary mt-3" disabled="@uploadingVoucher" @onclick="SubmitVoucher">
+                        @(uploadingVoucher ? "Enviando..." : "Enviar voucher a la agencia")
+                    </button>
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(message))
+            {
+                <div class="alert @(paid || voucherSent ? "alert-success" : "alert-danger") mt-3">@message</div>
+            }
+
+            @if (!paid && !awaitingVoucher)
             {
                 <button class="btn btn-primary btn-lg" disabled="@paying" @onclick="Pay">
-                    @(paying ? "Procesando..." : "Pagar ahora")
+                    @(paying ? "Procesando..." : IsWallet ? "Generar pago QR" : "Pagar ahora")
                 </button>
             }
-            else
+            else if (paid || voucherSent)
             {
                 <a class="btn btn-outline-primary" href="/">Volver a tours</a>
             }
         </div>
     }
-    else
-    {
-        <div class="alert alert-danger">@message</div>
-    }
+    else { <div class="alert alert-danger">@message</div> }
 </div>
 
 @code {
@@ -90,23 +106,26 @@
 
     private ReservationDto? reservation;
     private List<ReservationDto> reservations = [];
+    private PaymentDto? currentPayment;
     private bool loading = true;
     private bool paying;
     private bool paid;
+    private bool awaitingVoucher;
+    private bool voucherSent;
+    private bool uploadingVoucher;
     private string paymentMethod = "Tarjeta";
+    private string? qrReference;
     private string? message;
+    private string? voucherPreview;
+    private string? voucherUrl;
 
     private bool IsReservationsList => Nav.Uri.Contains("mis-reservas", StringComparison.OrdinalIgnoreCase);
+    private bool IsWallet => paymentMethod is "Yape" or "Plin";
 
     protected override async Task OnInitializedAsync()
     {
         await Auth.InitializeAsync();
-        if (!Auth.IsAuthenticated)
-        {
-            loading = false;
-            return;
-        }
-
+        if (!Auth.IsAuthenticated) { loading = false; return; }
         var result = await Api.GetUserReservationsAsync();
         if (result.Success && result.Data is not null)
         {
@@ -114,33 +133,65 @@
             if (!IsReservationsList)
             {
                 reservation = reservations.FirstOrDefault(r => r.Id == ReservationId);
-                if (reservation is null)
-                    message = "Reserva no encontrada.";
+                if (reservation is null) message = "Reserva no encontrada.";
             }
         }
-        else
-            message = result.ErrorMessage;
+        else message = result.ErrorMessage;
         loading = false;
     }
 
     private async Task Pay()
     {
         if (reservation is null) return;
-        paying = true;
-        message = null;
+        paying = true; message = null;
         var result = await Api.ProcessPaymentAsync(new CreatePaymentRequest
         {
             ReservationId = reservation.Id,
-            Method = paymentMethod
+            Method = paymentMethod,
+            QrReference = IsWallet ? qrReference : null
         });
-        if (result.Success)
+        if (result.Success && result.Data is not null)
         {
-            paid = true;
-            message = "Pago exitoso. ID: " + result.Data?.TransactionId;
-            reservation.Status = "Paid";
+            currentPayment = result.Data;
+            if (IsWallet)
+            {
+                awaitingVoucher = true;
+                message = "Pago QR iniciado. Sube tu voucher para validacion del partner.";
+            }
+            else
+            {
+                paid = true;
+                message = "Pago exitoso. ID: " + result.Data.TransactionId;
+                reservation.Status = "Paid";
+            }
         }
-        else
-            message = result.ErrorMessage;
+        else message = result.ErrorMessage;
         paying = false;
+    }
+
+    private async Task OnVoucherSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        await using var stream = file.OpenReadStream(5 * 1024 * 1024);
+        var ms = new MemoryStream();
+        await stream.CopyToAsync(ms);
+        ms.Position = 0;
+        var up = await Api.UploadImageAsync(ms, file.Name, "vouchers");
+        if (up.Success)
+        {
+            voucherUrl = up.Data;
+            voucherPreview = CloudinaryHelper.Optimize(voucherUrl, 400);
+        }
+        else message = up.ErrorMessage;
+    }
+
+    private async Task SubmitVoucher()
+    {
+        if (currentPayment is null || string.IsNullOrEmpty(voucherUrl)) { message = "Sube una imagen primero."; return; }
+        uploadingVoucher = true;
+        var r = await Api.SubmitVoucherAsync(new SubmitVoucherRequest { PaymentId = currentPayment.Id, VoucherUrl = voucherUrl });
+        if (r.Success) { voucherSent = true; message = "Voucher enviado. La agencia validara tu pago."; }
+        else message = r.ErrorMessage;
+        uploadingVoucher = false;
     }
 }
