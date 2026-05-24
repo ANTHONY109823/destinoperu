@@ -157,50 +157,17 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorization();
 
 // -------------------------------------------------------
-// 4. CORS — origenes permitidos desde variable AllowedHosts (Railway)
+// 4. CORS — politica permisiva fija (Blazor WASM en Railway)
 // -------------------------------------------------------
-var corsOrigins = GetCorsAllowedOrigins(builder.Configuration);
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("BlazorPolicy", policy =>
     {
-        policy.WithOrigins(corsOrigins)
-              .AllowAnyHeader()
+        policy.AllowAnyOrigin()
               .AllowAnyMethod()
-              .AllowCredentials();
+              .AllowAnyHeader();
     });
 });
-
-static string[] GetCorsAllowedOrigins(IConfiguration configuration)
-{
-    // Railway: AllowedHosts=https://tu-blazor.up.railway.app (URL exacta del frontend WASM)
-    var origins = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-    void AddFromRaw(string? raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw) || raw == "*") return;
-        foreach (var o in raw.Split([';', ','], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-            origins.Add(o.TrimEnd('/'));
-    }
-
-    AddFromRaw(Environment.GetEnvironmentVariable("AllowedHosts"));
-    AddFromRaw(Environment.GetEnvironmentVariable("CORS_ALLOWED_ORIGINS"));
-    AddFromRaw(Environment.GetEnvironmentVariable("FRONTEND_URL"));
-    AddFromRaw(Environment.GetEnvironmentVariable("BLAZOR_URL"));
-    AddFromRaw(configuration["Cors:AllowedOrigins"]);
-
-    if (origins.Count == 0)
-    {
-        return
-        [
-            "http://localhost:5073",
-            "http://localhost:8080",
-            "https://localhost:7185"
-        ];
-    }
-
-    return origins.ToArray();
-}
 
 // -------------------------------------------------------
 // 5. Controllers + Swagger (compatible .NET 8)
