@@ -19,13 +19,20 @@
 
         <nav id="dp-nav-menu" class="dp-nav-links @(menuOpen ? "open" : "")">
             <NavLink class="dp-link" href="/" Match="NavLinkMatch.All" @onclick="CloseMenu">Tours</NavLink>
-            <NavLink class="dp-link" href="/hoteles" @onclick="CloseMenu">Hoteles</NavLink>
-            <NavLink class="dp-link" href="/restaurantes" @onclick="CloseMenu">Restaurantes</NavLink>
-            <NavLink class="dp-link" href="/cafes-bar" @onclick="CloseMenu">Cafés / Bar</NavLink>
+
+            @if (ShowPublicCategories)
+            {
+                <NavLink class="dp-link" href="/hoteles" @onclick="CloseMenu">Hoteles</NavLink>
+                <NavLink class="dp-link" href="/restaurantes" @onclick="CloseMenu">Restaurantes</NavLink>
+                <NavLink class="dp-link" href="/cafes-bar" @onclick="CloseMenu">Cafés / Bar</NavLink>
+            }
 
             @if (Auth.IsAuthenticated)
             {
-                <NavLink class="dp-link" href="/mis-reservas" @onclick="CloseMenu">Mis reservas</NavLink>
+                @if (Auth.Role == "Cliente")
+                {
+                    <NavLink class="dp-link" href="/mis-reservas" @onclick="CloseMenu">Mis reservas</NavLink>
+                }
                 @if (Auth.Role == "SuperAdmin")
                 {
                     <NavLink class="dp-link" href="/superadmin" @onclick="CloseMenu">Super Admin</NavLink>
@@ -36,7 +43,7 @@
                 }
                 @if (Auth.Role == "Vendedor")
                 {
-                    <NavLink class="dp-link" href="/vendedor" @onclick="CloseMenu">Vendedor</NavLink>
+                    <NavLink class="dp-link" href="/vendedor" @onclick="CloseMenu">Panel vendedor</NavLink>
                 }
                 @if (Auth.Role == "Agencia")
                 {
@@ -55,6 +62,8 @@
 
 @code {
     private bool menuOpen;
+
+    private bool ShowPublicCategories => !Auth.IsAuthenticated || Auth.Role is "Cliente" or "SuperAdmin";
 
     protected override void OnInitialized() => Auth.OnChange += StateHasChanged;
 

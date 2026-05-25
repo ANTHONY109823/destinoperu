@@ -157,6 +157,19 @@ public class CreateVendorRequest
     public string Password { get; set; } = "";
 }
 
+public class AgencyProfileDto
+{
+    public int PartnerId { get; set; }
+    public string Name { get; set; } = "";
+    public string RUC { get; set; } = "";
+    public string? LogoUrl { get; set; }
+    public string? OperatingDepartment { get; set; }
+    public string? ContactEmail { get; set; }
+    public string? ContactPhone { get; set; }
+    public string Status { get; set; } = "";
+    public decimal CommissionRate { get; set; }
+}
+
 public class CreateTourRequest
 {
     public string Title { get; set; } = "";

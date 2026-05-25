@@ -1,0 +1,98 @@
+@page "/solicitud-agencia"
+@inject NavigationManager Nav
+
+<PageTitle>Solicitud de agencia - DestinoPerú</PageTitle>
+
+<div class="container py-4">
+    <BackToHome />
+
+    <section class="solicitud-card">
+        <h1>Únete a DestinoPerú</h1>
+        <p class="text-muted">Completa los datos de tu agencia. Al enviar se abrirá tu correo con la solicitud lista para mandar a nuestro equipo.</p>
+
+        <div class="admin-form-grid">
+            <div>
+                <label class="form-label">Nombre de la agencia *</label>
+                <input class="form-control" @bind="model.AgencyName" />
+            </div>
+            <div>
+                <label class="form-label">RUC *</label>
+                <input class="form-control" @bind="model.Ruc" />
+            </div>
+            <div>
+                <label class="form-label">Departamento donde opera *</label>
+                <input class="form-control" @bind="model.Department" placeholder="Ej. Lima, Cusco" />
+            </div>
+            <div>
+                <label class="form-label">Persona de contacto *</label>
+                <input class="form-control" @bind="model.ContactName" />
+            </div>
+            <div>
+                <label class="form-label">Correo *</label>
+                <input type="email" class="form-control" @bind="model.Email" />
+            </div>
+            <div>
+                <label class="form-label">Teléfono / WhatsApp</label>
+                <input class="form-control" @bind="model.Phone" />
+            </div>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Mensaje adicional</label>
+            <textarea class="form-control" rows="3" @bind="model.Message" placeholder="Cuéntanos qué tipo de tours ofreces..."></textarea>
+        </div>
+
+        @if (!string.IsNullOrEmpty(validationError))
+        {
+            <div class="alert alert-warning">@validationError</div>
+        }
+
+        <button type="button" class="btn-cta btn-cta-main" @onclick="SendEmailRequest">
+            Enviar solicitud por correo
+        </button>
+        <p class="small text-muted mt-2">Destino: partners@destinoperu.com — revisaremos tu documentación y te contactaremos.</p>
+    </section>
+</div>
+
+@code {
+    private SolicitudModel model = new();
+    private string? validationError;
+
+    private void SendEmailRequest()
+    {
+        validationError = null;
+        if (string.IsNullOrWhiteSpace(model.AgencyName) || string.IsNullOrWhiteSpace(model.Ruc)
+            || string.IsNullOrWhiteSpace(model.Email) || string.IsNullOrWhiteSpace(model.ContactName))
+        {
+            validationError = "Completa los campos obligatorios (*).";
+            return;
+        }
+
+        var body = $"""
+            Solicitud de agencia — DestinoPerú
+
+            Agencia: {model.AgencyName}
+            RUC: {model.Ruc}
+            Departamento: {model.Department}
+            Contacto: {model.ContactName}
+            Email: {model.Email}
+            Teléfono: {model.Phone}
+
+            Mensaje:
+            {model.Message}
+            """;
+        var subject = Uri.EscapeDataString($"Solicitud agencia: {model.AgencyName}");
+        var bodyEnc = Uri.EscapeDataString(body);
+        Nav.NavigateTo($"mailto:partners@destinoperu.com?subject={subject}&body={bodyEnc}", forceLoad: true);
+    }
+
+    private class SolicitudModel
+    {
+        public string AgencyName { get; set; } = "";
+        public string Ruc { get; set; } = "";
+        public string Department { get; set; } = "";
+        public string ContactName { get; set; } = "";
+        public string Email { get; set; } = "";
+        public string Phone { get; set; } = "";
+        public string Message { get; set; } = "";
+    }
+}

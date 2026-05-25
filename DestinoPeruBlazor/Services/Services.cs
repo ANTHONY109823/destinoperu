@@ -114,7 +114,7 @@ public class ApiService
 
     public async Task<ApiResult<PagedResult<TourDto>>> SearchToursAsync(
         string? department = null, string? location = null, string? adventureType = null,
-        DateTime? fromDate = null, decimal? maxPrice = null, int page = 1)
+        DateTime? fromDate = null, DateTime? toDate = null, int page = 1)
     {
         try
         {
@@ -124,7 +124,7 @@ public class ApiService
             if (!string.IsNullOrWhiteSpace(location)) q.Add($"location={Uri.EscapeDataString(location)}");
             if (!string.IsNullOrWhiteSpace(adventureType)) q.Add($"adventureType={Uri.EscapeDataString(adventureType)}");
             if (fromDate.HasValue) q.Add($"fromDate={fromDate.Value:O}");
-            if (maxPrice.HasValue) q.Add($"maxPrice={maxPrice.Value}");
+            if (toDate.HasValue) q.Add($"toDate={toDate.Value:O}");
             var response = await _http.GetAsync($"{_baseUrl}/tours?{string.Join("&", q)}");
             if (!response.IsSuccessStatusCode)
                 return Fail<PagedResult<TourDto>>($"Error al cargar tours ({(int)response.StatusCode}).");
@@ -166,10 +166,13 @@ public class ApiService
         await GetJsonAsync<AdminMetricsDto>($"{_baseUrl}/admin/metrics", "Sin acceso admin.");
 
     public async Task<ApiResult<SuperAdminMetricsDto>> GetSuperAdminMetricsAsync() =>
-        await GetJsonAsync<SuperAdminMetricsDto>($"{_baseUrl}/superadmin/metrics", "Sin acceso Super Admin.");
+        await GetJsonAsync<SuperAdminMetricsDto>($"{_baseUrl}/superadmin/metrics", "Sin acceso Super Admin.", showToast: false);
 
     public async Task<ApiResult<List<PartnerListItemDto>>> GetSuperAdminPartnersAsync() =>
-        await GetJsonAsync<List<PartnerListItemDto>>($"{_baseUrl}/superadmin/partners", "No se pudieron cargar agencias.");
+        await GetJsonAsync<List<PartnerListItemDto>>($"{_baseUrl}/superadmin/partners", "No se pudieron cargar agencias.", showToast: false);
+
+    public async Task<ApiResult<AgencyProfileDto>> GetAgencyProfileAsync() =>
+        await GetJsonAsync<AgencyProfileDto>($"{_baseUrl}/agency/profile", "Perfil de agencia no disponible.", showToast: false);
 
     public async Task<ApiResult<ApiResponse<object>>> CreateAgencyAsync(CreateAgencyRequest request)
     {
@@ -183,6 +186,17 @@ public class ApiService
             return Fail<ApiResponse<object>>(result?.Message ?? "No se pudo crear la agencia.");
         }
         catch (Exception ex) { return Fail<ApiResponse<object>>("Error al crear agencia.", ex); }
+    }
+
+    public async Task<ApiResult<bool>> SuspendPartnerAsync(int partnerId, bool suspend = true)
+    {
+        try
+        {
+            PrepareRequest();
+            var response = await _http.PutAsync($"{_baseUrl}/superadmin/partners/{partnerId}/suspend?suspend={suspend}", null);
+            return response.IsSuccessStatusCode ? ApiResult<bool>.Ok(true) : Fail<bool>("No se pudo actualizar el estado.");
+        }
+        catch (Exception ex) { return Fail<bool>("Error al suspender agencia.", ex); }
     }
 
     public async Task<ApiResult<AuthResponse>> ImpersonateAsync(int userId)
@@ -200,10 +214,10 @@ public class ApiService
     }
 
     public async Task<ApiResult<AgencyDashboardDto>> GetAgencyDashboardAsync() =>
-        await GetJsonAsync<AgencyDashboardDto>($"{_baseUrl}/agency/dashboard", "Sin acceso a panel de agencia.");
+        await GetJsonAsync<AgencyDashboardDto>($"{_baseUrl}/agency/dashboard", "Sin acceso a panel de agencia.", showToast: false);
 
     public async Task<ApiResult<List<ReservationDto>>> GetAgencyReservationsAsync() =>
-        await GetJsonAsync<List<ReservationDto>>($"{_baseUrl}/agency/reservations", "No se pudieron cargar reservas.");
+        await GetJsonAsync<List<ReservationDto>>($"{_baseUrl}/agency/reservations", "No se pudieron cargar reservas.", showToast: false);
 
     public async Task<ApiResult<bool>> SetReservationStatusAsync(int id, string status)
     {
@@ -245,7 +259,7 @@ public class ApiService
         catch (Exception ex) { return Fail<TourDto>("Error al crear tour.", ex); }
     }
 
-    private async Task<ApiResult<T>> GetJsonAsync<T>(string url, string failMessage)
+    private async Task<ApiResult<T>> GetJsonAsync<T>(string url, string failMessage, bool showToast = true)
     {
         try
         {
@@ -253,15 +267,15 @@ public class ApiService
             var response = await _http.GetAsync(url);
             if (!response.IsSuccessStatusCode)
             {
-                var msg = (int)response.StatusCode == 403
-                    ? "Sin acceso al panel. Cierra sesión e ingresa de nuevo con tu cuenta de agencia."
-                    : failMessage;
-                return Fail<T>(msg);
+                var msg = (int)response.StatusCode is 401 or 403
+                    ? "Sin acceso. Cierra sesión e ingresa de nuevo con tu cuenta."
+                    : $"{failMessage} ({(int)response.StatusCode})";
+                return Fail<T>(msg, showToast: showToast);
             }
             var data = await response.Content.ReadFromJsonAsync<T>(JsonOptions);
-            return data is not null ? ApiResult<T>.Ok(data) : Fail<T>("Sin datos");
+            return data is not null ? ApiResult<T>.Ok(data) : Fail<T>("Sin datos", showToast: showToast);
         }
-        catch (Exception ex) { return Fail<T>(failMessage, ex); }
+        catch (Exception ex) { return Fail<T>(failMessage, ex, showToast); }
     }
 
     public async Task<ApiResult<PaymentDto>> SubmitVoucherAsync(SubmitVoucherRequest request)
@@ -373,11 +387,11 @@ public class ApiService
         }
     }
 
-    private ApiResult<T> Fail<T>(string message, Exception? ex = null)
+    private ApiResult<T> Fail<T>(string message, Exception? ex = null, bool showToast = true)
     {
-        var detail = ex is HttpRequestException ? " Verifica tu conexion o la API en Railway." : "";
+        var detail = ex is HttpRequestException ? " Verifica tu conexión con la API." : "";
         var full = message + detail;
-        _toast.ShowError(full);
+        if (showToast) _toast.ShowError(full);
         return ApiResult<T>.Fail(full);
     }
 }

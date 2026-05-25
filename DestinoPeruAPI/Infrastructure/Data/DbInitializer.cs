@@ -20,29 +20,74 @@ public static class DbInitializer
         await EnsureDemoUserAsync(db, logger);
 
         var tourCount = await db.Tours.CountAsync();
-        if (tourCount >= MinPresentationTours)
+        if (tourCount < MinPresentationTours)
         {
-            logger.LogInformation("Catálogo con {Count} tours; seed de presentación omitido.", tourCount);
-            return;
+            logger.LogInformation("Sembrando contenido DEMO de presentación (partners + tours)...");
+            var partners = await EnsureDemoPartnersAsync(db);
+            if (partners.Count > 0)
+            {
+                var existingSlugs = await db.Tours.Select(t => t.Slug).ToListAsync();
+                var tours = BuildPresentationTours(partners, existingSlugs);
+                if (tours.Count > 0)
+                {
+                    db.Tours.AddRange(tours);
+                    await db.SaveChangesAsync();
+                    logger.LogInformation("Seed presentación: +{Tours} tours.", tours.Count);
+                }
+            }
         }
 
-        logger.LogInformation("Sembrando contenido DEMO de presentación (partners + tours)...");
-        var partners = await EnsureDemoPartnersAsync(db);
-        if (partners.Count == 0)
-        {
-            logger.LogWarning("No se pudieron crear partners demo.");
-            return;
-        }
+        await EnsureAgencyDemoToursAsync(db, logger);
+    }
 
-        var existingSlugs = await db.Tours.Select(t => t.Slug).ToListAsync();
-        var tours = BuildPresentationTours(partners, existingSlugs);
-        if (tours.Count > 0)
+    private static async Task EnsureAgencyDemoToursAsync(AppDbContext db, ILogger logger)
+    {
+        var admin = await db.Users.FirstOrDefaultAsync(u => u.Email == AgencyAdminEmail);
+        if (admin is null) return;
+
+        var partner = await db.Partners.FirstOrDefaultAsync(p => p.UserId == admin.Id);
+        if (partner is null) return;
+
+        partner.Name = "Agencia Demo DestinoPerú";
+        partner.Status = "Approved";
+        partner.VerificationStatus = "Verified";
+        partner.OperatingDepartment ??= "Lima";
+        partner.LogoUrl ??= "https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=200";
+        partner.ContactEmail = AgencyAdminEmail;
+
+        var existing = await db.Tours.CountAsync(t => t.PartnerId == partner.Id);
+        const int minTours = 8;
+        if (existing >= minTours)
         {
-            db.Tours.AddRange(tours);
             await db.SaveChangesAsync();
-            logger.LogInformation("Seed presentación: +{Tours} tours. Total partners: {Partners}.",
-                tours.Count, partners.Count);
+            return;
         }
+
+        var slugs = await db.Tours.Select(t => t.Slug).ToListAsync();
+        var demoTours = new (string Slug, string Title, string Dept, string Type, decimal Price)[]
+        {
+            ("demo-agencia-lima-city", "City Tour Lima — Agencia Demo", "Lima", "FullDay", 99m),
+            ("demo-agencia-cusco-valle", "Valle Sagrado 2D/1N — Agencia Demo", "Cusco", "Paquete2D1N", 380m),
+            ("demo-agencia-cusco-cultural", "Cusco Cultural Premium", "Cusco", "Cultural", 210m),
+            ("demo-agencia-ica-full", "Full Day Ica y Huacachina", "Ica", "FullDay", 175m),
+            ("demo-agencia-arequipa-colca", "Colca Full Day Demo", "Arequipa", "FullDay", 195m),
+            ("demo-agencia-puno-titicaca", "Titicaca Cultural Demo", "Puno", "Cultural", 165m),
+            ("demo-agencia-lima-cafebar", "Ruta Café y Bar Barranco", "Lima", "CafeBar", 120m),
+            ("demo-agencia-lima-paquete", "Escape Lunahuaná 2D/1N", "Lima", "Paquete2D1N", 290m)
+        };
+
+        var added = 0;
+        foreach (var d in demoTours)
+        {
+            if (existing + added >= minTours) break;
+            if (slugs.Contains(d.Slug, StringComparer.OrdinalIgnoreCase)) continue;
+            db.Tours.Add(BuildTour(partner.Id, d.Slug, d.Title, $"Tour demo {d.Title}", d.Dept, d.Dept, d.Type, d.Price,
+                "https://images.unsplash.com/photo-1587595431973-160d0d94add1?w=800", 10 + added));
+            added++;
+        }
+
+        await db.SaveChangesAsync();
+        logger.LogInformation("Agencia demo: {Count} tours asignados a partner {PartnerId}.", existing + added, partner.Id);
     }
 
     private static async Task EnsureSystemAdminsAsync(AppDbContext db, ILogger logger)

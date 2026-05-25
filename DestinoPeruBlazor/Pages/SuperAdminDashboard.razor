@@ -25,7 +25,12 @@
     else
     {
         <h1 class="dashboard-title">Gran tablero — Super Admin</h1>
-        <p class="text-muted">Control total del sistema · Comisión plataforma 10%</p>
+        <p class="text-muted">Control total · Comisión 10% · Suplantación y gestión de agencias</p>
+
+        @if (!string.IsNullOrEmpty(apiWarning))
+        {
+            <div class="alert alert-warning">@apiWarning <button class="btn btn-sm btn-outline-primary" @onclick="LoadData">Reintentar</button></div>
+        }
 
         @if (metrics is not null)
         {
@@ -41,63 +46,88 @@
         }
 
         <div class="panel-tabs">
-            <button type="button" class="panel-tab @(tab == "agencies" ? "active" : "")" @onclick='() => tab = "agencies"'>Agencias</button>
+            <button type="button" class="panel-tab @(tab == "agencies" ? "active" : "")" @onclick='() => tab = "agencies"'>Agencias (@partners.Count)</button>
             <button type="button" class="panel-tab @(tab == "create" ? "active" : "")" @onclick='() => tab = "create"'>Nueva agencia</button>
+            <button type="button" class="panel-tab @(tab == "config" ? "active" : "")" @onclick='() => tab = "config"'>Configuración</button>
         </div>
-
-        @if (!string.IsNullOrEmpty(message))
-        {
-            <div class="alert alert-info mt-2">@message</div>
-        }
 
         @if (tab == "agencies")
         {
-            <div class="partner-table-wrap">
-                <table class="partner-table">
-                    <thead>
-                        <tr>
-                            <th>Agencia</th>
-                            <th>Depto.</th>
-                            <th>Admin</th>
-                            <th>Estado</th>
-                            <th>Recaudado</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var p in partners)
-                        {
+            @if (partners.Count == 0)
+            {
+                <p class="text-muted">No hay agencias en la API. Redeploy la API o crea una desde «Nueva agencia».</p>
+            }
+            else
+            {
+                <div class="partner-table-wrap">
+                    <table class="partner-table">
+                        <thead>
                             <tr>
-                                <td><strong>@p.Name</strong><br /><small>@p.RUC</small></td>
-                                <td>@p.OperatingDepartment</td>
-                                <td>@p.AdminName<br /><small>@p.AdminEmail</small></td>
-                                <td>@p.Status</td>
-                                <td>S/ @p.Revenue.ToString("N0")</td>
-                                <td>
-                                    <button class="btn btn-outline-primary btn-sm" @onclick="() => ImpersonateAdmin(p)">Suplantar</button>
-                                </td>
+                                <th>Agencia</th>
+                                <th>Depto.</th>
+                                <th>Administrador</th>
+                                <th>Vendedores</th>
+                                <th>Estado</th>
+                                <th>Recaudado</th>
+                                <th>Acciones</th>
                             </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-            <p class="small text-muted mt-2">La aprobación operativa de reservas la realiza cada administrador de agencia.</p>
+                        </thead>
+                        <tbody>
+                            @foreach (var p in partners)
+                            {
+                                <tr>
+                                    <td><strong>@p.Name</strong><br /><small>@p.RUC</small></td>
+                                    <td>@p.OperatingDepartment</td>
+                                    <td>@p.AdminName<br /><small>@p.AdminEmail</small></td>
+                                    <td>@p.StaffCount / 5</td>
+                                    <td><span class="badge-status @(p.Status == "Approved" ? "ok" : "")">@p.Status</span></td>
+                                    <td>S/ @p.Revenue.ToString("N0")</td>
+                                    <td class="actions-cell">
+                                        <button class="btn btn-outline-primary btn-sm" @onclick="() => ImpersonateAdmin(p)">Suplantar</button>
+                                        @if (p.Status != "Suspended")
+                                        {
+                                            <button class="btn btn-outline-danger btn-sm" @onclick="() => Suspend(p)">Suspender</button>
+                                        }
+                                        else
+                                        {
+                                            <button class="btn btn-outline-success btn-sm" @onclick="() => Reactivate(p)">Reactivar</button>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            <p class="small text-muted mt-2">Agencias demo de prueba incluidas en el seed (Cusco Andes, Lima City, Agencia Demo, etc.).</p>
+        }
+        else if (tab == "create")
+        {
+            <section class="dash-panel mt-3">
+                <h3>Plantilla única — nueva agencia + admin inicial</h3>
+                <div class="admin-form-grid">
+                    <input class="form-control" placeholder="Nombre comercial *" @bind="newAgency.AgencyName" />
+                    <input class="form-control" placeholder="RUC *" @bind="newAgency.RUC" />
+                    <input class="form-control" placeholder="Departamento operación *" @bind="newAgency.OperatingDepartment" />
+                    <input class="form-control" placeholder="URL logo" @bind="newAgency.LogoUrl" />
+                    <input class="form-control" placeholder="Nombre admin *" @bind="newAgency.AdminName" />
+                    <input class="form-control" type="email" placeholder="Email admin *" @bind="newAgency.AdminEmail" />
+                    <input class="form-control" type="password" placeholder="Contraseña admin *" @bind="newAgency.AdminPassword" />
+                    <input class="form-control" placeholder="Teléfono" @bind="newAgency.ContactPhone" />
+                </div>
+                <button class="btn btn-primary" @onclick="CreateAgency" disabled="@saving">Crear agencia + admin</button>
+            </section>
         }
         else
         {
-            <section class="dash-panel mt-3">
-                <h3>Plantilla única — nueva agencia</h3>
-                <div class="admin-form-grid">
-                    <input class="form-control" placeholder="Nombre comercial" @bind="newAgency.AgencyName" />
-                    <input class="form-control" placeholder="RUC" @bind="newAgency.RUC" />
-                    <input class="form-control" placeholder="Departamento de operación" @bind="newAgency.OperatingDepartment" />
-                    <input class="form-control" placeholder="URL logo (opcional)" @bind="newAgency.LogoUrl" />
-                    <input class="form-control" placeholder="Nombre admin inicial" @bind="newAgency.AdminName" />
-                    <input class="form-control" type="email" placeholder="Email admin" @bind="newAgency.AdminEmail" />
-                    <input class="form-control" type="password" placeholder="Contraseña admin" @bind="newAgency.AdminPassword" />
-                    <input class="form-control" placeholder="Teléfono contacto" @bind="newAgency.ContactPhone" />
-                </div>
-                <button class="btn btn-primary" @onclick="CreateAgency" disabled="@saving">Crear agencia + admin</button>
+            <section class="dash-panel">
+                <h3>Configuración crítica (plataforma)</h3>
+                <ul>
+                    <li><strong>Comisión DestinoPerú:</strong> 10% fija por reserva confirmada.</li>
+                    <li><strong>Términos:</strong> gestión legal pendiente de publicación en web.</li>
+                    <li><strong>Mantenimiento:</strong> modo activo en Railway.</li>
+                </ul>
+                <p class="text-muted small">Como Super Admin puedes suplantar cualquier admin o vendedor para soporte dominical.</p>
             </section>
         }
     }
@@ -110,7 +140,7 @@
     private string tab = "agencies";
     private bool loading = true;
     private bool saving;
-    private string? message;
+    private string? apiWarning;
 
     protected override async Task OnInitializedAsync()
     {
@@ -122,27 +152,30 @@
     private async Task LoadData()
     {
         loading = true;
+        apiWarning = null;
         var m = await Api.GetSuperAdminMetricsAsync();
         if (m.Success) metrics = m.Data;
+        else apiWarning = m.ErrorMessage;
+
         var p = await Api.GetSuperAdminPartnersAsync();
         if (p.Success && p.Data is not null) partners = p.Data;
+        else if (string.IsNullOrEmpty(apiWarning)) apiWarning = p.ErrorMessage;
+
         loading = false;
     }
 
     private async Task CreateAgency()
     {
         saving = true;
-        message = null;
         var r = await Api.CreateAgencyAsync(newAgency);
         if (r.Success)
         {
-            message = "Agencia creada correctamente.";
+            Toast.ShowSuccess("Agencia creada.");
             newAgency = new() { AdminPassword = "Admin2026!" };
             tab = "agencies";
             await LoadData();
         }
-        else
-            Toast.ShowError(r.ErrorMessage ?? "Error");
+        else Toast.ShowError(r.ErrorMessage ?? "Error");
         saving = false;
     }
 
@@ -152,15 +185,22 @@
         if (r.Success && r.Data is not null)
         {
             await Auth.SetAuthAsync(r.Data);
-            Nav.NavigateTo(r.Data.Role switch
-            {
-                "Admin" => "/admin",
-                "Vendedor" => "/vendedor",
-                "Agencia" => "/partner",
-                _ => "/"
-            });
+            Nav.NavigateTo(r.Data.Role == "Admin" ? "/admin" : "/");
         }
-        else
-            Toast.ShowError(r.ErrorMessage ?? "No se pudo suplantar.");
+        else Toast.ShowError(r.ErrorMessage ?? "No se pudo suplantar.");
+    }
+
+    private async Task Suspend(PartnerListItemDto p)
+    {
+        var r = await Api.SuspendPartnerAsync(p.Id, true);
+        if (r.Success) { Toast.ShowSuccess("Agencia suspendida."); await LoadData(); }
+        else Toast.ShowError(r.ErrorMessage ?? "Error");
+    }
+
+    private async Task Reactivate(PartnerListItemDto p)
+    {
+        var r = await Api.SuspendPartnerAsync(p.Id, false);
+        if (r.Success) { Toast.ShowSuccess("Agencia reactivada."); await LoadData(); }
+        else Toast.ShowError(r.ErrorMessage ?? "Error");
     }
 }

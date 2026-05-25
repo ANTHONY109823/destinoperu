@@ -676,8 +676,11 @@ a:hover { color: var(--dp-primary-light); }
 }
 @media (min-width: 900px) {
     .home-search-linear-grid {
-        grid-template-columns: 1.1fr 1fr 1fr 0.95fr 0.85fr auto;
+        grid-template-columns: 1.1fr 1fr 1fr 0.95fr auto;
         gap: 0.5rem;
+    }
+    .home-search-linear-grid.has-return {
+        grid-template-columns: 1fr 1fr 1fr 0.9fr 0.9fr auto;
     }
 }
 @media (min-width: 640px) and (max-width: 899px) {
@@ -923,6 +926,87 @@ a:hover { color: var(--dp-primary-light); }
     border: 2px solid var(--dp-primary);
     background: linear-gradient(180deg, #fff 0%, var(--dp-secondary) 100%);
 }
+.agency-brand-header {
+    display: flex;
+    gap: 1.25rem;
+    align-items: center;
+    padding: 1.25rem;
+    background: var(--dp-surface);
+    border-radius: var(--dp-radius);
+    box-shadow: var(--dp-shadow);
+    margin-bottom: 1.25rem;
+}
+.agency-brand-logo {
+    width: 72px;
+    height: 72px;
+    border-radius: 12px;
+    flex-shrink: 0;
+    border: 2px solid var(--dp-secondary);
+}
+.agency-brand-name {
+    margin: 0 0 0.25rem;
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--dp-primary-dark);
+}
+.agency-brand-meta, .agency-brand-sub {
+    margin: 0;
+    font-size: 0.88rem;
+    color: var(--dp-muted);
+}
+.badge-status {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border-radius: 6px;
+    background: #eee;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+.badge-status.ok { background: #e8f5e9; color: #2e7d32; }
+.vendor-metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 0.65rem;
+    margin-top: 0.75rem;
+}
+.vendor-metric-card {
+    background: white;
+    border: 1px solid #e0ebe8;
+    border-radius: 10px;
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+.vendor-metric-card .vendor-revenue {
+    color: var(--dp-primary);
+    font-weight: 700;
+}
+.actions-cell {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+.reservation-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    border: 1px solid #e8e8e8;
+    border-radius: 8px;
+    margin-bottom: 0.5rem;
+}
+.solicitud-card {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 2rem;
+    background: white;
+    border-radius: 16px;
+    box-shadow: var(--dp-shadow-hover);
+}
+.manifest-list { padding-left: 1.2rem; }
+.metrics-grid-compact .metric-card { padding: 0.85rem; }
 
 /* Paneles admin */
 .panel-access-denied { padding: 2rem 0; }

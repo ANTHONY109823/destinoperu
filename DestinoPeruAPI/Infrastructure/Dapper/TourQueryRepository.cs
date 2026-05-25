@@ -44,6 +44,11 @@ public class TourQueryRepository(IDbConnectionFactory connectionFactory) : ITour
             where += """ AND t."Date" >= @FromDate """;
             parameters.Add("FromDate", query.FromDate.Value);
         }
+        if (query.ToDate.HasValue)
+        {
+            where += """ AND t."Date" <= @ToDate """;
+            parameters.Add("ToDate", query.ToDate.Value);
+        }
         if (query.MaxPrice.HasValue)
         {
             where += """ AND t."Price" <= @MaxPrice """;

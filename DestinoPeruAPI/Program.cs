@@ -2,6 +2,7 @@
 // DestinoPeru - Program.cs
 // Configuración principal — compatible con .NET 8
 // ============================================================
+using System.Security.Claims;
 using System.Text;
 using Npgsql;
 using DestinoPeruAPI.Application.Interfaces;
@@ -142,6 +143,7 @@ var secretKey   = jwtSettings["SecretKey"]!;
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        options.MapInboundClaims = false;
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer           = true,
@@ -152,6 +154,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidAudience            = jwtSettings["Audience"],
             IssuerSigningKey         = new SymmetricSecurityKey(
                                            Encoding.UTF8.GetBytes(secretKey)),
+            RoleClaimType = ClaimTypes.Role,
+            NameClaimType = ClaimTypes.Name,
             ClockSkew = TimeSpan.Zero
         };
     });

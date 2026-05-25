@@ -17,6 +17,8 @@ public class JwtService(IConfiguration configuration) : IJwtService
             new(JwtRegisteredClaimNames.Sub, userId.ToString()),
             new(JwtRegisteredClaimNames.Email, email),
             new(ClaimTypes.Role, role),
+            new("role", role),
+            new(ClaimTypes.Name, name),
             new("name", name),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };

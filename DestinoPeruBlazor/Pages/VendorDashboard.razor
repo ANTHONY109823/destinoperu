@@ -14,70 +14,95 @@
     @if (!Auth.IsAuthenticated || Auth.Role != "Vendedor")
     {
         <div class="panel-access-denied alert alert-warning">
-            Acceso para vendedores de agencia.
-            <a class="btn btn-primary btn-sm ms-2" href="/login">Ingresar</a>
+            Acceso para vendedores. <a class="btn btn-primary btn-sm ms-2" href="/login">Ingresar</a>
         </div>
     }
     else if (loading)
     {
-        <p class="text-muted">Cargando operaciones...</p>
+        <p class="text-muted">Cargando...</p>
     }
     else
     {
-        <h1 class="dashboard-title">Operador de campo</h1>
-        <p class="text-muted">Hola, <strong>@Auth.Name</strong> — inventario, pagos y manifiesto</p>
+        <AgencyBrandHeader Profile="profile" Subtitle="@($"Vendedor: {Auth.Name} — inventario, pagos y manifiesto")" />
 
-        <div class="dashboard-panels">
-            <section class="dash-panel">
-                <h3>Inventario en tiempo real</h3>
-                <p>Actualiza cupos cuando vendas por la calle para evitar sobreventa en la web.</p>
-                <p class="small text-muted">Usa la API de capacidad o coordina con tu administrador.</p>
-            </section>
+        @if (dashboard is not null)
+        {
+            <div class="metrics-grid metrics-grid-compact">
+                <div class="metric-card"><span class="metric-value">@mySales?.Reservations ?? 0</span><span class="metric-label">Mis reservas</span></div>
+                <div class="metric-card metric-highlight"><span class="metric-value">S/ @(mySales?.Revenue.ToString("N0") ?? "0")</span><span class="metric-label">Mi recaudado</span></div>
+                <div class="metric-card metric-warn"><span class="metric-value">@pendingCount</span><span class="metric-label">Pagos pendientes</span></div>
+            </div>
+        }
 
+        <div class="panel-tabs">
+            <button type="button" class="panel-tab @(tab == "payments" ? "active" : "")" @onclick='() => tab = "payments"'>Pagos</button>
+            <button type="button" class="panel-tab @(tab == "manifest" ? "active" : "")" @onclick='() => tab = "manifest"'>Manifiesto</button>
+            <button type="button" class="panel-tab @(tab == "inventory" ? "active" : "")" @onclick='() => tab = "inventory"'>Inventario</button>
+        </div>
+
+        @if (tab == "payments")
+        {
             <section class="dash-panel">
-                <h3>Validar pagos Yape / Plin</h3>
+                <h3>Validar Yape / Plin</h3>
                 @foreach (var r in reservations.Where(x => x.Status == "Pending"))
                 {
-                    <div class="border rounded p-2 mb-2">
-                        <strong>@r.TourTitle</strong> — @r.UserName · S/ @r.Total.ToString("N2")
-                        <button class="btn btn-primary btn-sm ms-2" @onclick="() => Approve(r.Id)">Verificar y aprobar</button>
+                    <div class="reservation-row">
+                        <div><strong>@r.TourTitle</strong><br />@r.UserName · S/ @r.Total.ToString("N2")</div>
+                        <button class="btn btn-primary btn-sm" @onclick="() => Approve(r.Id)">Verificar y aprobar</button>
                     </div>
                 }
-                @if (!reservations.Any(x => x.Status == "Pending"))
-                {
-                    <p class="text-muted">No hay reservas pendientes de pago.</p>
-                }
+                @if (pendingCount == 0) { <p class="text-muted">No hay pagos pendientes.</p> }
             </section>
-
+        }
+        else if (tab == "manifest")
+        {
             <section class="dash-panel">
                 <h3>Manifiesto de pasajeros</h3>
-                <p>Lista legal de DNIs y paraderos por tour. Genera el PDF desde reservas confirmadas.</p>
-                <ul class="small">
+                <ul class="manifest-list">
                     @foreach (var r in reservations.Where(x => x.Status is "Confirmed" or "Paid"))
                     {
-                        <li>@r.TourTitle — @r.TourDate.ToString("dd/MM/yyyy") · @r.Quantity pax</li>
+                        <li>@r.TourTitle — @r.TourDate.ToString("dd/MM/yyyy") · @r.Quantity pax · @r.UserName</li>
                     }
                 </ul>
             </section>
-
+        }
+        else
+        {
             <section class="dash-panel">
-                <h3>Checkout operativo</h3>
-                <p>QR Yape/Plin y carga de comprobante en <a href="/checkout">pantalla de pago</a>.</p>
+                <h3>Inventario en tiempo real</h3>
+                <p class="text-muted">Actualiza cupos al vender por la calle. Coordina con tu administrador para bloquear fechas.</p>
             </section>
-        </div>
+        }
     }
 </div>
 
 @code {
+    private AgencyProfileDto? profile;
+    private AgencyDashboardDto? dashboard;
     private List<ReservationDto> reservations = [];
+    private VendorSalesDto? mySales;
+    private string tab = "payments";
     private bool loading = true;
+    private int pendingCount;
 
     protected override async Task OnInitializedAsync()
     {
         await Auth.InitializeAsync();
         if (Auth.Role != "Vendedor") { loading = false; return; }
+
+        var pr = await Api.GetAgencyProfileAsync();
+        if (pr.Success) profile = pr.Data;
+
+        var d = await Api.GetAgencyDashboardAsync();
+        if (d.Success) dashboard = d.Data;
+        mySales = dashboard?.VendorSales.FirstOrDefault(v => v.UserId == Auth.UserId);
+
         var r = await Api.GetAgencyReservationsAsync();
-        if (r.Success && r.Data is not null) reservations = r.Data;
+        if (r.Success && r.Data is not null)
+        {
+            reservations = r.Data;
+            pendingCount = reservations.Count(x => x.Status == "Pending");
+        }
         loading = false;
     }
 
@@ -86,9 +111,9 @@
         var res = await Api.SetReservationStatusAsync(id, "Confirmed");
         if (res.Success)
         {
-            var list = await Api.GetAgencyReservationsAsync();
-            if (list.Success && list.Data is not null) reservations = list.Data;
             Toast.ShowSuccess("Reserva aprobada.");
+            var list = await Api.GetAgencyReservationsAsync();
+            if (list.Success && list.Data is not null) { reservations = list.Data; pendingCount = reservations.Count(x => x.Status == "Pending"); }
         }
         else Toast.ShowError(res.ErrorMessage ?? "Error");
     }

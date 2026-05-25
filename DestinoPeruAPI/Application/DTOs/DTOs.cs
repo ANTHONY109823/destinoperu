@@ -14,7 +14,11 @@ public record TourDto(
 
 public record TourSearchQuery(
     string? Department = null, string? Location = null, string? AdventureType = null,
-    DateTime? FromDate = null, decimal? MaxPrice = null, int Page = 1, int PageSize = 12);
+    DateTime? FromDate = null, DateTime? ToDate = null, decimal? MaxPrice = null, int Page = 1, int PageSize = 12);
+
+public record AgencyProfileDto(
+    int PartnerId, string Name, string RUC, string? LogoUrl, string? OperatingDepartment,
+    string? ContactEmail, string? ContactPhone, string Status, decimal CommissionRate);
 
 public record CreateTourRequest(
     string Title, string Description, decimal Price, string Location, string Department,

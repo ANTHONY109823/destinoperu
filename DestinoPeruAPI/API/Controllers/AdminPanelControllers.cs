@@ -63,6 +63,15 @@ public class AgencyController(AgencyAdminService agencyService) : ControllerBase
         return Role == "SuperAdmin" ? null : null;
     }
 
+    [HttpGet("profile")]
+    public async Task<IActionResult> Profile()
+    {
+        var partnerId = await PartnerIdOrBadRequest();
+        if (!partnerId.HasValue) return Forbid();
+        var r = await agencyService.GetProfileAsync(partnerId.Value);
+        return r.Success ? Ok(r.Data) : NotFound(r);
+    }
+
     [HttpGet("dashboard")]
     public async Task<IActionResult> Dashboard()
     {

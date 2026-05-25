@@ -1,0 +1,27 @@
+@using DestinoPeruBlazor.Models
+
+@if (Profile is not null)
+{
+    <div class="agency-brand-header">
+        <div class="agency-brand-logo" style="@LogoStyle"></div>
+        <div class="agency-brand-info">
+            <h1 class="agency-brand-name">@Profile.Name</h1>
+            <p class="agency-brand-meta">
+                RUC @Profile.RUC · @Profile.OperatingDepartment · <span class="badge-status">@Profile.Status</span>
+            </p>
+            @if (Subtitle is not null)
+            {
+                <p class="agency-brand-sub">@Subtitle</p>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public AgencyProfileDto? Profile { get; set; }
+    [Parameter] public string? Subtitle { get; set; }
+
+    private string LogoStyle => string.IsNullOrWhiteSpace(Profile?.LogoUrl)
+        ? "background: linear-gradient(135deg, #004D40, #00695C);"
+        : $"background-image: url('{Profile!.LogoUrl}'); background-size: cover; background-position: center;";
+}

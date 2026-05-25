@@ -14,9 +14,36 @@ public class SuperAdminService(
     IJwtService jwtService,
     AppDbContext appDb)
 {
-    public Task<SuperAdminMetricsDto> GetMetricsAsync() => partnerQuery.GetSuperAdminMetricsAsync();
+    public async Task<SuperAdminMetricsDto> GetMetricsAsync()
+    {
+        try { return await partnerQuery.GetSuperAdminMetricsAsync(); }
+        catch
+        {
+            var all = (await partnerRepository.GetAllAsync()).ToList();
+            return new SuperAdminMetricsDto(
+                0, all.Count, all.Count(p => p.Status == "Pending"), 0, 0, 0, 0, 0);
+        }
+    }
 
-    public Task<IReadOnlyList<PartnerListItemDto>> GetPartnersAsync() => partnerQuery.GetAllPartnersListAsync();
+    public async Task<IReadOnlyList<PartnerListItemDto>> GetPartnersAsync()
+    {
+        try { return await partnerQuery.GetAllPartnersListAsync(); }
+        catch { return await GetPartnersFromEfAsync(); }
+    }
+
+    private async Task<IReadOnlyList<PartnerListItemDto>> GetPartnersFromEfAsync()
+    {
+        var list = new List<PartnerListItemDto>();
+        foreach (var p in await partnerRepository.GetAllAsync())
+        {
+            var u = p.User;
+            list.Add(new PartnerListItemDto(
+                p.Id, p.Name, p.RUC, p.Status, p.OperatingDepartment ?? "",
+                u?.Email ?? "", u?.Name ?? "", u?.Id ?? 0,
+                await partnerRepository.GetStaffCountAsync(p.Id), 0));
+        }
+        return list;
+    }
 
     public async Task<ApiResponse<PartnerDto>> CreateAgencyAsync(CreateAgencyRequest request)
     {
@@ -115,10 +142,30 @@ public class AgencyAdminService(
         return null;
     }
 
-    public async Task<ApiResponse<AgencyDashboardDto>> GetDashboardAsync(int partnerId) =>
-        await partnerQuery.GetAgencyDashboardAsync(partnerId) is { } d
-            ? new ApiResponse<AgencyDashboardDto>(true, null, d)
-            : new ApiResponse<AgencyDashboardDto>(false, "Agencia no encontrada.", null);
+    public async Task<ApiResponse<AgencyDashboardDto>> GetDashboardAsync(int partnerId)
+    {
+        try
+        {
+            var d = await partnerQuery.GetAgencyDashboardAsync(partnerId);
+            if (d is not null) return new ApiResponse<AgencyDashboardDto>(true, null, d);
+        }
+        catch { /* fallback EF */ }
+
+        var partner = await partnerRepository.GetWithToursAsync(partnerId);
+        if (partner is null) return new ApiResponse<AgencyDashboardDto>(false, "Agencia no encontrada.", null);
+        var tourCount = partner.Tours.Count(t => t.IsActive);
+        return new ApiResponse<AgencyDashboardDto>(true, null, new AgencyDashboardDto(
+            partner.Id, partner.Name, tourCount, 0, 0, 0, 0, []));
+    }
+
+    public async Task<ApiResponse<AgencyProfileDto>> GetProfileAsync(int partnerId)
+    {
+        var p = await partnerRepository.GetByIdAsync(partnerId);
+        if (p is null) return new ApiResponse<AgencyProfileDto>(false, "Agencia no encontrada.", null);
+        return new ApiResponse<AgencyProfileDto>(true, null, new AgencyProfileDto(
+            p.Id, p.Name, p.RUC, p.LogoUrl, p.OperatingDepartment,
+            p.ContactEmail, p.ContactPhone, p.Status, p.CommissionRate));
+    }
 
     public async Task<ApiResponse<List<ReservationDto>>> GetReservationsAsync(int partnerId) =>
         new(true, null, (await reservationRepository.GetByPartnerAsync(partnerId))
