@@ -1,4 +1,5 @@
-﻿@using DestinoPeruBlazor.Services
+﻿@using DestinoPeruBlazor.Helpers
+@using DestinoPeruBlazor.Services
 @inject AuthStateService Auth
 @inject CartService Cart
 @inject NavigationManager Nav
@@ -19,13 +20,25 @@
         </button>
 
         <nav id="dp-nav-menu" class="dp-nav-links @(menuOpen ? "open" : "")">
-            <NavLink class="dp-link" href="/" Match="NavLinkMatch.All" @onclick="CloseMenu">Tours</NavLink>
-
-            @if (ShowPublicCategories)
+            @if (IsSuperAdmin)
             {
-                <NavLink class="dp-link" href="/hoteles" @onclick="CloseMenu">Hoteles</NavLink>
-                <NavLink class="dp-link" href="/restaurantes" @onclick="CloseMenu">Restaurantes</NavLink>
-                <NavLink class="dp-link" href="/cafes-bar" @onclick="CloseMenu">Cafés / Bar</NavLink>
+                <div class="sa-nav-ring">
+                    <NavLink class="dp-link dp-link-super" href="/superadmin/inicio" @onclick="CloseMenu">Inicio</NavLink>
+                    @foreach (var c in SuperAdminCategories.All)
+                    {
+                        <NavLink class="dp-link dp-link-sa-cat" href="@c.Route" @onclick="CloseMenu">@c.Label</NavLink>
+                    }
+                </div>
+            }
+            else
+            {
+                <NavLink class="dp-link" href="/" Match="NavLinkMatch.All" @onclick="CloseMenu">Tours</NavLink>
+                @if (ShowPublicCategories)
+                {
+                    <NavLink class="dp-link" href="/hoteles" @onclick="CloseMenu">Hoteles</NavLink>
+                    <NavLink class="dp-link" href="/restaurantes" @onclick="CloseMenu">Restaurantes</NavLink>
+                    <NavLink class="dp-link" href="/cafes-bar" @onclick="CloseMenu">Cafés / Bar</NavLink>
+                }
             }
 
             @if (Auth.IsAuthenticated)
@@ -36,10 +49,6 @@
                     <NavLink class="dp-link" href="/comparar" @onclick="CloseMenu">Comparar</NavLink>
                     <NavLink class="dp-link" href="/mis-reservas" @onclick="CloseMenu">Mis reservas</NavLink>
                     <NavLink class="dp-link" href="/fidelidad" @onclick="CloseMenu">Puntos</NavLink>
-                }
-                @if (Auth.Role == "SuperAdmin")
-                {
-                    <NavLink class="dp-link" href="/superadmin" @onclick="CloseMenu">Super Admin</NavLink>
                 }
                 @if (Auth.Role == "Admin")
                 {
@@ -68,7 +77,8 @@
     private bool menuOpen;
     private string cartLabel = "";
 
-    private bool ShowPublicCategories => !Auth.IsAuthenticated || Auth.Role is "Cliente" or "SuperAdmin";
+    private bool IsSuperAdmin => Auth.IsAuthenticated && Auth.Role == "SuperAdmin";
+    private bool ShowPublicCategories => !Auth.IsAuthenticated || Auth.Role == "Cliente";
 
     protected override async Task OnInitializedAsync()
     {

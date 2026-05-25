@@ -30,4 +30,5 @@ public interface IPartnerQueryRepository
     Task<IReadOnlyList<PartnerListItemDto>> GetAllPartnersListAsync();
     Task<AgencyDashboardDto?> GetAgencyDashboardAsync(int partnerId);
     Task<IReadOnlyList<AgencyRankingDto>> GetAgencyRankingAsync();
+    Task<IReadOnlyList<CategoryMetricsDto>> GetCategoryMetricsAsync();
 }

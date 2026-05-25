@@ -1,4 +1,5 @@
 using Dapper;
+using DestinoPeruAPI.Application.Common;
 using DestinoPeruAPI.Application.DTOs;
 using DestinoPeruAPI.Application.Interfaces;
 using DestinoPeruAPI.Domain.Enums;
@@ -65,7 +66,9 @@ public class PartnerQueryRepository(IDbConnectionFactory connectionFactory) : IP
             SELECT p."Id", p."Name", p."RUC", p."Status",
                    COALESCE(p."OperatingDepartment", '') AS "OperatingDepartment",
                    u."Email" AS "AdminEmail", u."Name" AS "AdminName", u."Id" AS "AdminUserId",
+                   p."PartnerType",
                    (SELECT COUNT(*) FROM "PartnerStaff" s WHERE s."PartnerId" = p."Id") AS "StaffCount",
+                   (SELECT COUNT(*) FROM "Tours" t WHERE t."PartnerId" = p."Id" AND t."IsActive" = true) AS "ItemCount",
                    COALESCE((
                        SELECT SUM(r."Total") FROM "Reservations" r
                        INNER JOIN "Tours" t ON t."Id" = r."TourId"
@@ -141,5 +144,36 @@ public class PartnerQueryRepository(IDbConnectionFactory connectionFactory) : IP
             ORDER BY "Revenue" DESC
             """;
         return (await conn.QueryAsync<AgencyRankingDto>(sql)).ToList();
+    }
+
+    public async Task<IReadOnlyList<CategoryMetricsDto>> GetCategoryMetricsAsync()
+    {
+        using var conn = connectionFactory.CreateConnection();
+        conn.Open();
+        var list = new List<CategoryMetricsDto>();
+        foreach (var cat in CategoryCatalog.All)
+        {
+            const string sql = """
+                SELECT
+                    (SELECT COUNT(*) FROM "Partners" p WHERE p."PartnerType" = @Type) AS "Partners",
+                    (SELECT COUNT(*) FROM "Partners" p WHERE p."PartnerType" = @Type AND p."Status" = 'Pending') AS "PendingPartners",
+                    (SELECT COUNT(*) FROM "Tours" t
+                        INNER JOIN "Partners" p ON p."Id" = t."PartnerId"
+                        WHERE p."PartnerType" = @Type AND t."IsActive" = true) AS "ActiveItems",
+                    (SELECT COUNT(*) FROM "Reservations" r
+                        INNER JOIN "Tours" t ON t."Id" = r."TourId"
+                        INNER JOIN "Partners" p ON p."Id" = t."PartnerId"
+                        WHERE p."PartnerType" = @Type) AS "Reservations",
+                    COALESCE((SELECT SUM(r."Total") FROM "Reservations" r
+                        INNER JOIN "Tours" t ON t."Id" = r."TourId"
+                        INNER JOIN "Partners" p ON p."Id" = t."PartnerId"
+                        WHERE p."PartnerType" = @Type AND r."Status" IN ('Paid', 'Confirmed')), 0) AS "Revenue"
+                """;
+            var row = await conn.QueryFirstAsync<(int Partners, int PendingPartners, int ActiveItems, int Reservations, decimal Revenue)>(
+                sql, new { Type = (int)cat.PartnerType });
+            list.Add(new CategoryMetricsDto(cat.Key, cat.Label, cat.Icon, row.Partners, row.ActiveItems,
+                row.Reservations, row.Revenue, row.PendingPartners));
+        }
+        return list;
     }
 }

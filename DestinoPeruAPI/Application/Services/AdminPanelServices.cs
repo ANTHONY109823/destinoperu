@@ -33,6 +33,30 @@ public class SuperAdminService(
 
     public Task<IReadOnlyList<AgencyRankingDto>> GetRankingAsync() => partnerQuery.GetAgencyRankingAsync();
 
+    public async Task<SuperAdminDashboardDto> GetDashboardAsync()
+    {
+        var global = await GetMetricsAsync();
+        try
+        {
+            var categories = await partnerQuery.GetCategoryMetricsAsync();
+            return new SuperAdminDashboardDto(global, categories);
+        }
+        catch
+        {
+            var cats = CategoryCatalog.All.Select(c => new CategoryMetricsDto(
+                c.Key, c.Label, c.Icon, 0, 0, 0, 0, 0)).ToList();
+            return new SuperAdminDashboardDto(global, cats);
+        }
+    }
+
+    public IReadOnlyList<PartnerListItemDto> FilterPartnersByCategory(
+        IReadOnlyList<PartnerListItemDto> partners, string? categoryKey)
+    {
+        var cat = CategoryCatalog.FromKey(categoryKey);
+        if (cat is null) return partners;
+        return partners.Where(p => p.PartnerType == cat.PartnerType).ToList();
+    }
+
     public async Task<IReadOnlyList<PartnerListItemDto>> GetPartnersAsync()
     {
         try { return await partnerQuery.GetAllPartnersListAsync(); }
@@ -52,10 +76,12 @@ public class SuperAdminService(
         foreach (var p in await partnerRepository.GetAllAsync())
         {
             var u = p.User;
+            var tourCount = await appDb.Tours.CountAsync(t => t.PartnerId == p.Id && t.IsActive);
             list.Add(new PartnerListItemDto(
                 p.Id, p.Name, p.RUC, p.Status, p.OperatingDepartment ?? "",
                 u?.Email ?? "", u?.Name ?? "", u?.Id ?? 0,
-                await partnerRepository.GetStaffCountAsync(p.Id), 0));
+                await partnerRepository.GetStaffCountAsync(p.Id), 0,
+                p.PartnerType, tourCount));
         }
         return list;
     }
@@ -83,7 +109,7 @@ public class SuperAdminService(
             UserId = admin.Id,
             Name = request.AgencyName.Trim(),
             RUC = request.RUC.Trim(),
-            PartnerType = PartnerType.Agencia,
+            PartnerType = request.PartnerType,
             Status = "Approved",
             VerificationStatus = "Verified",
             OperatingDepartment = request.OperatingDepartment.Trim(),
@@ -122,8 +148,11 @@ public class SuperAdminService(
             : new ApiResponse<bool>(false, r.Message, false);
     }
 
-    public async Task<ApiResponse<AuthResponse>> ImpersonateAsync(int targetUserId, int superAdminId)
+    public async Task<ApiResponse<AuthResponse>> ImpersonateAsync(int targetUserId)
     {
+        if (targetUserId <= 0)
+            return new ApiResponse<AuthResponse>(false, "ID de usuario inválido.", null);
+
         var target = await userRepository.GetByIdAsync(targetUserId);
         if (target == null) return new ApiResponse<AuthResponse>(false, "Usuario no encontrado.", null);
 
@@ -132,12 +161,18 @@ public class SuperAdminService(
         {
             var p = await partnerRepository.GetByUserIdAsync(target.Id);
             partnerId = p?.Id;
+            if (!partnerId.HasValue)
+                return new ApiResponse<AuthResponse>(false, "Este usuario no tiene agencia vinculada.", null);
         }
         else if (target.Role == RoleNames.Vendedor)
         {
             var staff = await partnerRepository.GetStaffByUserIdAsync(target.Id);
             partnerId = staff?.PartnerId;
+            if (!partnerId.HasValue)
+                return new ApiResponse<AuthResponse>(false, "Vendedor sin agencia asignada.", null);
         }
+        else
+            return new ApiResponse<AuthResponse>(false, "Solo puedes suplantar Admin, Agencia o Vendedor.", null);
 
         var token = jwtService.GenerateToken(target.Id, target.Email, target.Role, target.Name, partnerId, impersonating: true);
         return new ApiResponse<AuthResponse>(true, "Modo soporte activado.",

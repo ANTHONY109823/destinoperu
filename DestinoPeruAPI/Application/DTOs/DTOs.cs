@@ -37,6 +37,7 @@ public record CreatePartnerRequest(string Name, string RUC, PartnerType PartnerT
 public record CreateAgencyRequest(
     string AgencyName, string RUC, string OperatingDepartment,
     string AdminName, string AdminEmail, string AdminPassword,
+    PartnerType PartnerType = PartnerType.Agencia,
     string? LogoUrl = null, string? ContactEmail = null, string? ContactPhone = null);
 
 public record CreateVendorRequest(string DisplayName, string Email, string Password);
@@ -72,7 +73,16 @@ public record VendorSalesDto(int UserId, string Name, int Reservations, decimal 
 
 public record PartnerListItemDto(
     int Id, string Name, string RUC, string Status, string OperatingDepartment,
-    string AdminEmail, string AdminName, int AdminUserId, int StaffCount, decimal Revenue);
+    string AdminEmail, string AdminName, int AdminUserId, int StaffCount, decimal Revenue,
+    PartnerType PartnerType = PartnerType.Agencia, int ItemCount = 0);
+
+public record CategoryMetricsDto(
+    string Key, string Label, string Icon, int Partners, int ActiveItems,
+    int Reservations, decimal Revenue, int PendingPartners);
+
+public record SuperAdminDashboardDto(
+    SuperAdminMetricsDto Global,
+    IReadOnlyList<CategoryMetricsDto> Categories);
 public record UploadDocumentRequest(DocumentType DocumentType, string FileUrl);
 
 public record ReservationDto(

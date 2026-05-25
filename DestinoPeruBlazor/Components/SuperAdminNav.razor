@@ -1,0 +1,14 @@
+@using DestinoPeruBlazor.Helpers
+@inject NavigationManager Nav
+
+<nav class="sa-subnav" aria-label="Super Admin por categoría">
+    <NavLink class="sa-subnav-link" href="/superadmin/inicio">
+        <span class="sa-subnav-icon">🏠</span> Inicio
+    </NavLink>
+    @foreach (var c in SuperAdminCategories.All)
+    {
+        <NavLink class="sa-subnav-link" href="@c.Route">
+            <span class="sa-subnav-icon">@c.Icon</span> @c.Label
+        </NavLink>
+    }
+</nav>

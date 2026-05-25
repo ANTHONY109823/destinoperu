@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using DestinoPeruAPI.Application.Common;
 using DestinoPeruAPI.Application.DTOs;
 using DestinoPeruAPI.Application.Services;
@@ -14,6 +13,9 @@ public class SuperAdminController(SuperAdminService superAdminService) : Control
 {
     [HttpGet("metrics")]
     public async Task<IActionResult> GetMetrics() => Ok(await superAdminService.GetMetricsAsync());
+
+    [HttpGet("dashboard")]
+    public async Task<IActionResult> GetDashboard() => Ok(await superAdminService.GetDashboardAsync());
 
     [HttpGet("ranking")]
     public async Task<IActionResult> GetRanking() => Ok(await superAdminService.GetRankingAsync());
@@ -48,9 +50,15 @@ public class SuperAdminController(SuperAdminService superAdminService) : Control
     [HttpPost("impersonate/{userId:int}")]
     public async Task<IActionResult> Impersonate(int userId)
     {
-        var superId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-        var r = await superAdminService.ImpersonateAsync(userId, superId);
-        return r.Success ? Ok(r) : BadRequest(r);
+        try
+        {
+            var r = await superAdminService.ImpersonateAsync(userId);
+            return r.Success ? Ok(r) : BadRequest(r);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new ApiResponse<AuthResponse>(false, ex.Message, null));
+        }
     }
 
     [HttpPost("partners/{partnerId:int}/tours")]
@@ -66,8 +74,8 @@ public class SuperAdminController(SuperAdminService superAdminService) : Control
 [Authorize(Roles = $"{RoleNames.Admin},{RoleNames.Vendedor},{RoleNames.Agencia},{RoleNames.SuperAdmin}")]
 public class AgencyController(AgencyAdminService agencyService) : ControllerBase
 {
-    private int UserId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-    private string Role => User.FindFirstValue(ClaimTypes.Role) ?? "";
+    private int UserId => User.GetUserId();
+    private string Role => User.GetRole();
 
     private async Task<int?> PartnerIdOrBadRequest()
     {
@@ -75,7 +83,7 @@ public class AgencyController(AgencyAdminService agencyService) : ControllerBase
             int.TryParse(headerVal.FirstOrDefault(), out var fromHeader))
             return fromHeader;
 
-        if (int.TryParse(User.FindFirstValue("partner_id"), out var fromClaim))
+        if (int.TryParse(User.GetClaim("partner_id"), out var fromClaim))
             return fromClaim;
 
         return await agencyService.ResolvePartnerIdAsync(UserId, Role);
@@ -184,7 +192,7 @@ public class UsersController(UserAccountService userAccountService) : Controller
     [HttpGet("me/loyalty")]
     public async Task<IActionResult> Loyalty()
     {
-        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var userId = User.GetUserId();
         var r = await userAccountService.GetLoyaltyAsync(userId);
         return Ok(r.Data);
     }

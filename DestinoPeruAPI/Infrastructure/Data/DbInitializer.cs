@@ -17,6 +17,7 @@ public static class DbInitializer
     public static async Task SeedAsync(AppDbContext db, ILogger logger)
     {
         await EnsureSystemAdminsAsync(db, logger);
+        await EnsurePartnerAdminRolesAsync(db, logger);
         await EnsureDemoUserAsync(db, logger);
 
         var tourCount = await db.Tours.CountAsync();
@@ -88,6 +89,17 @@ public static class DbInitializer
 
         await db.SaveChangesAsync();
         logger.LogInformation("Agencia demo: {Count} tours asignados a partner {PartnerId}.", existing + added, partner.Id);
+    }
+
+    private static async Task EnsurePartnerAdminRolesAsync(AppDbContext db, ILogger logger)
+    {
+        var legacy = await db.Users.Where(u => u.Role == "Agencia").ToListAsync();
+        foreach (var u in legacy)
+        {
+            u.Role = "Admin";
+            logger.LogInformation("Rol actualizado Agencia→Admin: {Email}", u.Email);
+        }
+        if (legacy.Count > 0) await db.SaveChangesAsync();
     }
 
     private static async Task EnsureSystemAdminsAsync(AppDbContext db, ILogger logger)
@@ -191,7 +203,7 @@ public static class DbInitializer
             {
                 Name = s.Name,
                 Email = s.Email,
-                Role = "Agencia",
+                Role = "Admin",
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword("Demo123!", 12),
                 CreatedAt = DateTime.UtcNow
             };
@@ -204,6 +216,7 @@ public static class DbInitializer
                 Name = s.Name,
                 RUC = s.Ruc,
                 PartnerType = PartnerType.Agencia,
+                OperatingDepartment = s.Dept,
                 Status = "Approved",
                 VerificationStatus = "Verified",
                 CommissionRate = 0.10m,
@@ -214,7 +227,47 @@ public static class DbInitializer
             partners.Add(partner);
         }
 
+        await EnsureCategoryShowcaseAsync(db, partners);
         return partners;
+    }
+
+    private static async Task EnsureCategoryShowcaseAsync(AppDbContext db, List<Partner> partners)
+    {
+        var showcases = new (string Name, string Email, string Ruc, string Dept, PartnerType Type)[]
+        {
+            ("Hotel Costa Verde Miraflores", "hotel.costa@demo.dp", "20100020001", "Lima", PartnerType.Hotel),
+            ("Restaurante Sabor Andino", "rest.sabor@demo.dp", "20100020002", "Cusco", PartnerType.Restaurante),
+            ("Café Bar Barranco Lounge", "cafe.barranco@demo.dp", "20100020003", "Lima", PartnerType.CafeBar)
+        };
+
+        foreach (var s in showcases)
+        {
+            if (await db.Partners.AnyAsync(p => p.RUC == s.Ruc)) continue;
+            var user = new User
+            {
+                Name = s.Name,
+                Email = s.Email,
+                Role = "Admin",
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword("Demo123!", 12),
+                CreatedAt = DateTime.UtcNow
+            };
+            db.Users.Add(user);
+            await db.SaveChangesAsync();
+            db.Partners.Add(new Partner
+            {
+                UserId = user.Id,
+                Name = s.Name,
+                RUC = s.Ruc,
+                PartnerType = s.Type,
+                Status = "Approved",
+                VerificationStatus = "Verified",
+                OperatingDepartment = s.Dept,
+                ContactEmail = s.Email,
+                CommissionRate = 0.10m,
+                CreatedAt = DateTime.UtcNow
+            });
+            await db.SaveChangesAsync();
+        }
     }
 
     private static List<Tour> BuildPresentationTours(List<Partner> partners, List<string> existingSlugs)

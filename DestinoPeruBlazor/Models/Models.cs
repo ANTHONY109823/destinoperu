@@ -115,6 +115,26 @@ public class PartnerListItemDto
     public int AdminUserId { get; set; }
     public int StaffCount { get; set; }
     public decimal Revenue { get; set; }
+    public int PartnerType { get; set; }
+    public int ItemCount { get; set; }
+}
+
+public class CategoryMetricsDto
+{
+    public string Key { get; set; } = "";
+    public string Label { get; set; } = "";
+    public string Icon { get; set; } = "";
+    public int Partners { get; set; }
+    public int ActiveItems { get; set; }
+    public int Reservations { get; set; }
+    public decimal Revenue { get; set; }
+    public int PendingPartners { get; set; }
+}
+
+public class SuperAdminDashboardDto
+{
+    public SuperAdminMetricsDto Global { get; set; } = new();
+    public List<CategoryMetricsDto> Categories { get; set; } = [];
 }
 
 public class AgencyDashboardDto
@@ -142,6 +162,7 @@ public class CreateAgencyRequest
     public string AgencyName { get; set; } = "";
     public string RUC { get; set; } = "";
     public string OperatingDepartment { get; set; } = "";
+    public int PartnerType { get; set; }
     public string AdminName { get; set; } = "";
     public string AdminEmail { get; set; } = "";
     public string AdminPassword { get; set; } = "";
@@ -155,6 +176,19 @@ public class CreateVendorRequest
     public string DisplayName { get; set; } = "";
     public string Email { get; set; } = "";
     public string Password { get; set; } = "";
+}
+
+public class AgencyTourListItemDto
+{
+    public int Id { get; set; }
+    public string Title { get; set; } = "";
+    public string Slug { get; set; } = "";
+    public string Department { get; set; } = "";
+    public decimal Price { get; set; }
+    public int AvailableCapacity { get; set; }
+    public int Capacity { get; set; }
+    public bool IsActive { get; set; }
+    public string UnitLabel { get; set; } = "cupos";
 }
 
 public class AgencyProfileDto
@@ -210,18 +244,6 @@ public class AgencyStaffDto
     public string Email { get; set; } = "";
     public string DisplayName { get; set; } = "";
     public string StaffRole { get; set; } = "";
-}
-
-public class AgencyTourListItemDto
-{
-    public int Id { get; set; }
-    public string Title { get; set; } = "";
-    public string Slug { get; set; } = "";
-    public string Department { get; set; } = "";
-    public decimal Price { get; set; }
-    public int AvailableCapacity { get; set; }
-    public int Capacity { get; set; }
-    public bool IsActive { get; set; }
 }
 
 public class ManifestDto

@@ -1,0 +1,124 @@
+@using DestinoPeruBlazor.Models
+
+<section class="ops-panel">
+    <div class="ops-quick-actions">
+        <a class="ops-action-card" href="/manifiesto" target="_blank">
+            <span class="ops-action-icon">📋</span>
+            <strong>Manifiesto legal</strong>
+            <small>PDF / imprimir</small>
+        </a>
+        <a class="ops-action-card" href="/checkout">
+            <span class="ops-action-icon">📱</span>
+            <strong>Pagos QR</strong>
+            <small>Yape · Plin · vouchers</small>
+        </a>
+    </div>
+
+    <div class="ops-section">
+        <div class="ops-section-head">
+            <h4>Pagos pendientes</h4>
+            <span class="ops-badge @(PendingCount > 0 ? "warn" : "ok")">@PendingCount</span>
+        </div>
+        @if (PendingReservations.Count == 0)
+        {
+            <p class="ops-empty">✓ Todo al día — no hay pagos por verificar.</p>
+        }
+        else
+        {
+            @foreach (var r in PendingReservations)
+            {
+                <div class="ops-payment-card">
+                    <div>
+                        <strong>@r.TourTitle</strong>
+                        <p class="mb-0 text-muted small">@r.UserName · S/ @r.Total.ToString("N2")</p>
+                    </div>
+                    <button type="button" class="btn btn-primary btn-sm" @onclick="() => OnApprove.InvokeAsync(r.Id)">Verificar</button>
+                </div>
+            }
+        }
+    </div>
+
+    <div class="ops-section">
+        <div class="ops-section-head">
+            <h4>Inventario en vivo</h4>
+            <span class="text-muted small">Actualiza cupos al vender en calle</span>
+        </div>
+        @if (Tours.Count == 0)
+        {
+            <p class="ops-empty">Publica experiencias en «Nuevo tour» para gestionar cupos.</p>
+        }
+        else
+        {
+            <div class="inventory-grid">
+                @foreach (var t in Tours)
+                {
+                    var pct = t.Capacity > 0 ? (int)(100.0 * GetCap(t.Id) / t.Capacity) : 0;
+                    var level = pct switch { >= 80 => "high", >= 40 => "mid", _ => "low" };
+                    <div class="inventory-card">
+                        <div class="inventory-card-head">
+                            <span class="inventory-type">@GetTypeIcon(t.Title)</span>
+                            <div>
+                                <strong>@t.Title</strong>
+                                <p class="mb-0 text-muted small">@t.Department</p>
+                            </div>
+                        </div>
+                        <div class="inventory-bar">
+                            <div class="inventory-bar-fill @level" style="width:@(pct)%"></div>
+                        </div>
+                        <div class="inventory-meta">
+                            <span><strong>@GetCap(t.Id)</strong> / @t.Capacity @UnitLabel(t)</span>
+                            <span class="inventory-pct">@pct% libre</span>
+                        </div>
+                        <div class="inventory-actions">
+                            <button type="button" class="btn-inv" @onclick="() => Adjust(t.Id, -1)">−</button>
+                            <input type="number" class="form-control form-control-sm inventory-input"
+                                   value="@GetCap(t.Id)" @onchange="e => SetCap(t.Id, e)" min="0" max="@t.Capacity" />
+                            <button type="button" class="btn-inv" @onclick="() => Adjust(t.Id, 1)">+</button>
+                            <button type="button" class="btn btn-primary btn-sm" @onclick="() => OnSaveCapacity.InvokeAsync(t.Id)">Guardar</button>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</section>
+
+@code {
+    [Parameter] public List<ReservationDto> PendingReservations { get; set; } = [];
+    [Parameter] public List<AgencyTourListItemDto> Tours { get; set; } = [];
+    [Parameter] public Dictionary<int, int> CapacityEdits { get; set; } = new();
+    [Parameter] public EventCallback<int> OnApprove { get; set; }
+    [Parameter] public EventCallback<int> OnSaveCapacity { get; set; }
+
+    private int PendingCount => PendingReservations.Count;
+
+    private int GetCap(int id) => CapacityEdits.TryGetValue(id, out var v) ? v : 0;
+
+    private void Adjust(int id, int delta)
+    {
+        var tour = Tours.FirstOrDefault(t => t.Id == id);
+        if (tour is null) return;
+        var next = Math.Clamp(GetCap(id) + delta, 0, tour.Capacity);
+        CapacityEdits[id] = next;
+    }
+
+    private void SetCap(int id, ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var v))
+        {
+            var tour = Tours.FirstOrDefault(t => t.Id == id);
+            if (tour is not null) CapacityEdits[id] = Math.Clamp(v, 0, tour.Capacity);
+        }
+    }
+
+    private static string UnitLabel(AgencyTourListItemDto t) =>
+        t.Title.Contains("Café", StringComparison.OrdinalIgnoreCase) ||
+        t.Title.Contains("Bar", StringComparison.OrdinalIgnoreCase) ? "tazas" : "cupos";
+
+    private static string GetTypeIcon(string title)
+    {
+        if (title.Contains("Café", StringComparison.OrdinalIgnoreCase) || title.Contains("Bar", StringComparison.OrdinalIgnoreCase)) return "☕";
+        if (title.Contains("Cultural", StringComparison.OrdinalIgnoreCase)) return "🏛️";
+        return "🗺️";
+    }
+}

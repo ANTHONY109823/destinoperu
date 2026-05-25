@@ -9,6 +9,7 @@ namespace DestinoPeruBlazor.Services;
 public class AuthStateService
 {
     private const string StorageKey = "destinoperu_auth";
+    private const string OriginKey = "destinoperu_auth_origin";
     private readonly IJSRuntime _js;
 
     public string? Token { get; private set; }
@@ -40,6 +41,15 @@ public class AuthStateService
 
     public async Task SetAuthAsync(AuthResponse auth)
     {
+        if (auth.Impersonating && Role == "SuperAdmin" && IsAuthenticated)
+        {
+            var origin = JsonSerializer.Serialize(new AuthResponse
+            {
+                Token = Token!, Name = Name!, Email = Email!, Role = Role!, UserId = UserId, PartnerId = PartnerId
+            });
+            try { await _js.InvokeVoidAsync("localStorage.setItem", OriginKey, origin); } catch { }
+        }
+
         Token = auth.Token;
         Name = auth.Name;
         Email = auth.Email;
@@ -50,6 +60,23 @@ public class AuthStateService
         var json = JsonSerializer.Serialize(auth);
         await _js.InvokeVoidAsync("localStorage.setItem", StorageKey, json);
         Notify();
+    }
+
+    public async Task<bool> EndImpersonationAsync()
+    {
+        try
+        {
+            var originJson = await _js.InvokeAsync<string?>("localStorage.getItem", OriginKey);
+            if (string.IsNullOrWhiteSpace(originJson)) return false;
+            var origin = JsonSerializer.Deserialize<AuthResponse>(originJson);
+            if (origin is null || string.IsNullOrEmpty(origin.Token)) return false;
+            await _js.InvokeVoidAsync("localStorage.removeItem", OriginKey);
+            RestoreAuth(origin);
+            await _js.InvokeVoidAsync("localStorage.setItem", StorageKey, originJson);
+            Notify();
+            return true;
+        }
+        catch { return false; }
     }
 
     private void RestoreAuth(AuthResponse auth)
@@ -203,15 +230,24 @@ public class ApiService
     {
         try
         {
+            if (userId <= 0) return Fail<AuthResponse>("Usuario admin no válido para esta agencia.");
             PrepareRequest();
             var response = await _http.PostAsync($"{_baseUrl}/superadmin/impersonate/{userId}", null);
-            var result = await response.Content.ReadFromJsonAsync<ApiResponse<AuthResponse>>(JsonOptions);
-            if (result?.Success == true && result.Data is not null)
+            var body = await response.Content.ReadAsStringAsync();
+            ApiResponse<AuthResponse>? result = null;
+            try { result = System.Text.Json.JsonSerializer.Deserialize<ApiResponse<AuthResponse>>(body, JsonOptions); } catch { /* ignore */ }
+            if (response.IsSuccessStatusCode && result?.Success == true && result.Data is not null)
                 return ApiResult<AuthResponse>.Ok(result.Data);
-            return Fail<AuthResponse>(result?.Message ?? "No se pudo suplantar.");
+            var msg = result?.Message ?? (response.StatusCode == System.Net.HttpStatusCode.Unauthorized
+                ? "Sesión expirada. Vuelve a ingresar como Super Admin."
+                : $"No se pudo suplantar ({(int)response.StatusCode}).");
+            return Fail<AuthResponse>(msg);
         }
-        catch (Exception ex) { return Fail<AuthResponse>("Error de suplantación.", ex); }
+        catch (Exception ex) { return Fail<AuthResponse>($"Error de suplantación: {ex.Message}", ex); }
     }
+
+    public async Task<ApiResult<SuperAdminDashboardDto>> GetSuperAdminDashboardAsync() =>
+        await GetJsonAsync<SuperAdminDashboardDto>($"{_baseUrl}/superadmin/dashboard", "Dashboard no disponible.", showToast: false);
 
     public async Task<ApiResult<AgencyDashboardDto>> GetAgencyDashboardAsync() =>
         await GetJsonAsync<AgencyDashboardDto>($"{_baseUrl}/agency/dashboard", "Sin acceso a panel de agencia.", showToast: false);
