@@ -343,6 +343,11 @@ public class AgencyAdminService(
             return new ApiResponse<bool>(false, "Tour no encontrado.", false);
 
         if (request.ImageUrl is not null) tour.ImageUrl = request.ImageUrl;
+        if (request.BusTotalSeats.HasValue)
+        {
+            tour.Capacity = Math.Max(1, request.BusTotalSeats.Value);
+            tour.AvailableCapacity = Math.Min(tour.AvailableCapacity, tour.Capacity);
+        }
         if (request.AvailableCapacity.HasValue)
             tour.AvailableCapacity = Math.Clamp(request.AvailableCapacity.Value, 0, tour.Capacity);
 

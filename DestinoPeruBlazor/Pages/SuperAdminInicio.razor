@@ -24,17 +24,32 @@
         <SuperAdminNav />
 
         <header class="sa-header">
-            <h1 class="dashboard-title mb-1">Vista Inicio — Dashboard global</h1>
-            <p class="text-muted mb-0">Consolidado de Tours, Hoteles, Restaurantes y Cafés/Bar · Comisión 10%</p>
+            <h1 class="dashboard-title mb-1">Vista Inicio — Panel de control global</h1>
+            <p class="text-muted mb-0">Gráficos consolidados · Cada categoría con su administración Super Admin</p>
         </header>
 
         @if (!string.IsNullOrEmpty(apiWarning))
         {
-            <div class="alert alert-warning">@apiWarning</div>
+            <div class="alert alert-warning">@apiWarning <button type="button" class="btn btn-sm btn-outline-primary" @onclick="LoadAsync">Reintentar</button></div>
         }
 
         @if (metrics is not null)
         {
+            <div class="sa-charts-row">
+                <div class="sa-chart-card">
+                    <MetricDonutChart Percent="@ReservationsPct" CenterValue="@metrics.TotalReservations.ToString()" CenterLabel="Reservas" Title="Actividad reservas" Color="#00695c" />
+                </div>
+                <div class="sa-chart-card">
+                    <MetricDonutChart Percent="@PartnersActivePct" CenterValue="@metrics.TotalPartners.ToString()" CenterLabel="Socios" Title="Red de socios" Color="#2e7d32" />
+                </div>
+                <div class="sa-chart-card">
+                    <MetricDonutChart Percent="10" CenterValue="@($"S/ {metrics.TotalCommissions:N0}")" CenterLabel="Comisión" Title="Comisión 10%" Color="#f9a825" />
+                </div>
+                <div class="sa-chart-card sa-chart-card-wide">
+                    <MetricBarChart Title="Socios por categoría" Items="CategoryBarItems" />
+                </div>
+            </div>
+
             <div class="metrics-grid sa-global-metrics">
                 <div class="metric-card"><span class="metric-value">@metrics.TotalUsers</span><span class="metric-label">Usuarios</span></div>
                 <div class="metric-card"><span class="metric-value">@metrics.TotalPartners</span><span class="metric-label">Socios totales</span></div>
@@ -47,47 +62,46 @@
         }
 
         <h2 class="sa-section-title">Administración por categoría</h2>
-        <p class="text-muted small mb-3">Cada rubro tiene su propio panel Super Admin (socios, crear perfiles, suplantar, ranking).</p>
+        <p class="text-muted small mb-3">Entra al panel de cada rubro: socios, crear perfiles, suplantar admin, ranking y suspender.</p>
 
         <div class="category-hub-grid">
             @foreach (var cat in SuperAdminCategories.All)
             {
                 var m = dashboard?.Categories.FirstOrDefault(c => c.Key == cat.Key);
-                <a class="category-hub-card" href="@cat.Route">
-                    <span class="category-hub-icon">@cat.Icon</span>
-                    <h3>@cat.Label</h3>
+                var isTours = cat.Key == SuperAdminCategories.Tours;
+                <article class="category-hub-card-v2 @(isTours ? "hub-tours-active" : "hub-coming-soon")">
+                    <div class="hub-card-head">
+                        <span class="category-hub-icon">@cat.Icon</span>
+                        <div>
+                            <h3>@cat.Label</h3>
+                            @if (!isTours)
+                            {
+                                <span class="hub-badge-soon">Socios listo · operación full próximo</span>
+                            }
+                            else
+                            {
+                                <span class="hub-badge-live">Operativo ahora</span>
+                            }
+                        </div>
+                    </div>
                     <p class="category-hub-desc">@cat.Description</p>
                     @if (m is not null)
                     {
-                        <ul class="category-hub-stats">
-                            <li><strong>@m.Partners</strong> socios</li>
-                            <li><strong>@m.ActiveItems</strong> activos</li>
-                            <li><strong>@m.Reservations</strong> reservas</li>
-                            <li class="hub-revenue">S/ @m.Revenue.ToString("N0")</li>
-                        </ul>
-                    }
-                    <span class="category-hub-cta">Panel Super Admin @cat.Label →</span>
-                </a>
-            }
-        </div>
-
-        @if (partners.Count > 0)
-        {
-            <section class="dash-panel mt-4">
-                <h3>Resumen rápido de socios (todas las categorías)</h3>
-                <div class="sa-mini-table">
-                    @foreach (var p in partners.Take(8))
-                    {
-                        <div class="sa-mini-row">
-                            <span>@CategoryIcon(p.PartnerType) @p.Name</span>
-                            <span class="text-muted">@p.OperatingDepartment</span>
-                            <span>S/ @p.Revenue.ToString("N0")</span>
+                        <div class="hub-mini-metrics">
+                            <div class="hub-mini-m"><strong>@m.Partners</strong><span>socios</span></div>
+                            <div class="hub-mini-m"><strong>@m.ActiveItems</strong><span>activos</span></div>
+                            <div class="hub-mini-m"><strong>@m.Reservations</strong><span>reservas</span></div>
+                            <div class="hub-mini-m hub-rev"><strong>S/ @m.Revenue.ToString("N0")</strong></div>
                         </div>
                     }
-                </div>
-                <p class="small text-muted mt-2">Entra a una categoría arriba para administración completa.</p>
-            </section>
-        }
+                    <div class="hub-card-actions">
+                        <button type="button" class="btn btn-primary btn-sm" @onclick='() => GoPanel(cat, "partners")'>Administrar</button>
+                        <button type="button" class="btn btn-outline-primary btn-sm" @onclick='() => GoPanel(cat, "create")'>+ Socio</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" @onclick='() => GoPanel(cat, "ranking")'>Ranking</button>
+                    </div>
+                </article>
+            }
+        </div>
     }
 </div>
 
@@ -97,6 +111,13 @@
     private List<PartnerListItemDto> partners = [];
     private bool loading = true;
     private string? apiWarning;
+
+    private double ReservationsPct => metrics is null || metrics.TotalTours == 0 ? 0 : Math.Min(100, metrics.TotalReservations * 10.0);
+    private double PartnersActivePct => metrics is null || metrics.TotalUsers == 0 ? 0 : Math.Min(100, metrics.TotalPartners * 100.0 / Math.Max(metrics.TotalUsers, 1));
+
+    private List<MetricBarChart.BarItem> CategoryBarItems =>
+        dashboard?.Categories.Select(c => new MetricBarChart.BarItem(
+            c.Label, c.Icon, c.Partners, c.Partners.ToString(), BarColor(c.Key))).ToList() ?? [];
 
     protected override async Task OnInitializedAsync()
     {
@@ -108,6 +129,7 @@
     private async Task LoadAsync()
     {
         loading = true;
+        apiWarning = null;
         var d = await Api.GetSuperAdminDashboardAsync();
         if (d.Success && d.Data is not null) { dashboard = d.Data; metrics = d.Data.Global; }
         else
@@ -121,8 +143,14 @@
         loading = false;
     }
 
-    private static string CategoryIcon(int type) => type switch
+    private void GoPanel(SuperAdminCategory cat, string tab) =>
+        Nav.NavigateTo($"{cat.Route}?tab={tab}");
+
+    private static string BarColor(string key) => key switch
     {
-        1 => "🏨", 2 => "🍽️", 3 => "☕", _ => "🗺️"
+        "hoteles" => "#1565c0",
+        "restaurantes" => "#c62828",
+        "cafes-bar" => "#6d4c41",
+        _ => "#00695c"
     };
 }

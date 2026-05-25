@@ -1,0 +1,25 @@
+<div class="metric-bar-chart">
+    @if (!string.IsNullOrEmpty(Title))
+    {
+        <h4 class="metric-bar-title">@Title</h4>
+    }
+    @foreach (var item in Items)
+    {
+        var pct = MaxValue > 0 ? Math.Min(100, item.Value / MaxValue * 100) : 0;
+        <div class="metric-bar-row">
+            <span class="metric-bar-label">@item.Icon @item.Label</span>
+            <div class="metric-bar-track">
+                <div class="metric-bar-fill" style="width:@(pct.ToString("F0"))%; background:@item.Color"></div>
+            </div>
+            <span class="metric-bar-num">@item.Display</span>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public string Title { get; set; } = "";
+    [Parameter] public List<BarItem> Items { get; set; } = [];
+    private double MaxValue => Items.Count > 0 ? Items.Max(i => i.Value) : 1;
+
+    public record BarItem(string Label, string Icon, double Value, string Display, string Color = "#00695c");
+}

@@ -1,0 +1,20 @@
+<div class="metric-donut-wrap">
+    <div class="metric-donut" style="--pct:@((int)Math.Clamp(Percent, 0, 100)); --color:@Color">
+        <div class="metric-donut-hole">
+            <span class="metric-donut-value">@CenterValue</span>
+            <span class="metric-donut-label">@CenterLabel</span>
+        </div>
+    </div>
+    @if (!string.IsNullOrEmpty(Title))
+    {
+        <p class="metric-donut-title">@Title</p>
+    }
+</div>
+
+@code {
+    [Parameter] public double Percent { get; set; }
+    [Parameter] public string CenterValue { get; set; } = "";
+    [Parameter] public string CenterLabel { get; set; } = "";
+    [Parameter] public string Title { get; set; } = "";
+    [Parameter] public string Color { get; set; } = "#004d40";
+}

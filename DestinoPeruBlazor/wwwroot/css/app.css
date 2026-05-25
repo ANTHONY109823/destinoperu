@@ -539,7 +539,7 @@ a:hover { color: var(--dp-primary-light); }
 }
 
 .metric-value { display: block; font-size: 1.75rem; font-weight: 800; color: var(--dp-primary); }
-.metric-label { font-size: 0.85rem; color: var(--dp-muted); }
+.metric-label { font-size: 0.85rem; color: var(--dp-muted); white-space: normal; line-height: 1.2; }
 .metric-highlight .metric-value { color: var(--dp-offer-dark); }
 
 .dashboard-title { color: var(--dp-primary); }
@@ -1128,6 +1128,77 @@ a:hover { color: var(--dp-primary-light); }
 .category-hub-stats li { margin-bottom: 0.15rem; }
 .hub-revenue { color: var(--dp-primary); font-weight: 700; }
 .category-hub-cta { font-size: 0.8rem; color: var(--dp-primary); font-weight: 600; }
+
+/* Super Admin — gráficos y hub v2 */
+.sa-charts-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+.sa-chart-card {
+    background: #fff;
+    border: 1px solid #e8ece9;
+    border-radius: 16px;
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 140px;
+}
+.sa-chart-card-wide { grid-column: span 2; }
+@media (max-width: 720px) { .sa-chart-card-wide { grid-column: span 1; } }
+
+.metric-donut-wrap { text-align: center; }
+.metric-donut {
+    width: 100px; height: 100px; border-radius: 50%;
+    background: conic-gradient(var(--color) calc(var(--pct) * 1%), #e8ece9 0);
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto;
+}
+.metric-donut-hole {
+    width: 68px; height: 68px; border-radius: 50%;
+    background: #fff;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    line-height: 1.1;
+}
+.metric-donut-value { font-size: 0.95rem; font-weight: 700; color: var(--dp-primary); }
+.metric-donut-label { font-size: 0.65rem; color: #888; }
+.metric-donut-title { font-size: 0.8rem; color: #666; margin: 0.5rem 0 0; }
+
+.metric-bar-chart { width: 100%; }
+.metric-bar-title { font-size: 0.9rem; color: var(--dp-primary); margin: 0 0 0.65rem; }
+.metric-bar-row { display: grid; grid-template-columns: 1fr 2fr auto; gap: 0.5rem; align-items: center; margin-bottom: 0.45rem; font-size: 0.82rem; }
+.metric-bar-track { height: 8px; background: #e8ece9; border-radius: 4px; overflow: hidden; }
+.metric-bar-fill { height: 100%; border-radius: 4px; transition: width 0.3s; }
+.metric-bar-num { font-weight: 600; color: var(--dp-primary); min-width: 2rem; text-align: right; }
+
+.category-hub-card-v2 {
+    background: #fff;
+    border: 2px solid #e8ece9;
+    border-radius: 16px;
+    padding: 1.15rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.category-hub-card-v2.hub-tours-active { border-color: var(--dp-primary); box-shadow: 0 6px 18px rgba(0,77,64,0.08); }
+.hub-card-head { display: flex; gap: 0.65rem; align-items: flex-start; }
+.hub-card-head h3 { margin: 0; font-size: 1.1rem; color: var(--dp-primary); }
+.hub-badge-live { font-size: 0.7rem; background: #e8f5e9; color: #2e7d32; padding: 0.15rem 0.5rem; border-radius: 999px; }
+.hub-badge-soon { font-size: 0.7rem; background: #fff3e0; color: #e65100; padding: 0.15rem 0.5rem; border-radius: 999px; }
+.hub-mini-metrics {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.35rem;
+    font-size: 0.78rem;
+}
+.hub-mini-m { text-align: center; background: #f5f7f6; border-radius: 8px; padding: 0.35rem; }
+.hub-mini-m strong { display: block; font-size: 1rem; color: var(--dp-primary); }
+.hub-mini-m span { color: #888; font-size: 0.7rem; }
+.hub-card-actions { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: auto; }
+
 .sa-section-title { font-size: 1.2rem; color: var(--dp-primary); margin: 1.5rem 0 0.25rem; }
 .sa-features-grid {
     display: grid;
@@ -1302,6 +1373,59 @@ a:hover { color: var(--dp-primary-light); }
 .ops-add-tour-box { margin-bottom: 1rem; }
 .ops-action-btn { border: none; text-align: left; cursor: pointer; width: 100%; }
 .ops-action-btn.active { border-color: var(--dp-primary); background: #e8f5e9; }
+
+.ops-metrics-strip {
+    display: flex; flex-wrap: wrap; gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+.ops-metric-pill {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 999px;
+    padding: 0.35rem 0.85rem;
+    font-size: 0.82rem;
+}
+.ops-metric-pill.warn { border-color: #ffcc80; background: #fff8e1; }
+.ops-metric-pill.highlight { border-color: var(--dp-primary); background: #e8f5e9; }
+
+.ops-tour-compact-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 0.85rem;
+}
+.ops-tour-compact {
+    background: #fff;
+    border: 1px solid #e8ece9;
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+.ops-tour-compact-photo {
+    height: 100px;
+    background-size: cover;
+    background-position: center;
+    position: relative;
+}
+.ops-photo-change-sm {
+    position: absolute; bottom: 4px; right: 4px;
+    background: rgba(0,0,0,0.6); color: #fff;
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.7rem; cursor: pointer;
+}
+.ops-tour-compact-body { padding: 0.65rem 0.75rem 0.75rem; flex: 1; display: flex; flex-direction: column; }
+.ops-tour-compact-body h6 { margin: 0; font-size: 0.88rem; color: var(--dp-primary); line-height: 1.2; }
+.ops-tour-meta { font-size: 0.72rem; color: #888; margin: 0.15rem 0 0.4rem; }
+.ops-seat-stats { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.35rem; }
+.ops-seat-stat { font-size: 0.68rem; padding: 0.2rem 0.4rem; border-radius: 6px; background: #f5f5f5; }
+.ops-seat-stat.sold { background: #ffebee; }
+.ops-seat-stat.avail { background: #e8f5e9; }
+.ops-seat-stat.total { background: #e3f2fd; }
+.inventory-bar-sm { height: 4px; margin-bottom: 0.4rem; }
+.ops-seat-edit label { display: block; margin-top: 0.25rem; color: #888; }
+.ops-seat-row { display: flex; gap: 0.25rem; align-items: center; }
+.ops-seat-row .form-control { flex: 1; min-width: 0; }
 
 .impersonation-banner {
     background: #fff8e1;

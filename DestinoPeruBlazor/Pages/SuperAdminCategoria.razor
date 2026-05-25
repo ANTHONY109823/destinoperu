@@ -149,6 +149,15 @@
             newAgency.PartnerType = _category.PartnerType;
             _catMetrics = null;
         }
+        mainTab = ParseTabFromUri(Nav.Uri);
+    }
+
+    private static string ParseTabFromUri(string uri)
+    {
+        if (uri.Contains("tab=create", StringComparison.OrdinalIgnoreCase)) return "create";
+        if (uri.Contains("tab=ranking", StringComparison.OrdinalIgnoreCase)) return "ranking";
+        if (uri.Contains("tab=config", StringComparison.OrdinalIgnoreCase)) return "config";
+        return "partners";
     }
 
     private async Task LoadAsync()

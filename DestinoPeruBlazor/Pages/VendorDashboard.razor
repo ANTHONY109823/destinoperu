@@ -64,9 +64,11 @@
         }
         else
         {
-            <AdminOperationsPanel Tours="agencyTours"
+            <AdminOperationsPanel Dashboard="dashboard"
+                                  Tours="agencyTours"
                                   PendingReservations="PendingReservations"
                                   CapacityEdits="capacityEdits"
+                                  TotalSeatEdits="totalSeatEdits"
                                   CanManageTours="false"
                                   OnApprove="Approve"
                                   OnToursChanged="ReloadTours" />
@@ -80,6 +82,7 @@
     private List<ReservationDto> reservations = [];
     private List<AgencyTourListItemDto> agencyTours = [];
     private Dictionary<int, int> capacityEdits = new();
+    private Dictionary<int, int> totalSeatEdits = new();
     private VendorSalesDto? mySales;
     private string tab = "payments";
     private bool loading = true;
@@ -110,6 +113,7 @@
         {
             agencyTours = tr.Data;
             capacityEdits = agencyTours.ToDictionary(t => t.Id, t => t.AvailableCapacity);
+            totalSeatEdits = agencyTours.ToDictionary(t => t.Id, t => t.Capacity);
         }
 
         loading = false;
@@ -122,6 +126,7 @@
         {
             agencyTours = tr.Data;
             capacityEdits = agencyTours.ToDictionary(t => t.Id, t => t.AvailableCapacity);
+            totalSeatEdits = agencyTours.ToDictionary(t => t.Id, t => t.Capacity);
         }
         var r = await Api.GetAgencyReservationsAsync();
         if (r.Success && r.Data is not null)

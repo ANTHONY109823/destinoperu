@@ -143,9 +143,11 @@
         }
         else if (tab == "ops")
         {
-            <AdminOperationsPanel Tours="agencyTours"
+            <AdminOperationsPanel Dashboard="dashboard"
+                                  Tours="agencyTours"
                                   PendingReservations="PendingReservations"
                                   CapacityEdits="capacityEdits"
+                                  TotalSeatEdits="totalSeatEdits"
                                   CanManageTours="@(Auth.Role == "Admin")"
                                   OnApprove="Approve"
                                   OnToursChanged="Load" />
@@ -177,6 +179,7 @@
     private UpdateAgencyRequest profileForm = new();
     private List<AgencyTourListItemDto> agencyTours = [];
     private Dictionary<int, int> capacityEdits = new();
+    private Dictionary<int, int> totalSeatEdits = new();
     private string tab = "team";
     private bool loading = true;
     private string? error;
@@ -214,6 +217,7 @@
         {
             agencyTours = tr.Data;
             capacityEdits = agencyTours.ToDictionary(t => t.Id, t => t.AvailableCapacity);
+            totalSeatEdits = agencyTours.ToDictionary(t => t.Id, t => t.Capacity);
         }
 
         var d = await Api.GetAgencyDashboardAsync();
