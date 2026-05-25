@@ -37,17 +37,18 @@
             <div class="alert alert-warning mt-3">@apiWarning</div>
         }
 
-        <SuperAdminCategoryPanel Category="_category"
+        <SuperAdminCategoryPanel @key="_category.Key"
+                               Category="_category"
                                CategoryMetrics="_catMetrics"
                                Partners="FilteredPartners"
                                RankingRows="CategoryRanking"
-                               Tab="mainTab"
-                               TabChanged="SetTab"
-                               OnImpersonate="ImpersonateUser"
-                               OnShowStaff="ShowStaff"
-                               OnEdit="EditPartner"
-                               OnSuspend="Suspend"
-                               OnReactivate="Reactivate">
+                               @bind-Tab="mainTab"
+                               @bind-Tab:after="SyncTabToUrl"
+                               OnImpersonate="@ImpersonateUser"
+                               OnShowStaff="@ShowStaff"
+                               OnEdit="@EditPartner"
+                               OnSuspend="@Suspend"
+                               OnReactivate="@Reactivate">
             <CreateForm>
                 <div class="admin-form-grid">
                     <input class="form-control" placeholder="Nombre comercial *" @bind="newAgency.AgencyName" />
@@ -130,6 +131,8 @@
         Nav.LocationChanged += OnLocationChanged;
         if (Auth.Role != "SuperAdmin") { loading = false; return; }
         ResolveCategory();
+        if (string.IsNullOrEmpty(mainTab) || mainTab == "mainTab")
+            mainTab = "partners";
         await LoadAsync();
     }
 
@@ -155,8 +158,11 @@
             newAgency.PartnerType = _category.PartnerType;
             _catMetrics = null;
         }
-        mainTab = ParseTabFromUri(Nav.Uri);
+        mainTab = NormalizeTabId(ParseTabFromUri(Nav.Uri));
     }
+
+    private static string NormalizeTabId(string tab) =>
+        tab is "ranking" or "create" or "config" or "partners" ? tab : "partners";
 
     private static string ParseTabFromUri(string uri)
     {
@@ -166,11 +172,10 @@
         return "partners";
     }
 
-    private void SetTab(string tab)
+    private void SyncTabToUrl()
     {
-        mainTab = tab;
         if (_category is not null)
-            Nav.NavigateTo($"{_category.Route}?tab={tab}");
+            Nav.NavigateTo($"{_category.Route}?tab={mainTab}", replace: true);
     }
 
     private async Task LoadAsync()
@@ -193,18 +198,22 @@
 
     private async Task ShowStaff(PartnerListItemDto p)
     {
+        mainTab = "partners";
         staffPartner = p;
         staffLoading = true;
         staffList = [];
         var r = await Api.GetPartnerStaffAsync(p.Id);
         if (r.Success && r.Data is not null) staffList = r.Data;
         staffLoading = false;
+        StateHasChanged();
     }
 
     private void EditPartner(PartnerListItemDto p)
     {
+        mainTab = "partners";
         editPartner = p;
         editForm = new UpdateAgencyRequest { Name = p.Name, RUC = p.RUC, OperatingDepartment = p.OperatingDepartment };
+        StateHasChanged();
     }
 
     private async Task SaveEdit()
@@ -224,7 +233,8 @@
         {
             Toast.ShowSuccess($"Perfil {_category?.Label} creado.");
             newAgency = new() { AdminPassword = "Admin2026!", PartnerType = _category?.PartnerType ?? 0 };
-            SetTab("partners");
+            mainTab = "partners";
+            SyncTabToUrl();
             await LoadAsync();
         }
         else Toast.ShowError(r.ErrorMessage ?? "Error");

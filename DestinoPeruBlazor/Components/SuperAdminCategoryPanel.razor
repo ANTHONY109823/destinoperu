@@ -13,7 +13,7 @@ else
             <h1 class="dashboard-title mb-1">Administración — @Category.Label</h1>
             <p class="text-muted mb-0">@Category.AdminHint</p>
         </div>
-        <a class="btn btn-outline-secondary btn-sm" href="/superadmin/inicio">← Dashboard Inicio</a>
+        <a class="btn btn-outline-secondary btn-sm" href="/superadmin/inicio">← Panel de control Inicio</a>
     </header>
 
     @if (CategoryMetrics is not null)
@@ -27,20 +27,20 @@ else
         </div>
     }
 
-    <div class="panel-tabs sa-tabs">
-        <button type="button" class="panel-tab @(Tab == "partners" ? "active" : "")" @onclick='() => OnTabClick("partners")'>Socios (@Partners.Count())</button>
-        <button type="button" class="panel-tab @(Tab == "ranking" ? "active" : "")" @onclick='() => OnTabClick("ranking")'>Ranking</button>
-        <button type="button" class="panel-tab @(Tab == "create" ? "active" : "")" @onclick='() => OnTabClick("create")'>+ Nuevo @Category.Label</button>
-        <button type="button" class="panel-tab @(Tab == "config" ? "active" : "")" @onclick='() => OnTabClick("config")'>Config rubro</button>
+    <div class="panel-tabs sa-tabs" role="tablist">
+        <button type="button" role="tab" class="panel-tab @(ActiveTab == "partners" ? "active" : "")" @onclick='() => SelectTabAsync("partners")'>Socios (@Partners.Count())</button>
+        <button type="button" role="tab" class="panel-tab @(ActiveTab == "ranking" ? "active" : "")" @onclick='() => SelectTabAsync("ranking")'>Ranking</button>
+        <button type="button" role="tab" class="panel-tab @(ActiveTab == "create" ? "active" : "")" @onclick='() => SelectTabAsync("create")'>+ Nuevo @Category.Label</button>
+        <button type="button" role="tab" class="panel-tab @(ActiveTab == "config" ? "active" : "")" @onclick='() => SelectTabAsync("config")'>Configuración rubro</button>
     </div>
 
-    @if (Tab == "partners")
+    @if (ActiveTab == "partners")
     {
         @if (!Partners.Any())
         {
             <div class="dash-panel text-center py-4">
                 <p class="text-muted">No hay socios de @Category.Label registrados.</p>
-                <button type="button" class="btn btn-primary" @onclick='() => OnTabClick("create")'>Crear primer perfil</button>
+                <button type="button" class="btn btn-primary" @onclick='() => SelectTabAsync("create")'>Crear primer perfil / agencia</button>
             </div>
         }
         else
@@ -81,35 +81,35 @@ else
         }
         @ChildContent
     }
-    else if (Tab == "ranking")
+    else if (ActiveTab == "ranking")
     {
         <div class="partner-table-wrap mt-2">
             @if (!RankingRows.Any()) { <p class="text-muted">Sin ranking en @Category.Label.</p> }
             else
             {
                 <table class="partner-table">
-                    <thead><tr><th>#</th><th>Socio</th><th>Recaudado</th><th>Reservas</th></tr></thead>
+                    <thead><tr><th>#</th><th>Socio</th><th>Recaudado</th><th>Reservas</th><th>Publicaciones</th></tr></thead>
                     <tbody>
                         @{ var n = 0; }
                         @foreach (var row in RankingRows)
                         {
                             n++;
-                            <tr><td>@n</td><td>@row.Name</td><td>S/ @row.Revenue.ToString("N0")</td><td>@row.Reservations</td></tr>
+                            <tr><td>@n</td><td>@row.Name</td><td>S/ @row.Revenue.ToString("N0")</td><td>@row.Reservations</td><td>@row.TourCount</td></tr>
                         }
                     </tbody>
                 </table>
             }
         </div>
     }
-    else if (Tab == "create")
+    else if (ActiveTab == "create")
     {
         <section class="dash-panel create-profile-panel">
-            <h3>Crear perfil — @Category.Label</h3>
-            <p class="text-muted small">Solo socios de tipo @Category.Label (PartnerType @Category.PartnerType).</p>
+            <h3>Crear agencia / socio — @Category.Label</h3>
+            <p class="text-muted small">Registra un nuevo perfil de @Category.Label con su administrador (máx. 5 vendedores por socio).</p>
             @CreateForm
         </section>
     }
-    else
+    else if (ActiveTab == "config")
     {
         <section class="dash-panel">
             <h3>Configuración — @Category.Label</h3>
@@ -127,20 +127,33 @@ else
     [Parameter] public IEnumerable<PartnerListItemDto> Partners { get; set; } = [];
     [Parameter] public IEnumerable<AgencyRankingDto> RankingRows { get; set; } = [];
     [Parameter] public string Tab { get; set; } = "partners";
+    [Parameter] public EventCallback<string> TabChanged { get; set; }
     [Parameter] public RenderFragment? CreateForm { get; set; }
     [Parameter] public RenderFragment? ChildContent { get; set; }
-    [Parameter] public EventCallback<string> TabChanged { get; set; }
-
     [Parameter] public EventCallback<int> OnImpersonate { get; set; }
     [Parameter] public EventCallback<PartnerListItemDto> OnShowStaff { get; set; }
     [Parameter] public EventCallback<PartnerListItemDto> OnEdit { get; set; }
     [Parameter] public EventCallback<PartnerListItemDto> OnSuspend { get; set; }
     [Parameter] public EventCallback<PartnerListItemDto> OnReactivate { get; set; }
 
-    private void OnTabClick(string tab) => TabChanged.InvokeAsync(tab);
-    private void ClickImpersonate(int userId) => OnImpersonate.InvokeAsync(userId);
-    private void ClickStaff(PartnerListItemDto p) => OnShowStaff.InvokeAsync(p);
-    private void ClickEdit(PartnerListItemDto p) => OnEdit.InvokeAsync(p);
-    private void ClickSuspend(PartnerListItemDto p) => OnSuspend.InvokeAsync(p);
-    private void ClickReactivate(PartnerListItemDto p) => OnReactivate.InvokeAsync(p);
+    private string ActiveTab => NormalizeTab(Tab);
+
+    private static string NormalizeTab(string? tab) => tab switch
+    {
+        "ranking" or "create" or "config" or "partners" => tab,
+        _ => "partners"
+    };
+
+    private async Task SelectTabAsync(string tab)
+    {
+        tab = NormalizeTab(tab);
+        if (ActiveTab == tab) return;
+        await TabChanged.InvokeAsync(tab);
+    }
+
+    private async Task ClickImpersonate(int userId) => await OnImpersonate.InvokeAsync(userId);
+    private async Task ClickStaff(PartnerListItemDto p) => await OnShowStaff.InvokeAsync(p);
+    private async Task ClickEdit(PartnerListItemDto p) => await OnEdit.InvokeAsync(p);
+    private async Task ClickSuspend(PartnerListItemDto p) => await OnSuspend.InvokeAsync(p);
+    private async Task ClickReactivate(PartnerListItemDto p) => await OnReactivate.InvokeAsync(p);
 }
