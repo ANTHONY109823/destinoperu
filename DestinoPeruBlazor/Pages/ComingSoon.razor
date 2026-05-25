@@ -1,6 +1,6 @@
 @page "/hoteles"
 @page "/restaurantes"
-@page "/vida-nocturna"
+@page "/cafes-bar"
 @inject NavigationManager Nav
 
 <PageTitle>@Content.Title - DestinoPerú</PageTitle>
@@ -14,7 +14,7 @@
         <p class="coming-soon-lead">@Content.Lead</p>
         <p class="coming-soon-invite">@Content.Invite</p>
         <div class="coming-soon-actions">
-            <a class="btn btn-primary" href="register">Registrar mi negocio</a>
+            <a class="btn btn-primary" href="/register">Registrar mi negocio</a>
             <a class="btn btn-outline-primary" href="/">Explorar tours</a>
         </div>
     </section>
@@ -22,7 +22,7 @@
 
 @code {
     private CategoryContent Content => Nav.Uri.Contains("restaurantes", StringComparison.OrdinalIgnoreCase) ? Restaurant
-        : Nav.Uri.Contains("vida-nocturna", StringComparison.OrdinalIgnoreCase) ? Nightlife
+        : Nav.Uri.Contains("cafes-bar", StringComparison.OrdinalIgnoreCase) ? CafesBar
         : Hotel;
 
     private static readonly CategoryContent Hotel = new(
@@ -35,10 +35,10 @@
         "Pronto: experiencias gastronómicas y restaurantes destacados.",
         "¿Tienes un restaurante? Únete a nuestra red de partners verificados.");
 
-    private static readonly CategoryContent Nightlife = new(
-        "Vida Nocturna", "🌙",
-        "Pronto: bares, discotecas y planes nocturnos en las principales ciudades.",
-        "¿Ofreces vida nocturna? Contáctanos y crece con DestinoPerú.");
+    private static readonly CategoryContent CafesBar = new(
+        "Cafés / Bar", "☕",
+        "Pronto: cafés, bares y espacios para disfrutar en las principales ciudades.",
+        "¿Tienes un café o bar? Súmate a DestinoPerú y llega a más viajeros.");
 
     private record CategoryContent(string Title, string Icon, string Lead, string Invite);
 }

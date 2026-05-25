@@ -35,6 +35,9 @@ public class AuthStateService
         catch { /* sin localStorage */ }
     }
 
+    public int? PartnerId { get; private set; }
+    public bool Impersonating { get; private set; }
+
     public async Task SetAuthAsync(AuthResponse auth)
     {
         Token = auth.Token;
@@ -42,6 +45,8 @@ public class AuthStateService
         Email = auth.Email;
         Role = auth.Role;
         UserId = auth.UserId;
+        PartnerId = auth.PartnerId;
+        Impersonating = auth.Impersonating;
         var json = JsonSerializer.Serialize(auth);
         await _js.InvokeVoidAsync("localStorage.setItem", StorageKey, json);
         Notify();
@@ -54,6 +59,8 @@ public class AuthStateService
         Email = auth.Email;
         Role = auth.Role;
         UserId = auth.UserId;
+        PartnerId = auth.PartnerId;
+        Impersonating = auth.Impersonating;
         Notify();
     }
 
@@ -61,6 +68,8 @@ public class AuthStateService
     {
         Token = Name = Email = Role = null;
         UserId = 0;
+        PartnerId = null;
+        Impersonating = false;
         try { await _js.InvokeVoidAsync("localStorage.removeItem", StorageKey); } catch { }
         Notify();
     }
@@ -148,17 +157,100 @@ public class ApiService
         catch (Exception ex) { return Fail<string>("Error de subida.", ex); }
     }
 
-    public async Task<ApiResult<AdminMetricsDto>> GetAdminMetricsAsync()
+    public async Task<ApiResult<AdminMetricsDto>> GetAdminMetricsAsync() =>
+        await GetJsonAsync<AdminMetricsDto>($"{_baseUrl}/admin/metrics", "Sin acceso admin.");
+
+    public async Task<ApiResult<SuperAdminMetricsDto>> GetSuperAdminMetricsAsync() =>
+        await GetJsonAsync<SuperAdminMetricsDto>($"{_baseUrl}/superadmin/metrics", "Sin acceso Super Admin.");
+
+    public async Task<ApiResult<List<PartnerListItemDto>>> GetSuperAdminPartnersAsync() =>
+        await GetJsonAsync<List<PartnerListItemDto>>($"{_baseUrl}/superadmin/partners", "No se pudieron cargar agencias.");
+
+    public async Task<ApiResult<ApiResponse<object>>> CreateAgencyAsync(CreateAgencyRequest request)
     {
         try
         {
             PrepareRequest();
-            var response = await _http.GetAsync($"{_baseUrl}/admin/metrics");
-            if (!response.IsSuccessStatusCode) return Fail<AdminMetricsDto>("Sin acceso admin.");
-            var m = await response.Content.ReadFromJsonAsync<AdminMetricsDto>(JsonOptions);
-            return m is not null ? ApiResult<AdminMetricsDto>.Ok(m) : Fail<AdminMetricsDto>("Sin datos");
+            var response = await _http.PostAsJsonAsync($"{_baseUrl}/superadmin/partners", request);
+            var result = await response.Content.ReadFromJsonAsync<ApiResponse<object>>(JsonOptions);
+            if (response.IsSuccessStatusCode && result?.Success == true)
+                return ApiResult<ApiResponse<object>>.Ok(result);
+            return Fail<ApiResponse<object>>(result?.Message ?? "No se pudo crear la agencia.");
         }
-        catch (Exception ex) { return Fail<AdminMetricsDto>("Error admin.", ex); }
+        catch (Exception ex) { return Fail<ApiResponse<object>>("Error al crear agencia.", ex); }
+    }
+
+    public async Task<ApiResult<AuthResponse>> ImpersonateAsync(int userId)
+    {
+        try
+        {
+            PrepareRequest();
+            var response = await _http.PostAsync($"{_baseUrl}/superadmin/impersonate/{userId}", null);
+            var result = await response.Content.ReadFromJsonAsync<ApiResponse<AuthResponse>>(JsonOptions);
+            if (result?.Success == true && result.Data is not null)
+                return ApiResult<AuthResponse>.Ok(result.Data);
+            return Fail<AuthResponse>(result?.Message ?? "No se pudo suplantar.");
+        }
+        catch (Exception ex) { return Fail<AuthResponse>("Error de suplantación.", ex); }
+    }
+
+    public async Task<ApiResult<AgencyDashboardDto>> GetAgencyDashboardAsync() =>
+        await GetJsonAsync<AgencyDashboardDto>($"{_baseUrl}/agency/dashboard", "Sin acceso a panel de agencia.");
+
+    public async Task<ApiResult<List<ReservationDto>>> GetAgencyReservationsAsync() =>
+        await GetJsonAsync<List<ReservationDto>>($"{_baseUrl}/agency/reservations", "No se pudieron cargar reservas.");
+
+    public async Task<ApiResult<bool>> SetReservationStatusAsync(int id, string status)
+    {
+        try
+        {
+            PrepareRequest();
+            var response = await _http.PutAsync($"{_baseUrl}/agency/reservations/{id}/status?status={Uri.EscapeDataString(status)}", null);
+            if (response.IsSuccessStatusCode) return ApiResult<bool>.Ok(true);
+            return Fail<bool>("No se pudo actualizar la reserva.");
+        }
+        catch (Exception ex) { return Fail<bool>("Error de reserva.", ex); }
+    }
+
+    public async Task<ApiResult<VendorSalesDto>> CreateVendorAsync(CreateVendorRequest request)
+    {
+        try
+        {
+            PrepareRequest();
+            var response = await _http.PostAsJsonAsync($"{_baseUrl}/agency/vendors", request);
+            var result = await response.Content.ReadFromJsonAsync<ApiResponse<VendorSalesDto>>(JsonOptions);
+            if (result?.Success == true && result.Data is not null)
+                return ApiResult<VendorSalesDto>.Ok(result.Data);
+            return Fail<VendorSalesDto>(result?.Message ?? "No se pudo crear vendedor.");
+        }
+        catch (Exception ex) { return Fail<VendorSalesDto>("Error al crear vendedor.", ex); }
+    }
+
+    public async Task<ApiResult<TourDto>> CreateAgencyTourAsync(CreateTourRequest request)
+    {
+        try
+        {
+            PrepareRequest();
+            var response = await _http.PostAsJsonAsync($"{_baseUrl}/agency/tours", request);
+            var result = await response.Content.ReadFromJsonAsync<ApiResponse<TourDto>>(JsonOptions);
+            if (result?.Success == true && result.Data is not null)
+                return ApiResult<TourDto>.Ok(result.Data);
+            return Fail<TourDto>(result?.Message ?? "No se pudo crear el tour.");
+        }
+        catch (Exception ex) { return Fail<TourDto>("Error al crear tour.", ex); }
+    }
+
+    private async Task<ApiResult<T>> GetJsonAsync<T>(string url, string failMessage)
+    {
+        try
+        {
+            PrepareRequest();
+            var response = await _http.GetAsync(url);
+            if (!response.IsSuccessStatusCode) return Fail<T>(failMessage);
+            var data = await response.Content.ReadFromJsonAsync<T>(JsonOptions);
+            return data is not null ? ApiResult<T>.Ok(data) : Fail<T>("Sin datos");
+        }
+        catch (Exception ex) { return Fail<T>(failMessage, ex); }
     }
 
     public async Task<ApiResult<PaymentDto>> SubmitVoucherAsync(SubmitVoucherRequest request)

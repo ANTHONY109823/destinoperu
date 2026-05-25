@@ -4,7 +4,7 @@ namespace DestinoPeruAPI.Application.DTOs;
 
 public record RegisterRequest(string Name, string Email, string Password, string Role = "Cliente");
 public record LoginRequest(string Email, string Password);
-public record AuthResponse(string Token, string Name, string Email, string Role, int UserId);
+public record AuthResponse(string Token, string Name, string Email, string Role, int UserId, int? PartnerId = null, bool Impersonating = false);
 
 public record TourDto(
     int Id, int PartnerId, string PartnerName, string Slug, string Title, string Description,
@@ -24,9 +24,33 @@ public record CreateTourRequest(
 public record PartnerDto(
     int Id, int UserId, string UserName, string Name, string RUC, PartnerType PartnerType,
     string Status, string VerificationStatus, decimal CommissionRate, DateTime CreatedAt,
-    int DocumentCount = 0);
+    int DocumentCount = 0,
+    string? OperatingDepartment = null, string? LogoUrl = null,
+    string? ContactEmail = null, string? ContactPhone = null, int StaffCount = 0);
 
 public record CreatePartnerRequest(string Name, string RUC, PartnerType PartnerType = PartnerType.Agencia);
+
+public record CreateAgencyRequest(
+    string AgencyName, string RUC, string OperatingDepartment,
+    string AdminName, string AdminEmail, string AdminPassword,
+    string? LogoUrl = null, string? ContactEmail = null, string? ContactPhone = null);
+
+public record CreateVendorRequest(string DisplayName, string Email, string Password);
+
+public record SuperAdminMetricsDto(
+    int TotalUsers, int TotalPartners, int PendingPartners, int TotalTours,
+    int TotalReservations, decimal TotalRevenue, decimal TotalCommissions, int ActiveUsers);
+
+public record AgencyDashboardDto(
+    int PartnerId, string PartnerName, int TotalTours, int PendingReservations,
+    int ConfirmedReservations, decimal TotalRevenue, decimal AgencyCommissions,
+    IReadOnlyList<VendorSalesDto> VendorSales);
+
+public record VendorSalesDto(int UserId, string Name, int Reservations, decimal Revenue);
+
+public record PartnerListItemDto(
+    int Id, string Name, string RUC, string Status, string OperatingDepartment,
+    string AdminEmail, string AdminName, int AdminUserId, int StaffCount, decimal Revenue);
 public record UploadDocumentRequest(DocumentType DocumentType, string FileUrl);
 
 public record ReservationDto(

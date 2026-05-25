@@ -1,0 +1,95 @@
+@page "/vendedor"
+@using DestinoPeruBlazor.Models
+@using DestinoPeruBlazor.Services
+@inject ApiService Api
+@inject AuthStateService Auth
+@inject NavigationManager Nav
+@inject ToastService Toast
+
+<PageTitle>Panel Vendedor - DestinoPerú</PageTitle>
+
+<div class="container py-4 dashboard-page">
+    <BackToHome />
+
+    @if (!Auth.IsAuthenticated || Auth.Role != "Vendedor")
+    {
+        <div class="panel-access-denied alert alert-warning">
+            Acceso para vendedores de agencia.
+            <a class="btn btn-primary btn-sm ms-2" href="/login">Ingresar</a>
+        </div>
+    }
+    else if (loading)
+    {
+        <p class="text-muted">Cargando operaciones...</p>
+    }
+    else
+    {
+        <h1 class="dashboard-title">Operador de campo</h1>
+        <p class="text-muted">Hola, <strong>@Auth.Name</strong> — inventario, pagos y manifiesto</p>
+
+        <div class="dashboard-panels">
+            <section class="dash-panel">
+                <h3>Inventario en tiempo real</h3>
+                <p>Actualiza cupos cuando vendas por la calle para evitar sobreventa en la web.</p>
+                <p class="small text-muted">Usa la API de capacidad o coordina con tu administrador.</p>
+            </section>
+
+            <section class="dash-panel">
+                <h3>Validar pagos Yape / Plin</h3>
+                @foreach (var r in reservations.Where(x => x.Status == "Pending"))
+                {
+                    <div class="border rounded p-2 mb-2">
+                        <strong>@r.TourTitle</strong> — @r.UserName · S/ @r.Total.ToString("N2")
+                        <button class="btn btn-primary btn-sm ms-2" @onclick="() => Approve(r.Id)">Verificar y aprobar</button>
+                    </div>
+                }
+                @if (!reservations.Any(x => x.Status == "Pending"))
+                {
+                    <p class="text-muted">No hay reservas pendientes de pago.</p>
+                }
+            </section>
+
+            <section class="dash-panel">
+                <h3>Manifiesto de pasajeros</h3>
+                <p>Lista legal de DNIs y paraderos por tour. Genera el PDF desde reservas confirmadas.</p>
+                <ul class="small">
+                    @foreach (var r in reservations.Where(x => x.Status is "Confirmed" or "Paid"))
+                    {
+                        <li>@r.TourTitle — @r.TourDate.ToString("dd/MM/yyyy") · @r.Quantity pax</li>
+                    }
+                </ul>
+            </section>
+
+            <section class="dash-panel">
+                <h3>Checkout operativo</h3>
+                <p>QR Yape/Plin y carga de comprobante en <a href="/checkout">pantalla de pago</a>.</p>
+            </section>
+        </div>
+    }
+</div>
+
+@code {
+    private List<ReservationDto> reservations = [];
+    private bool loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Auth.InitializeAsync();
+        if (Auth.Role != "Vendedor") { loading = false; return; }
+        var r = await Api.GetAgencyReservationsAsync();
+        if (r.Success && r.Data is not null) reservations = r.Data;
+        loading = false;
+    }
+
+    private async Task Approve(int id)
+    {
+        var res = await Api.SetReservationStatusAsync(id, "Confirmed");
+        if (res.Success)
+        {
+            var list = await Api.GetAgencyReservationsAsync();
+            if (list.Success && list.Data is not null) reservations = list.Data;
+            Toast.ShowSuccess("Reserva aprobada.");
+        }
+        else Toast.ShowError(res.ErrorMessage ?? "Error");
+    }
+}

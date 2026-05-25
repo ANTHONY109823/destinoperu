@@ -13,6 +13,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<LoyaltyAccount> LoyaltyAccounts => Set<LoyaltyAccount>();
     public DbSet<PassengerManifest> PassengerManifests => Set<PassengerManifest>();
+    public DbSet<PartnerStaff> PartnerStaff => Set<PartnerStaff>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -82,6 +83,15 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(p => p.Amount).HasPrecision(10, 2);
             e.HasOne(p => p.Reservation).WithOne(r => r.Payment)
                 .HasForeignKey<Payment>(p => p.ReservationId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<PartnerStaff>(e =>
+        {
+            e.HasIndex(s => new { s.PartnerId, s.UserId }).IsUnique();
+            e.HasOne(s => s.Partner).WithMany(p => p.Staff)
+                .HasForeignKey(s => s.PartnerId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(s => s.User).WithMany()
+                .HasForeignKey(s => s.UserId).OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

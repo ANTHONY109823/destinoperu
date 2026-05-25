@@ -8,7 +8,7 @@
 
 <div class="container py-4 dashboard-page">
     <BackToHome />
-    @if (!Auth.IsAuthenticated || (Auth.Role != "Agencia" && Auth.Role != "Admin"))
+    @if (!Auth.IsAuthenticated || Auth.Role is not ("Agencia" or "Admin" or "Vendedor" or "SuperAdmin"))
     {
         <div class="alert alert-warning">Acceso para partners (Agencia).</div>
     }

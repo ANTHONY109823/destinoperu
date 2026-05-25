@@ -19,26 +19,39 @@
 
         <nav id="dp-nav-menu" class="dp-nav-links @(menuOpen ? "open" : "")">
             <NavLink class="dp-link" href="/" Match="NavLinkMatch.All" @onclick="CloseMenu">Tours</NavLink>
-            <NavLink class="dp-link" href="hoteles" @onclick="CloseMenu">Hoteles</NavLink>
-            <NavLink class="dp-link" href="restaurantes" @onclick="CloseMenu">Restaurantes</NavLink>
-            <NavLink class="dp-link" href="vida-nocturna" @onclick="CloseMenu">Vida Nocturna</NavLink>
+            <NavLink class="dp-link" href="/hoteles" @onclick="CloseMenu">Hoteles</NavLink>
+            <NavLink class="dp-link" href="/restaurantes" @onclick="CloseMenu">Restaurantes</NavLink>
+            <NavLink class="dp-link" href="/cafes-bar" @onclick="CloseMenu">Cafés / Bar</NavLink>
+
             @if (Auth.IsAuthenticated)
             {
-                <NavLink class="dp-link" href="mis-reservas" @onclick="CloseMenu">Mis reservas</NavLink>
-                @if (Auth.Role is "Agencia" or "Admin")
+                <NavLink class="dp-link" href="/mis-reservas" @onclick="CloseMenu">Mis reservas</NavLink>
+                @if (Auth.Role == "SuperAdmin")
                 {
-                    <NavLink class="dp-link" href="partner" @onclick="CloseMenu">Partner</NavLink>
+                    <NavLink class="dp-link" href="/superadmin" @onclick="CloseMenu">Super Admin</NavLink>
                 }
-                @if (Auth.Role == "Admin")
+                @if (Auth.Role is "Admin" or "SuperAdmin")
                 {
-                    <NavLink class="dp-link" href="admin" @onclick="CloseMenu">Admin</NavLink>
+                    <NavLink class="dp-link" href="/admin" @onclick="CloseMenu">Mi agencia</NavLink>
+                }
+                @if (Auth.Role == "Vendedor")
+                {
+                    <NavLink class="dp-link" href="/vendedor" @onclick="CloseMenu">Vendedor</NavLink>
+                }
+                @if (Auth.Role == "Agencia")
+                {
+                    <NavLink class="dp-link" href="/partner" @onclick="CloseMenu">Partner</NavLink>
                 }
             }
-            <NavLink class="dp-link" href="login" @onclick="CloseMenu">
-                @(Auth.IsAuthenticated ? "Mi cuenta" : "Ingresar")
-            </NavLink>
-            @if (Auth.IsAuthenticated)
+
+            @if (!Auth.IsAuthenticated)
             {
+                <NavLink class="dp-link" href="/login" @onclick="CloseMenu">Ingresar</NavLink>
+                <NavLink class="dp-link dp-link-register" href="/register" @onclick="CloseMenu">Registrarse</NavLink>
+            }
+            else
+            {
+                <NavLink class="dp-link" href="/login" @onclick="CloseMenu">Mi cuenta</NavLink>
                 <span class="dp-user">Hola, @Auth.Name</span>
                 <button type="button" class="btn btn-nav-outline btn-sm" @onclick="Logout">Salir</button>
             }

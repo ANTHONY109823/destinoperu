@@ -10,8 +10,13 @@ public static class DbInitializer
     private const string DemoEmail = "demo@destinoperu.com";
     private const int MinPresentationTours = 18;
 
+    private const string SuperAdminEmail = "superadmin@destinoperu.com";
+    private const string AgencyAdminEmail = "admin@destinoperu.com";
+    private const string SystemPassword = "Admin2026!";
+
     public static async Task SeedAsync(AppDbContext db, ILogger logger)
     {
+        await EnsureSystemAdminsAsync(db, logger);
         await EnsureDemoUserAsync(db, logger);
 
         var tourCount = await db.Tours.CountAsync();
@@ -38,6 +43,50 @@ public static class DbInitializer
             logger.LogInformation("Seed presentación: +{Tours} tours. Total partners: {Partners}.",
                 tours.Count, partners.Count);
         }
+    }
+
+    private static async Task EnsureSystemAdminsAsync(AppDbContext db, ILogger logger)
+    {
+        await UpsertUserAsync(db, SuperAdminEmail, "Super Admin DestinoPerú", "SuperAdmin", SystemPassword, logger);
+
+        var agencyAdmin = await UpsertUserAsync(db, AgencyAdminEmail, "Admin Agencia Demo", "Admin", SystemPassword, logger);
+        if (!await db.Partners.AnyAsync(p => p.UserId == agencyAdmin.Id))
+        {
+            db.Partners.Add(new Partner
+            {
+                UserId = agencyAdmin.Id,
+                Name = "Agencia Demo DestinoPerú",
+                RUC = "20999999991",
+                PartnerType = PartnerType.Agencia,
+                Status = "Approved",
+                VerificationStatus = "Verified",
+                OperatingDepartment = "Lima",
+                ContactEmail = AgencyAdminEmail,
+                CommissionRate = 0.10m,
+                CreatedAt = DateTime.UtcNow
+            });
+            await db.SaveChangesAsync();
+            logger.LogInformation("Partner demo vinculado a {Email}", AgencyAdminEmail);
+        }
+    }
+
+    private static async Task<User> UpsertUserAsync(AppDbContext db, string email, string name, string role, string password, ILogger logger)
+    {
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Email == email);
+        var hash = BCrypt.Net.BCrypt.HashPassword(password, 12);
+        if (user is null)
+        {
+            user = new User { Name = name, Email = email, Role = role, PasswordHash = hash, CreatedAt = DateTime.UtcNow };
+            db.Users.Add(user);
+            await db.SaveChangesAsync();
+            logger.LogInformation("Usuario sistema creado: {Email} ({Role})", email, role);
+            return user;
+        }
+        user.Name = name;
+        user.Role = role;
+        user.PasswordHash = hash;
+        await db.SaveChangesAsync();
+        return user;
     }
 
     private static async Task EnsureDemoUserAsync(AppDbContext db, ILogger logger)

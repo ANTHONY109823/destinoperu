@@ -6,23 +6,30 @@ using DestinoPeruAPI.Domain.Enums;
 
 namespace DestinoPeruAPI.Application.Services;
 
-public class AuthService(IUserRepository userRepository, IJwtService jwtService, ILoyaltyRepository loyaltyRepository)
+public class AuthService(
+    IUserRepository userRepository,
+    IJwtService jwtService,
+    ILoyaltyRepository loyaltyRepository,
+    IPartnerRepository partnerRepository)
 {
     public async Task<ApiResponse<AuthResponse>> RegisterAsync(RegisterRequest request)
     {
         if (await userRepository.ExistsEmailAsync(request.Email))
             return new ApiResponse<AuthResponse>(false, "El email ya está registrado.", null);
+
+        var role = string.Equals(request.Role, "Cliente", StringComparison.OrdinalIgnoreCase)
+            ? "Cliente" : "Cliente";
+
         var user = new User
         {
             Name = request.Name,
             Email = request.Email.ToLower().Trim(),
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password, 12),
-            Role = request.Role
+            Role = role
         };
         await userRepository.AddAsync(user);
         await loyaltyRepository.AddPointsAsync(user.Id, 0);
-        var token = jwtService.GenerateToken(user.Id, user.Email, user.Role, user.Name);
-        return new ApiResponse<AuthResponse>(true, "Registro exitoso.", new AuthResponse(token, user.Name, user.Email, user.Role, user.Id));
+        return await BuildAuthResponseAsync(user);
     }
 
     public async Task<ApiResponse<AuthResponse>> LoginAsync(LoginRequest request)
@@ -30,8 +37,30 @@ public class AuthService(IUserRepository userRepository, IJwtService jwtService,
         var user = await userRepository.GetByEmailAsync(request.Email.ToLower().Trim());
         if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
             return new ApiResponse<AuthResponse>(false, "Credenciales incorrectas.", null);
-        var token = jwtService.GenerateToken(user.Id, user.Email, user.Role, user.Name);
-        return new ApiResponse<AuthResponse>(true, "Login exitoso.", new AuthResponse(token, user.Name, user.Email, user.Role, user.Id));
+        return await BuildAuthResponseAsync(user);
+    }
+
+    private async Task<ApiResponse<AuthResponse>> BuildAuthResponseAsync(User user)
+    {
+        var partnerId = await ResolvePartnerIdAsync(user);
+        var token = jwtService.GenerateToken(user.Id, user.Email, user.Role, user.Name, partnerId);
+        return new ApiResponse<AuthResponse>(true, "Login exitoso.",
+            new AuthResponse(token, user.Name, user.Email, user.Role, user.Id, partnerId));
+    }
+
+    private async Task<int?> ResolvePartnerIdAsync(User user)
+    {
+        if (user.Role is "Admin" or "Agencia")
+        {
+            var p = await partnerRepository.GetByUserIdAsync(user.Id);
+            return p?.Id;
+        }
+        if (user.Role == "Vendedor")
+        {
+            var staff = await partnerRepository.GetStaffByUserIdAsync(user.Id);
+            return staff?.PartnerId;
+        }
+        return null;
     }
 }
 
@@ -86,10 +115,11 @@ public class TourService(
     {
         var tour = await tourCommand.GetByIdAsync(id);
         if (tour == null) return new ApiResponse<bool>(false, "Tour no encontrado.", false);
-        if (role != "Admin")
+        if (role != "SuperAdmin")
         {
             var partner = await partnerRepository.GetByUserIdAsync(userId);
-            if (partner == null || tour.PartnerId != partner.Id) return new ApiResponse<bool>(false, "Sin permiso.", false);
+            if (partner == null || tour.PartnerId != partner.Id)
+                return new ApiResponse<bool>(false, "Sin permiso.", false);
         }
         await tourCommand.DeleteAsync(id);
         return new ApiResponse<bool>(true, "Tour eliminado.", true);

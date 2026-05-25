@@ -37,7 +37,7 @@ public class ToursController(TourService tourService) : ControllerBase
         return r.Success ? Ok(r) : NotFound(r);
     }
 
-    [HttpPost][Authorize(Roles = "Agencia,Admin")]
+    [HttpPost][Authorize(Roles = "Agencia,Admin,SuperAdmin")]
     public async Task<IActionResult> Create([FromBody] CreateTourRequest request)
     {
         var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
@@ -45,7 +45,7 @@ public class ToursController(TourService tourService) : ControllerBase
         return r.Success ? Created("", r) : BadRequest(r);
     }
 
-    [HttpDelete("{id:int}")][Authorize(Roles = "Agencia,Admin")]
+    [HttpDelete("{id:int}")][Authorize(Roles = "Agencia,Admin,SuperAdmin")]
     public async Task<IActionResult> Delete(int id)
     {
         var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
@@ -60,7 +60,7 @@ public class PartnersController(PartnerService partnerService) : ControllerBase
 {
     private int UserId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
-    [HttpGet("pending")][Authorize(Roles = "Admin")]
+    [HttpGet("pending")][Authorize(Roles = "SuperAdmin")]
     public async Task<IActionResult> GetPending() => Ok(await partnerService.GetPendingAsync());
 
     [HttpPost][Authorize]
@@ -70,7 +70,7 @@ public class PartnersController(PartnerService partnerService) : ControllerBase
         return r.Success ? Created("", r) : BadRequest(r);
     }
 
-    [HttpPut("approve/{id:int}")][Authorize(Roles = "Admin")]
+    [HttpPut("approve/{id:int}")][Authorize(Roles = "SuperAdmin")]
     public async Task<IActionResult> Approve(int id)
     {
         var r = await partnerService.ApproveAsync(id);
@@ -84,7 +84,7 @@ public class PartnersController(PartnerService partnerService) : ControllerBase
         return r.Success ? Ok(r) : BadRequest(r);
     }
 
-    [HttpPut("documents/{id:int}/verify")][Authorize(Roles = "Admin")]
+    [HttpPut("documents/{id:int}/verify")][Authorize(Roles = "SuperAdmin")]
     public async Task<IActionResult> VerifyDocument(int id, [FromQuery] bool approved)
     {
         var admin = User.FindFirstValue(ClaimTypes.Name) ?? "Admin";
@@ -104,7 +104,7 @@ public class AgenciesController(PartnerService partnerService) : ControllerBase
         return r.Success ? Created("", r) : BadRequest(r);
     }
 
-    [HttpPut("approve/{id:int}")][Authorize(Roles = "Admin")]
+    [HttpPut("approve/{id:int}")][Authorize(Roles = "SuperAdmin")]
     public async Task<IActionResult> Approve(int id)
     {
         var r = await partnerService.ApproveAsync(id);
@@ -112,7 +112,7 @@ public class AgenciesController(PartnerService partnerService) : ControllerBase
     }
 }
 
-[ApiController][Route("api/admin")][Authorize(Roles = "Admin")]
+[ApiController][Route("api/admin")][Authorize(Roles = "SuperAdmin")]
 public class AdminController(PartnerService partnerService) : ControllerBase
 {
     [HttpGet("metrics")]
@@ -134,7 +134,7 @@ public class ReservationsController(ReservationService reservationService) : Con
     [HttpGet("user")]
     public async Task<IActionResult> GetByUser() => Ok(await reservationService.GetByUserAsync(UserId));
 
-    [HttpGet("partner/{partnerId:int}")][Authorize(Roles = "Agencia,Admin")]
+    [HttpGet("partner/{partnerId:int}")][Authorize(Roles = "Agencia,Admin,Vendedor,SuperAdmin")]
     public async Task<IActionResult> GetByPartner(int partnerId) =>
         Ok(await reservationService.GetByPartnerAsync(partnerId));
 

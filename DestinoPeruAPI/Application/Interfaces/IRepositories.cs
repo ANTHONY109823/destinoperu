@@ -22,6 +22,9 @@ public interface IPartnerRepository
     Task<PartnerDocument> AddDocumentAsync(PartnerDocument doc);
     Task<PartnerDocument?> GetDocumentAsync(int id);
     Task UpdateDocumentAsync(PartnerDocument doc);
+    Task<int> GetStaffCountAsync(int partnerId);
+    Task<PartnerStaff?> GetStaffByUserIdAsync(int userId);
+    Task<PartnerStaff> AddStaffAsync(PartnerStaff staff);
 }
 
 public interface ITourRepository
@@ -60,5 +63,5 @@ public interface IPaymentRepository
 
 public interface IJwtService
 {
-    string GenerateToken(int userId, string email, string role, string name);
+    string GenerateToken(int userId, string email, string role, string name, int? partnerId = null, bool impersonating = false);
 }

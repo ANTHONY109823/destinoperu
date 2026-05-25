@@ -17,8 +17,8 @@
         <h2>@(IsRegister ? "Crear cuenta" : "Iniciar sesión")</h2>
 
         <div class="auth-tabs">
-            <a class="@(!IsRegister ? "active" : "")" href="login">Ingresar</a>
-            <a class="@(IsRegister ? "active" : "")" href="register">Registrarse</a>
+            <NavLink class="auth-tab-link" href="/login" Match="NavLinkMatch.All">Ingresar</NavLink>
+            <NavLink class="auth-tab-link" href="/register">Registrarse</NavLink>
         </div>
 
         @if (!string.IsNullOrEmpty(successMessage))
@@ -30,7 +30,7 @@
             <div class="alert alert-danger">@message</div>
         }
 
-        @if (Auth.IsAuthenticated)
+        @if (Auth.IsAuthenticated && !IsRegister)
         {
             <div class="alert alert-success">
                 Sesión activa como <strong>@Auth.Name</strong> (@Auth.Role).
@@ -58,14 +58,11 @@
                     <label class="form-label">Confirmar contraseña</label>
                     <InputText type="password" class="form-control" @bind-Value="registerForm.ConfirmPassword" />
                 </div>
-                <button class="btn btn-primary w-100" disabled="@loading">@(loading ? "Registrando..." : "Crear cuenta")</button>
+                <button type="submit" class="btn btn-primary w-100" disabled="@loading">@(loading ? "Registrando..." : "Crear cuenta")</button>
             </EditForm>
         }
         else
         {
-            <p class="auth-demo-hint">
-                <strong>Cuenta de prueba:</strong> demo@destinoperu.com / Demo123!
-            </p>
             <EditForm Model="loginModel" OnValidSubmit="DoLogin">
                 <div class="mb-3">
                     <label class="form-label">Correo electrónico</label>
@@ -75,7 +72,7 @@
                     <label class="form-label">Contraseña</label>
                     <InputText type="password" class="form-control" @bind-Value="loginModel.Password" />
                 </div>
-                <button class="btn btn-primary w-100" disabled="@loading">@(loading ? "Ingresando..." : "Ingresar")</button>
+                <button type="submit" class="btn btn-primary w-100" disabled="@loading">@(loading ? "Ingresando..." : "Ingresar")</button>
             </EditForm>
         }
     </div>
@@ -88,7 +85,7 @@
     private string? message;
     private string? successMessage;
 
-    private bool IsRegister => Nav.Uri.Contains("/register", StringComparison.OrdinalIgnoreCase);
+    private bool IsRegister => Nav.ToBaseRelativePath(Nav.Uri).StartsWith("register", StringComparison.OrdinalIgnoreCase);
 
     protected override async Task OnInitializedAsync()
     {
@@ -99,13 +96,19 @@
 
     private async Task DoLogin()
     {
+        if (string.IsNullOrWhiteSpace(loginModel.Email) || string.IsNullOrWhiteSpace(loginModel.Password))
+        {
+            message = "Ingresa correo y contraseña.";
+            return;
+        }
+
         loading = true;
         message = null;
         var result = await Api.LoginAsync(loginModel);
         if (result.Success && result.Data is not null)
         {
             await Auth.SetAuthAsync(result.Data);
-            Nav.NavigateTo("/");
+            Nav.NavigateTo(RedirectForRole(result.Data.Role));
         }
         else
             message = result.ErrorMessage;
@@ -153,6 +156,15 @@
         message = null;
         successMessage = null;
     }
+
+    private static string RedirectForRole(string role) => role switch
+    {
+        "SuperAdmin" => "/superadmin",
+        "Admin" => "/admin",
+        "Vendedor" => "/vendedor",
+        "Agencia" => "/partner",
+        _ => "/"
+    };
 
     private class RegisterFormModel
     {

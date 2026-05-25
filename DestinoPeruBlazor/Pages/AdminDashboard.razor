@@ -4,29 +4,129 @@
 @inject ApiService Api
 @inject AuthStateService Auth
 @inject NavigationManager Nav
+@inject ToastService Toast
 
-<PageTitle>Panel Super Admin - Destino Peru</PageTitle>
+<PageTitle>Panel Admin Agencia - DestinoPerú</PageTitle>
 
 <div class="container py-4 dashboard-page">
     <BackToHome />
-    @if (!Auth.IsAuthenticated || Auth.Role != "Admin")
+
+    @if (Auth.Impersonating)
     {
-        <div class="alert alert-warning">Acceso solo para Super Admin.</div>
+        <div class="impersonation-banner">Modo soporte: actuando como <strong>@Auth.Name</strong> (@Auth.Role)</div>
     }
-    else if (loading) { <p>Cargando metricas...</p> }
-    else if (metrics is not null)
+
+    @if (!CanAccess)
     {
-        <h1 class="dashboard-title">Panel maestro</h1>
-        <p class="text-muted">Comision fija 10% · Crecimiento nacional</p>
-        <div class="metrics-grid">
-            <div class="metric-card"><span class="metric-value">@metrics.TotalPartners</span><span class="metric-label">Partners</span></div>
-            <div class="metric-card metric-warn"><span class="metric-value">@metrics.PendingPartners</span><span class="metric-label">Pendientes</span></div>
-            <div class="metric-card"><span class="metric-value">@metrics.TotalTours</span><span class="metric-label">Tours activos</span></div>
-            <div class="metric-card"><span class="metric-value">@metrics.TotalReservations</span><span class="metric-label">Reservas</span></div>
-            <div class="metric-card metric-highlight"><span class="metric-value">S/ @metrics.TotalCommissions.ToString("N0")</span><span class="metric-label">Comisiones</span></div>
-            <div class="metric-card"><span class="metric-value">@metrics.ActiveUsers</span><span class="metric-label">Usuarios</span></div>
+        <div class="panel-access-denied alert alert-warning">
+            Acceso solo para administradores de agencia.
+            <a class="btn btn-primary btn-sm ms-2" href="/login">Ingresar</a>
         </div>
-        <p class="mt-4 text-muted small">Aprueba partners y documentos desde la API o amplia este panel en la siguiente iteracion.</p>
+    }
+    else if (loading)
+    {
+        <p class="text-muted">Cargando panel de agencia...</p>
+    }
+    else if (dashboard is not null)
+    {
+        <h1 class="dashboard-title">@dashboard.PartnerName</h1>
+        <p class="text-muted">Administración operativa · Hasta 5 vendedores</p>
+
+        <div class="metrics-grid">
+            <div class="metric-card"><span class="metric-value">@dashboard.TotalTours</span><span class="metric-label">Tours activos</span></div>
+            <div class="metric-card metric-warn"><span class="metric-value">@dashboard.PendingReservations</span><span class="metric-label">Reservas pendientes</span></div>
+            <div class="metric-card"><span class="metric-value">@dashboard.ConfirmedReservations</span><span class="metric-label">Confirmadas</span></div>
+            <div class="metric-card metric-highlight"><span class="metric-value">S/ @dashboard.TotalRevenue.ToString("N0")</span><span class="metric-label">Recaudado</span></div>
+        </div>
+
+        <div class="panel-tabs">
+            <button type="button" class="panel-tab @(tab == "reservations" ? "active" : "")" @onclick='() => tab = "reservations"'>Reservas</button>
+            <button type="button" class="panel-tab @(tab == "team" ? "active" : "")" @onclick='() => tab = "team"'>Vendedores</button>
+            <button type="button" class="panel-tab @(tab == "tours" ? "active" : "")" @onclick='() => tab = "tours"'>Nuevo tour</button>
+            <button type="button" class="panel-tab @(tab == "brand" ? "active" : "")" @onclick='() => tab = "brand"'>Marca</button>
+        </div>
+
+        @if (tab == "reservations")
+        {
+            <div class="partner-table-wrap">
+                <table class="partner-table">
+                    <thead>
+                        <tr><th>Tour</th><th>Cliente</th><th>Total</th><th>Estado</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var r in reservations)
+                        {
+                            <tr>
+                                <td>@r.TourTitle</td>
+                                <td>@r.UserName</td>
+                                <td>S/ @r.Total.ToString("N2")</td>
+                                <td>@r.Status</td>
+                                <td>
+                                    @if (r.Status == "Pending")
+                                    {
+                                        <button class="btn btn-primary btn-sm" @onclick="() => Approve(r.Id)">Aprobar</button>
+                                        <button class="btn btn-outline-danger btn-sm" @onclick="() => Reject(r.Id)">Rechazar</button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else if (tab == "team")
+        {
+            <section class="dash-panel">
+                <h3>Ventas por vendedor</h3>
+                @if (dashboard.VendorSales.Count == 0)
+                {
+                    <p class="text-muted">Aún no hay vendedores. Crea hasta 5 perfiles.</p>
+                }
+                @foreach (var v in dashboard.VendorSales)
+                {
+                    <p><strong>@v.Name</strong> — @v.Reservations reservas · S/ @v.Revenue.ToString("N2")</p>
+                }
+                <hr />
+                <h4>Nuevo vendedor</h4>
+                <div class="admin-form-grid">
+                    <input class="form-control" placeholder="Nombre en operaciones" @bind="newVendor.DisplayName" />
+                    <input class="form-control" type="email" placeholder="Email" @bind="newVendor.Email" />
+                    <input class="form-control" type="password" placeholder="Contraseña" @bind="newVendor.Password" />
+                </div>
+                <button class="btn btn-primary" @onclick="CreateVendor">Crear vendedor</button>
+            </section>
+        }
+        else if (tab == "tours")
+        {
+            <section class="dash-panel">
+                <h3>Añadir tour (solo Admin de agencia)</h3>
+                <div class="admin-form-grid">
+                    <input class="form-control" placeholder="Título" @bind="newTour.Title" />
+                    <input class="form-control" placeholder="Ubicación" @bind="newTour.Location" />
+                    <input class="form-control" placeholder="Departamento" @bind="newTour.Department" />
+                    <select class="form-select" @bind="newTour.AdventureType">
+                        <option value="FullDay">Full Day</option>
+                        <option value="Trekking">Trekking</option>
+                        <option value="Cultural">Cultural</option>
+                        <option value="Gastronomico">Gastronómico</option>
+                        <option value="Aventura">Aventura</option>
+                    </select>
+                    <input type="number" class="form-control" placeholder="Precio S/" @bind="newTour.Price" />
+                    <input type="number" class="form-control" placeholder="Cupos" @bind="newTour.Capacity" />
+                    <input type="date" class="form-control" @bind="newTour.Date" />
+                </div>
+                <textarea class="form-control mb-2" rows="3" placeholder="Descripción" @bind="newTour.Description"></textarea>
+                <button class="btn btn-primary" @onclick="CreateTour">Publicar tour</button>
+            </section>
+        }
+        else
+        {
+            <section class="dash-panel">
+                <h3>Carrusel y perfil público</h3>
+                <p class="text-muted">Sube fotos y videos desde el panel partner o arrastra archivos en la zona de carga. El carrusel se muestra en la ficha de tu agencia.</p>
+                <a class="btn btn-outline-primary" href="/partner">Gestionar medios</a>
+            </section>
+        }
     }
     else
     {
@@ -35,17 +135,61 @@
 </div>
 
 @code {
-    private AdminMetricsDto? metrics;
+    private AgencyDashboardDto? dashboard;
+    private List<ReservationDto> reservations = [];
+    private CreateVendorRequest newVendor = new();
+    private CreateTourRequest newTour = new() { Date = DateTime.Today.AddDays(7), AdventureType = "FullDay", Capacity = 20 };
+    private string tab = "reservations";
     private bool loading = true;
     private string? error;
+
+    private bool CanAccess => Auth.IsAuthenticated && Auth.Role == "Admin";
 
     protected override async Task OnInitializedAsync()
     {
         await Auth.InitializeAsync();
-        if (Auth.Role != "Admin") { loading = false; return; }
-        var r = await Api.GetAdminMetricsAsync();
-        if (r.Success) metrics = r.Data;
-        else error = r.ErrorMessage;
+        if (!CanAccess) { loading = false; return; }
+        await Load();
+    }
+
+    private async Task Load()
+    {
+        loading = true;
+        var d = await Api.GetAgencyDashboardAsync();
+        if (d.Success) dashboard = d.Data;
+        else error = d.ErrorMessage;
+        var r = await Api.GetAgencyReservationsAsync();
+        if (r.Success && r.Data is not null) reservations = r.Data;
         loading = false;
+    }
+
+    private async Task Approve(int id)
+    {
+        var res = await Api.SetReservationStatusAsync(id, "Confirmed");
+        if (res.Success) await Load();
+        else Toast.ShowError(res.ErrorMessage ?? "Error");
+    }
+
+    private async Task Reject(int id)
+    {
+        var res = await Api.SetReservationStatusAsync(id, "Cancelled");
+        if (res.Success) await Load();
+        else Toast.ShowError(res.ErrorMessage ?? "Error");
+    }
+
+    private async Task CreateVendor()
+    {
+        var res = await Api.CreateVendorAsync(newVendor);
+        if (res.Success) { newVendor = new(); await Load(); Toast.ShowSuccess("Vendedor creado."); }
+        else Toast.ShowError(res.ErrorMessage ?? "Error");
+    }
+
+    private async Task CreateTour()
+    {
+        if (string.IsNullOrWhiteSpace(newTour.Description))
+            newTour.Description = newTour.Title;
+        var res = await Api.CreateAgencyTourAsync(newTour);
+        if (res.Success) Toast.ShowSuccess("Tour publicado.");
+        else Toast.ShowError(res.ErrorMessage ?? "Error");
     }
 }

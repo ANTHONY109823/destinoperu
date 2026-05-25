@@ -128,6 +128,8 @@ builder.Services.AddScoped<TourService>();
 builder.Services.AddScoped<PartnerService>();
 builder.Services.AddScoped<ReservationService>();
 builder.Services.AddScoped<PaymentService>();
+builder.Services.AddScoped<SuperAdminService>();
+builder.Services.AddScoped<AgencyAdminService>();
 
 builder.Services.AddScoped<IJwtService, JwtService>();
 

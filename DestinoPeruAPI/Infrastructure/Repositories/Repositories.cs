@@ -25,6 +25,19 @@ public class PartnerRepository(AppDbContext context) : IPartnerRepository
     public async Task<PartnerDocument> AddDocumentAsync(PartnerDocument doc) { await context.PartnerDocuments.AddAsync(doc); await context.SaveChangesAsync(); return doc; }
     public async Task<PartnerDocument?> GetDocumentAsync(int id) => await context.PartnerDocuments.FindAsync(id);
     public async Task UpdateDocumentAsync(PartnerDocument doc) { context.PartnerDocuments.Update(doc); await context.SaveChangesAsync(); }
+
+    public async Task<int> GetStaffCountAsync(int partnerId) =>
+        await context.PartnerStaff.CountAsync(s => s.PartnerId == partnerId);
+
+    public async Task<PartnerStaff?> GetStaffByUserIdAsync(int userId) =>
+        await context.PartnerStaff.Include(s => s.Partner).FirstOrDefaultAsync(s => s.UserId == userId);
+
+    public async Task<PartnerStaff> AddStaffAsync(PartnerStaff staff)
+    {
+        await context.PartnerStaff.AddAsync(staff);
+        await context.SaveChangesAsync();
+        return staff;
+    }
 }
 
 public class TourRepository(AppDbContext context) : ITourRepository

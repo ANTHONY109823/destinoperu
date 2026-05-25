@@ -23,6 +23,8 @@ public class AuthResponse
     public string Email { get; set; } = "";
     public string Role { get; set; } = "";
     public int UserId { get; set; }
+    public int? PartnerId { get; set; }
+    public bool Impersonating { get; set; }
 }
 
 public class TourDto
@@ -87,6 +89,85 @@ public class AdminMetricsDto
     public int TotalReservations { get; set; }
     public decimal TotalCommissions { get; set; }
     public int ActiveUsers { get; set; }
+}
+
+public class SuperAdminMetricsDto
+{
+    public int TotalUsers { get; set; }
+    public int TotalPartners { get; set; }
+    public int PendingPartners { get; set; }
+    public int TotalTours { get; set; }
+    public int TotalReservations { get; set; }
+    public decimal TotalRevenue { get; set; }
+    public decimal TotalCommissions { get; set; }
+    public int ActiveUsers { get; set; }
+}
+
+public class PartnerListItemDto
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = "";
+    public string RUC { get; set; } = "";
+    public string Status { get; set; } = "";
+    public string OperatingDepartment { get; set; } = "";
+    public string AdminEmail { get; set; } = "";
+    public string AdminName { get; set; } = "";
+    public int AdminUserId { get; set; }
+    public int StaffCount { get; set; }
+    public decimal Revenue { get; set; }
+}
+
+public class AgencyDashboardDto
+{
+    public int PartnerId { get; set; }
+    public string PartnerName { get; set; } = "";
+    public int TotalTours { get; set; }
+    public int PendingReservations { get; set; }
+    public int ConfirmedReservations { get; set; }
+    public decimal TotalRevenue { get; set; }
+    public decimal AgencyCommissions { get; set; }
+    public List<VendorSalesDto> VendorSales { get; set; } = [];
+}
+
+public class VendorSalesDto
+{
+    public int UserId { get; set; }
+    public string Name { get; set; } = "";
+    public int Reservations { get; set; }
+    public decimal Revenue { get; set; }
+}
+
+public class CreateAgencyRequest
+{
+    public string AgencyName { get; set; } = "";
+    public string RUC { get; set; } = "";
+    public string OperatingDepartment { get; set; } = "";
+    public string AdminName { get; set; } = "";
+    public string AdminEmail { get; set; } = "";
+    public string AdminPassword { get; set; } = "";
+    public string? LogoUrl { get; set; }
+    public string? ContactEmail { get; set; }
+    public string? ContactPhone { get; set; }
+}
+
+public class CreateVendorRequest
+{
+    public string DisplayName { get; set; } = "";
+    public string Email { get; set; } = "";
+    public string Password { get; set; } = "";
+}
+
+public class CreateTourRequest
+{
+    public string Title { get; set; } = "";
+    public string Description { get; set; } = "";
+    public decimal Price { get; set; }
+    public string Location { get; set; } = "";
+    public string Department { get; set; } = "";
+    public string AdventureType { get; set; } = "";
+    public DateTime Date { get; set; }
+    public int Capacity { get; set; }
+    public string? ImageUrl { get; set; }
 }
 
 public class LoginRequest { public string Email { get; set; } = ""; public string Password { get; set; } = ""; }

@@ -8,32 +8,51 @@
 
 <section class="home-hero">
     <div class="home-hero-overlay"></div>
-    <div class="container home-hero-content">
-        <h1>Descubre el Perú con agencias verificadas</h1>
-        <p class="home-hero-sub">Reserva full days, trekking y experiencias únicas. Paga con Yape o Plin y viaja con confianza.</p>
+    <div class="container home-hero-inner">
+        <div class="home-hero-text">
+            <h1>Descubre el Perú con agencias verificadas</h1>
+            <p class="home-hero-sub">Reserva full days, trekking y experiencias únicas. Paga con Yape o Plin y viaja con confianza.</p>
+        </div>
 
-        <div class="home-search-box">
-            <div class="home-search-grid">
-                <select class="form-select" @bind="department">
-                    <option value="">Todos los departamentos</option>
-                    @foreach (var d in PeruDepartments)
-                    {
-                        <option value="@d">@d</option>
-                    }
-                </select>
-                <input class="form-control" placeholder="Ciudad o destino" @bind="location" />
-                <select class="form-select" @bind="adventureType">
-                    <option value="">Tipo de experiencia</option>
-                    <option value="FullDay">Full Day</option>
-                    <option value="Trekking">Trekking</option>
-                    <option value="Cultural">Cultural</option>
-                    <option value="Gastronomico">Gastronómico</option>
-                    <option value="Aventura">Aventura</option>
-                </select>
-                <input type="date" class="form-control" @bind="fromDate" />
-                <input type="number" class="form-control" placeholder="Precio máx. (S/)" @bind="maxPrice" />
-                <button class="btn btn-primary btn-home-search" @onclick="Search" disabled="@loading">Buscar experiencias</button>
+        <div class="home-search-card">
+            <div class="home-search-row home-search-row-top">
+                <div class="home-search-field">
+                    <label class="home-search-label">Departamento</label>
+                    <select class="form-select" @bind="department">
+                        <option value="">Todos los departamentos</option>
+                        @foreach (var d in PeruDepartments)
+                        {
+                            <option value="@d">@d</option>
+                        }
+                    </select>
+                </div>
+                <div class="home-search-field">
+                    <label class="home-search-label">Ciudad o destino</label>
+                    <input class="form-control" placeholder="Ej. Cusco, Miraflores" @bind="location" />
+                </div>
+                <div class="home-search-field">
+                    <label class="home-search-label">Tipo de experiencia</label>
+                    <select class="form-select" @bind="adventureType">
+                        <option value="">Cualquier tipo</option>
+                        <option value="FullDay">Full Day</option>
+                        <option value="Trekking">Trekking</option>
+                        <option value="Cultural">Cultural</option>
+                        <option value="Gastronomico">Gastronómico</option>
+                        <option value="Aventura">Aventura</option>
+                    </select>
+                </div>
             </div>
+            <div class="home-search-row home-search-row-bottom">
+                <div class="home-search-field">
+                    <label class="home-search-label">Fecha</label>
+                    <input type="date" class="form-control" @bind="fromDate" />
+                </div>
+                <div class="home-search-field">
+                    <label class="home-search-label">Precio máximo (S/)</label>
+                    <input type="number" class="form-control" placeholder="Sin límite" @bind="maxPrice" min="0" />
+                </div>
+            </div>
+            <button class="btn btn-primary btn-home-search" @onclick="Search" disabled="@loading">Buscar experiencias</button>
         </div>
     </div>
 </section>
@@ -48,26 +67,6 @@
                 <span class="destino-name">@d.Name</span>
             </button>
         }
-    </div>
-</section>
-
-<section class="home-trust">
-    <div class="container trust-grid">
-        <div class="trust-item">
-            <span class="trust-icon">📱</span>
-            <h3>Pago seguro con Yape y Plin</h3>
-            <p>Checkout rápido y validación por la agencia.</p>
-        </div>
-        <div class="trust-item">
-            <span class="trust-icon">✓</span>
-            <h3>Agencias verificadas</h3>
-            <p>Partners con documentación y revisión DestinoPerú.</p>
-        </div>
-        <div class="trust-item">
-            <span class="trust-icon">💬</span>
-            <h3>Soporte cercano</h3>
-            <p>Atención en español para viajeros y operadores.</p>
-        </div>
     </div>
 </section>
 
@@ -111,6 +110,32 @@
             </div>
         }
     }
+</section>
+
+<section class="home-trust-strip">
+    <div class="container trust-strip">
+        <div class="trust-strip-item">
+            <span class="trust-strip-icon">📱</span>
+            <div>
+                <strong>Yape y Plin</strong>
+                <span>Pago seguro validado por la agencia.</span>
+            </div>
+        </div>
+        <div class="trust-strip-item">
+            <span class="trust-strip-icon">✓</span>
+            <div>
+                <strong>Agencias verificadas</strong>
+                <span>Partners con documentación revisada.</span>
+            </div>
+        </div>
+        <div class="trust-strip-item">
+            <span class="trust-strip-icon">💬</span>
+            <div>
+                <strong>Soporte cercano</strong>
+                <span>Atención en español para viajeros.</span>
+            </div>
+        </div>
+    </div>
 </section>
 
 <section class="home-cta">
