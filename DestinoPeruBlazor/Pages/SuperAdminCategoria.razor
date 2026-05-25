@@ -42,7 +42,7 @@
                                Partners="FilteredPartners"
                                RankingRows="CategoryRanking"
                                Tab="mainTab"
-                               TabChanged="OnTabChanged"
+                               TabChanged="SetTab"
                                OnImpersonate="ImpersonateUser"
                                OnShowStaff="ShowStaff"
                                OnEdit="EditPartner"
@@ -135,15 +135,21 @@
 
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
     {
+        var prevKey = _category?.Key;
         ResolveCategory();
-        staffPartner = null;
-        editPartner = null;
-        _ = InvokeAsync(async () => { await LoadAsync(); StateHasChanged(); });
+        if (prevKey != _category?.Key)
+        {
+            staffPartner = null;
+            editPartner = null;
+            _ = InvokeAsync(async () => { await LoadAsync(); StateHasChanged(); });
+        }
+        else
+            _ = InvokeAsync(StateHasChanged);
     }
 
     private void ResolveCategory()
     {
-        _category = SuperAdminCategories.FromRoute(Nav.Uri);
+        _category = SuperAdminCategories.FromNavigation(Nav);
         if (_category is not null)
         {
             newAgency.PartnerType = _category.PartnerType;
@@ -158,6 +164,13 @@
         if (uri.Contains("tab=ranking", StringComparison.OrdinalIgnoreCase)) return "ranking";
         if (uri.Contains("tab=config", StringComparison.OrdinalIgnoreCase)) return "config";
         return "partners";
+    }
+
+    private void SetTab(string tab)
+    {
+        mainTab = tab;
+        if (_category is not null)
+            Nav.NavigateTo($"{_category.Route}?tab={tab}");
     }
 
     private async Task LoadAsync()
@@ -177,8 +190,6 @@
 
         loading = false;
     }
-
-    private Task OnTabChanged(string tab) { mainTab = tab; return Task.CompletedTask; }
 
     private async Task ShowStaff(PartnerListItemDto p)
     {
@@ -213,7 +224,7 @@
         {
             Toast.ShowSuccess($"Perfil {_category?.Label} creado.");
             newAgency = new() { AdminPassword = "Admin2026!", PartnerType = _category?.PartnerType ?? 0 };
-            mainTab = "partners";
+            SetTab("partners");
             await LoadAsync();
         }
         else Toast.ShowError(r.ErrorMessage ?? "Error");

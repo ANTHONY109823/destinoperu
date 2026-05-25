@@ -28,10 +28,10 @@ else
     }
 
     <div class="panel-tabs sa-tabs">
-        <button type="button" class="panel-tab @(Tab == "partners" ? "active" : "")" @onclick='() => TabChanged.InvokeAsync("partners")'>Socios (@Partners.Count())</button>
-        <button type="button" class="panel-tab @(Tab == "ranking" ? "active" : "")" @onclick='() => TabChanged.InvokeAsync("ranking")'>Ranking</button>
-        <button type="button" class="panel-tab @(Tab == "create" ? "active" : "")" @onclick='() => TabChanged.InvokeAsync("create")'>+ Nuevo @Category.Label</button>
-        <button type="button" class="panel-tab @(Tab == "config" ? "active" : "")" @onclick='() => TabChanged.InvokeAsync("config")'>Config rubro</button>
+        <button type="button" class="panel-tab @(Tab == "partners" ? "active" : "")" @onclick='() => OnTabClick("partners")'>Socios (@Partners.Count())</button>
+        <button type="button" class="panel-tab @(Tab == "ranking" ? "active" : "")" @onclick='() => OnTabClick("ranking")'>Ranking</button>
+        <button type="button" class="panel-tab @(Tab == "create" ? "active" : "")" @onclick='() => OnTabClick("create")'>+ Nuevo @Category.Label</button>
+        <button type="button" class="panel-tab @(Tab == "config" ? "active" : "")" @onclick='() => OnTabClick("config")'>Config rubro</button>
     </div>
 
     @if (Tab == "partners")
@@ -40,7 +40,7 @@ else
         {
             <div class="dash-panel text-center py-4">
                 <p class="text-muted">No hay socios de @Category.Label registrados.</p>
-                <button type="button" class="btn btn-primary" @onclick='() => TabChanged.InvokeAsync("create")'>Crear primer perfil</button>
+                <button type="button" class="btn btn-primary" @onclick='() => OnTabClick("create")'>Crear primer perfil</button>
             </div>
         }
         else
@@ -63,16 +63,16 @@ else
                         </div>
                         <div class="partner-card-actions">
                             <button type="button" class="btn btn-primary btn-sm" disabled="@(p.AdminUserId <= 0)"
-                                    @onclick="() => OnImpersonate.InvokeAsync(p.AdminUserId)">Entrar al panel</button>
-                            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="() => OnShowStaff.InvokeAsync(p)">Equipo</button>
-                            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="() => OnEdit.InvokeAsync(p)">Editar</button>
+                                    @onclick="() => ClickImpersonate(p.AdminUserId)">Entrar al panel</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="() => ClickStaff(p)">Equipo</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="() => ClickEdit(p)">Editar</button>
                             @if (p.Status != "Suspended")
                             {
-                                <button type="button" class="btn btn-outline-danger btn-sm" @onclick="() => OnSuspend.InvokeAsync(p)">Suspender</button>
+                                <button type="button" class="btn btn-outline-danger btn-sm" @onclick="() => ClickSuspend(p)">Suspender</button>
                             }
                             else
                             {
-                                <button type="button" class="btn btn-outline-success btn-sm" @onclick="() => OnReactivate.InvokeAsync(p)">Reactivar</button>
+                                <button type="button" class="btn btn-outline-success btn-sm" @onclick="() => ClickReactivate(p)">Reactivar</button>
                             }
                         </div>
                     </article>
@@ -130,9 +130,17 @@ else
     [Parameter] public RenderFragment? CreateForm { get; set; }
     [Parameter] public RenderFragment? ChildContent { get; set; }
     [Parameter] public EventCallback<string> TabChanged { get; set; }
+
     [Parameter] public EventCallback<int> OnImpersonate { get; set; }
     [Parameter] public EventCallback<PartnerListItemDto> OnShowStaff { get; set; }
     [Parameter] public EventCallback<PartnerListItemDto> OnEdit { get; set; }
     [Parameter] public EventCallback<PartnerListItemDto> OnSuspend { get; set; }
     [Parameter] public EventCallback<PartnerListItemDto> OnReactivate { get; set; }
+
+    private void OnTabClick(string tab) => TabChanged.InvokeAsync(tab);
+    private void ClickImpersonate(int userId) => OnImpersonate.InvokeAsync(userId);
+    private void ClickStaff(PartnerListItemDto p) => OnShowStaff.InvokeAsync(p);
+    private void ClickEdit(PartnerListItemDto p) => OnEdit.InvokeAsync(p);
+    private void ClickSuspend(PartnerListItemDto p) => OnSuspend.InvokeAsync(p);
+    private void ClickReactivate(PartnerListItemDto p) => OnReactivate.InvokeAsync(p);
 }

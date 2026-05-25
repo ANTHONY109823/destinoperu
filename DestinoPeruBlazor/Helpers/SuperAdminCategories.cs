@@ -27,18 +27,36 @@ public static class SuperAdminCategories
             "Cafés/Bar: experiencias café y bar nocturno.")
     ];
 
-    public static SuperAdminCategory? FromRoute(string? path)
+    /// <summary>Resuelve categoría desde URI absoluta, relativa o path (ignora ?query y #hash).</summary>
+    public static SuperAdminCategory? FromRoute(string? uriOrPath)
     {
-        if (string.IsNullOrWhiteSpace(path)) return null;
-        var p = path.TrimEnd('/').ToLowerInvariant();
-        return All.FirstOrDefault(c => p.EndsWith(c.Route, StringComparison.OrdinalIgnoreCase));
+        var path = NormalizePath(uriOrPath);
+        if (path is null) return null;
+        return All.FirstOrDefault(c => path == c.Route);
     }
 
-    public static bool IsInicioRoute(string? path)
+    public static SuperAdminCategory? FromNavigation(Microsoft.AspNetCore.Components.NavigationManager nav) =>
+        FromRoute(nav.ToBaseRelativePath(nav.Uri));
+
+    public static bool IsInicioRoute(string? uriOrPath)
     {
-        if (string.IsNullOrWhiteSpace(path)) return true;
-        var p = path.TrimEnd('/').ToLowerInvariant();
-        return p is "/superadmin" or "/superadmin/inicio";
+        var path = NormalizePath(uriOrPath);
+        return path is "/superadmin" or "/superadmin/inicio";
+    }
+
+    private static string? NormalizePath(string? uriOrPath)
+    {
+        if (string.IsNullOrWhiteSpace(uriOrPath)) return null;
+
+        var raw = uriOrPath;
+        if (Uri.TryCreate(uriOrPath, UriKind.Absolute, out var absolute))
+            raw = absolute.AbsolutePath;
+
+        var noQuery = raw.Split('?', '#')[0].Trim();
+        if (string.IsNullOrEmpty(noQuery)) return null;
+
+        var path = noQuery.StartsWith('/') ? noQuery : "/" + noQuery;
+        return path.TrimEnd('/').ToLowerInvariant();
     }
 }
 
