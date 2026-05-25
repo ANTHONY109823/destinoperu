@@ -6,20 +6,22 @@
 <header class="dp-nav" style="background: linear-gradient(135deg, #00332a 0%, #004D40 100%);">
     <div class="dp-nav-inner container">
         <a class="dp-brand" href="/" @onclick="CloseMenu">
-            <span class="dp-brand-icon" aria-hidden="true">🇵🇪</span>
-            <span class="dp-brand-text">Destino<strong>Peru</strong></span>
+            <span class="dp-brand-text">Destino<strong>Perú</strong></span>
         </a>
 
         <button class="dp-nav-toggle @(menuOpen ? "open" : "")"
                 @onclick="ToggleMenu"
                 aria-expanded="@menuOpen"
                 aria-controls="dp-nav-menu"
-                aria-label="Abrir menu">
+                aria-label="Abrir menú">
             <span></span><span></span><span></span>
         </button>
 
         <nav id="dp-nav-menu" class="dp-nav-links @(menuOpen ? "open" : "")">
             <NavLink class="dp-link" href="/" Match="NavLinkMatch.All" @onclick="CloseMenu">Tours</NavLink>
+            <NavLink class="dp-link" href="hoteles" @onclick="CloseMenu">Hoteles</NavLink>
+            <NavLink class="dp-link" href="restaurantes" @onclick="CloseMenu">Restaurantes</NavLink>
+            <NavLink class="dp-link" href="vida-nocturna" @onclick="CloseMenu">Vida Nocturna</NavLink>
             @if (Auth.IsAuthenticated)
             {
                 <NavLink class="dp-link" href="mis-reservas" @onclick="CloseMenu">Mis reservas</NavLink>

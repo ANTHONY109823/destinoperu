@@ -7,102 +7,153 @@ namespace DestinoPeruAPI.Infrastructure.Data;
 
 public static class DbInitializer
 {
+    private const string DemoEmail = "demo@destinoperu.com";
+    private const int MinPresentationTours = 18;
+
     public static async Task SeedAsync(AppDbContext db, ILogger logger)
     {
-        if (await db.Tours.AnyAsync())
+        await EnsureDemoUserAsync(db, logger);
+
+        var tourCount = await db.Tours.CountAsync();
+        if (tourCount >= MinPresentationTours)
         {
-            logger.LogInformation("Base de datos ya contiene tours; seed omitido.");
+            logger.LogInformation("Catálogo con {Count} tours; seed de presentación omitido.", tourCount);
             return;
         }
 
-        if (!await db.Partners.AnyAsync())
-            logger.LogInformation("Sembrando partners y tours de demostracion...");
-        else
-            logger.LogInformation("Sembrando tours de demostracion...");
-
-        Partner[] partners;
-        if (!await db.Partners.AnyAsync())
+        logger.LogInformation("Sembrando contenido DEMO de presentación (partners + tours)...");
+        var partners = await EnsureDemoPartnersAsync(db);
+        if (partners.Count == 0)
         {
-            var partnerUsers = new[]
-            {
-                CreateUser("Andes Explorer", "andes@destinoperu.demo", "Agencia"),
-                CreateUser("Costa Peru Tours", "costa@destinoperu.demo", "Agencia")
-            };
-            db.Users.AddRange(partnerUsers);
-            await db.SaveChangesAsync();
-
-            partners =
-            [
-                new Partner
-                {
-                    UserId = partnerUsers[0].Id,
-                    Name = "Andes Explorer SAC",
-                    RUC = "20111111111",
-                    PartnerType = PartnerType.Agencia,
-                    Status = "Approved",
-                    VerificationStatus = "Verified",
-                    CommissionRate = 0.10m,
-                    CreatedAt = DateTime.UtcNow
-                },
-                new Partner
-                {
-                    UserId = partnerUsers[1].Id,
-                    Name = "Costa Peru Tours EIRL",
-                    RUC = "20222222222",
-                    PartnerType = PartnerType.Agencia,
-                    Status = "Approved",
-                    VerificationStatus = "Verified",
-                    CommissionRate = 0.10m,
-                    CreatedAt = DateTime.UtcNow
-                }
-            ];
-            db.Partners.AddRange(partners);
-            await db.SaveChangesAsync();
-        }
-        else
-        {
-            partners = await db.Partners.Where(p => p.Status == "Approved").Take(2).ToArrayAsync();
-            if (partners.Length == 0)
-                partners = await db.Partners.Take(2).ToArrayAsync();
-            if (partners.Length == 0)
-            {
-                logger.LogWarning("No hay partners para asociar tours de prueba.");
-                return;
-            }
+            logger.LogWarning("No se pudieron crear partners demo.");
+            return;
         }
 
-        var p0 = partners[0];
-        var p1 = partners.Length > 1 ? partners[1] : partners[0];
-
-        var tours = new List<Tour>
+        var existingSlugs = await db.Tours.Select(t => t.Slug).ToListAsync();
+        var tours = BuildPresentationTours(partners, existingSlugs);
+        if (tours.Count > 0)
         {
-            BuildTour(p0.Id, "full-day-paracas-huacachina", "Full Day Paracas e Huacachina",
-                "Navega por la Reserva de Paracas y disfruta del oasis de Huacachina.", "Ica", "Ica", "FullDay", 189,
-                "https://images.unsplash.com/photo-1587595431973-160d0d94add1?w=800", 14),
-            BuildTour(p0.Id, "city-tour-cusco-sagrado", "City Tour Cusco + Valle Sagrado",
-                "Recorre el ombligo del mundo con guias certificados.", "Cusco", "Cusco", "Cultural", 220,
-                "https://images.unsplash.com/photo-1526392060635-9d601b837dd0?w=800", 21),
-            BuildTour(p1.Id, "trekking-rainbow-mountain", "Trekking Montana de Colores",
-                "Aventura de altura con desayuno y transporte incluido.", "Cusco", "Cusco", "Trekking", 165,
-                "https://images.unsplash.com/photo-1587595431973-160d0d94add1?w=800", 10),
-            BuildTour(p1.Id, "gastronomia-lima-barranco", "Tour Gastronomico Barranco",
-                "Degusta la mejor cocina peruana frente al mar.", "Lima", "Lima", "Gastronomico", 145,
-                "https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=800", 7)
-        };
-
-        db.Tours.AddRange(tours);
-        await db.SaveChangesAsync();
-        logger.LogInformation("Seed completado: {Partners} partners, {Tours} tours.", partners.Length, tours.Count);
+            db.Tours.AddRange(tours);
+            await db.SaveChangesAsync();
+            logger.LogInformation("Seed presentación: +{Tours} tours. Total partners: {Partners}.",
+                tours.Count, partners.Count);
+        }
     }
 
-    private static User CreateUser(string name, string email, string role) => new()
+    private static async Task EnsureDemoUserAsync(AppDbContext db, ILogger logger)
     {
-        Name = name,
-        Email = email,
-        Role = role,
-        PasswordHash = BCrypt.Net.BCrypt.HashPassword("Demo123!", 12),
-        CreatedAt = DateTime.UtcNow
-    };
+        if (await db.Users.AnyAsync(u => u.Email == DemoEmail))
+            return;
+
+        db.Users.Add(new User
+        {
+            Name = "Usuario Demo",
+            Email = DemoEmail,
+            Role = "Cliente",
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword("Demo123!", 12),
+            CreatedAt = DateTime.UtcNow
+        });
+        await db.SaveChangesAsync();
+        logger.LogInformation("Usuario demo creado: {Email}", DemoEmail);
+    }
+
+    private static async Task<List<Partner>> EnsureDemoPartnersAsync(AppDbContext db)
+    {
+        var specs = new (string Name, string Email, string Ruc, string City, string Dept)[]
+        {
+            ("Cusco Andes Travel", "cusco.andes@demo.dp", "20100010001", "Cusco", "Cusco"),
+            ("Machu Picchu Expeditions", "machu.exp@demo.dp", "20100010002", "Cusco", "Cusco"),
+            ("Lima City Tours", "lima.city@demo.dp", "20100010003", "Lima", "Lima"),
+            ("Costa Verde Aventuras", "costa.verde@demo.dp", "20100010004", "Lima", "Lima"),
+            ("Arequipa Volcano Tours", "arequipa.vol@demo.dp", "20100010005", "Arequipa", "Arequipa"),
+            ("Colca Canyon Adventures", "colca@demo.dp", "20100010006", "Arequipa", "Arequipa"),
+            ("Ica Dunas y Vinos", "ica.dunas@demo.dp", "20100010007", "Ica", "Ica"),
+            ("Huacachina Sunset", "huacachina@demo.dp", "20100010008", "Ica", "Ica"),
+            ("Puno Titicaca Experience", "puno.titi@demo.dp", "20100010009", "Puno", "Puno"),
+            ("Uros Floating Tours", "uros@demo.dp", "20100010010", "Puno", "Puno"),
+            ("Loreto Amazonia Verde", "loreto.amz@demo.dp", "20100010011", "Iquitos", "Loreto"),
+            ("Selva Premium Lodge", "selva@demo.dp", "20100010012", "Tarapoto", "San Martin")
+        };
+
+        var partners = new List<Partner>();
+        foreach (var s in specs)
+        {
+            if (await db.Partners.AnyAsync(p => p.RUC == s.Ruc))
+            {
+                var existing = await db.Partners.FirstAsync(p => p.RUC == s.Ruc);
+                partners.Add(existing);
+                continue;
+            }
+
+            var user = new User
+            {
+                Name = s.Name,
+                Email = s.Email,
+                Role = "Agencia",
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword("Demo123!", 12),
+                CreatedAt = DateTime.UtcNow
+            };
+            db.Users.Add(user);
+            await db.SaveChangesAsync();
+
+            var partner = new Partner
+            {
+                UserId = user.Id,
+                Name = s.Name,
+                RUC = s.Ruc,
+                PartnerType = PartnerType.Agencia,
+                Status = "Approved",
+                VerificationStatus = "Verified",
+                CommissionRate = 0.10m,
+                CreatedAt = DateTime.UtcNow
+            };
+            db.Partners.Add(partner);
+            await db.SaveChangesAsync();
+            partners.Add(partner);
+        }
+
+        return partners;
+    }
+
+    private static List<Tour> BuildPresentationTours(List<Partner> partners, List<string> existingSlugs)
+    {
+        var byDept = partners.GroupBy(p => p.Name).ToList();
+        Partner Pick(int i) => partners[i % partners.Count];
+
+        var defs = new (string Slug, string Title, string Desc, string Loc, string Dept, string Type, decimal Price, string Img, int Days)[]
+        {
+            ("full-day-paracas-huacachina", "Full Day Paracas e Huacachina", "Islas Ballestas, reserva y oasis con sandboard.", "Paracas", "Ica", "FullDay", 189m, "https://images.unsplash.com/photo-1587595431973-160d0d94add1?w=800", 5),
+            ("city-tour-lima-centro", "City Tour Lima Centro Histórico", "Plaza Mayor, San Francisco y barrios coloniales.", "Lima", "Lima", "Cultural", 95m, "https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=800", 7),
+            ("gastronomia-lima-barranco", "Tour Gastronómico Barranco", "Ceviche, pisco y restaurantes boutique.", "Lima", "Lima", "Gastronomico", 145m, "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=800", 9),
+            ("aventura-lunahuana-rafting", "Rafting Lunahuana Aventura", "Rafting clase II-III con almuerzo campestre.", "Lunahuana", "Lima", "Aventura", 175m, "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800", 11),
+            ("machu-picchu-full-day", "Machu Picchu Full Day desde Cusco", "Visita guiada a la ciudadela con tren o bus.", "Machu Picchu", "Cusco", "FullDay", 420m, "https://images.unsplash.com/photo-1526392060635-9d601b837dd0?w=800", 14),
+            ("city-tour-cusco-sagrado", "City Tour Cusco + Valle Sagrado", "Sacsayhuaman, Pisac y mercado artesanal.", "Cusco", "Cusco", "Cultural", 220m, "https://images.unsplash.com/photo-1537996194471-e657b7758544?w=800", 16),
+            ("trekking-rainbow-mountain", "Trekking Montaña de Colores", "Vinicunca con desayuno y oxígeno incluido.", "Cusco", "Cusco", "Trekking", 165m, "https://images.unsplash.com/photo-1519681393784-d120267933ba?w=800", 12),
+            ("aventura-sacred-valley-atv", "Valle Sagrado en ATV", "Moray, Maras y salineras en cuatrimoto.", "Urubamba", "Cusco", "Aventura", 198m, "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800", 18),
+            ("colca-canyon-condor", "Cañón del Colca y Cóndor", "Mirador del cóndor y pueblos del valle.", "Chivay", "Arequipa", "FullDay", 185m, "https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=800", 10),
+            ("city-tour-arequipa", "City Tour Arequipa Blanca", "Monasterio Santa Catalina y centro histórico.", "Arequipa", "Arequipa", "Cultural", 110m, "https://images.unsplash.com/photo-1516026679272-898a54700f3f?w=800", 8),
+            ("trekking-misti-base", "Trekking Base del Misti", "Ascenso moderado con vista a la ciudad.", "Arequipa", "Arequipa", "Trekking", 240m, "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800", 20),
+            ("lago-titicaca-uros", "Lago Titicaca Islas Uros y Taquile", "Paseo en totora y comunidad local.", "Puno", "Puno", "Cultural", 175m, "https://images.unsplash.com/photo-1476514525535-07fb3b4eae35?w=800", 13),
+            ("full-day-sillustani", "Sillustani y Atardecer Lago", "Chullpas preincas y mirador del lago.", "Puno", "Puno", "FullDay", 130m, "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=800", 15),
+            ("amazonia-loreto-3d2n", "Selva Loreto 3D/2N", "Cabaña, caminata y avistamiento de fauna.", "Iquitos", "Loreto", "Aventura", 890m, "https://images.unsplash.com/photo-1516026679272-898a54700f3f?w=800", 22),
+            ("full-day-iquitos-belen", "Belén y Río Amazonas", "Mercado flotante y navegación por el río.", "Iquitos", "Loreto", "FullDay", 320m, "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=800", 17),
+            ("ica-ruta-vinos", "Ruta del Vino y Pisco Ica", "Bodegas, cata y maridaje en el sur.", "Ica", "Ica", "Gastronomico", 155m, "https://images.unsplash.com/photo-1551632811-561732d1e306?w=800", 6),
+            ("huacachina-sandboard-sunset", "Huacachina Sandboard Sunset", "Sandboard y paseo en tubulares al atardecer.", "Huacachina", "Ica", "Aventura", 165m, "https://images.unsplash.com/photo-1587595431973-160d0d94add1?w=800", 4),
+            ("nazca-lineas-aereas", "Sobrevuelo Líneas de Nazca", "Vuelo panorámico con briefing arqueológico.", "Nazca", "Ica", "FullDay", 450m, "https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=800", 19)
+        };
+
+        var tours = new List<Tour>();
+        for (var i = 0; i < defs.Length; i++)
+        {
+            var d = defs[i];
+            if (existingSlugs.Contains(d.Slug, StringComparer.OrdinalIgnoreCase))
+                continue;
+
+            tours.Add(BuildTour(Pick(i).Id, d.Slug, d.Title, d.Desc, d.Loc, d.Dept, d.Type, d.Price, d.Img, d.Days));
+        }
+
+        return tours;
+    }
 
     private static Tour BuildTour(int partnerId, string slug, string title, string description,
         string location, string department, string adventureType, decimal price, string? imageUrl, int daysAhead) =>
@@ -112,15 +163,15 @@ public static class DbInitializer
             Slug = slug,
             Title = title,
             Description = description,
-            MetaTitle = $"{title} | Destino Peru",
+            MetaTitle = $"{title} | DestinoPerú",
             MetaDescription = description.Length > 155 ? description[..155] : description,
             Price = price,
             Location = location,
             Department = department,
             AdventureType = adventureType,
             Date = DateTime.UtcNow.AddDays(daysAhead),
-            Capacity = 24,
-            AvailableCapacity = 24,
+            Capacity = 28,
+            AvailableCapacity = 28,
             ImageUrl = imageUrl,
             IsActive = true,
             CreatedAt = DateTime.UtcNow

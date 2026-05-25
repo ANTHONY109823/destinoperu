@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>DestinoPeru - Informe Ejecutivo para Socio</title>
+  <style>
+    @page { size: A4; margin: 18mm 16mm; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      color: #1a2e2a;
+      line-height: 1.45;
+      font-size: 10.5pt;
+      max-width: 210mm;
+      margin: 0 auto;
+      padding: 12mm;
+    }
+    .cover {
+      page-break-after: always;
+      text-align: center;
+      padding-top: 55mm;
+      background: linear-gradient(160deg, #00332a 0%, #004D40 45%, #00695C 100%);
+      color: white;
+      min-height: 260mm;
+      margin: -12mm;
+      padding-left: 12mm;
+      padding-right: 12mm;
+    }
+    .cover h1 { font-size: 32pt; margin: 0 0 8px; font-weight: 800; }
+    .cover .sub { font-size: 14pt; opacity: 0.95; margin-bottom: 40px; }
+    .cover .meta { font-size: 11pt; opacity: 0.85; margin-top: 80px; }
+    .cover .badge {
+      display: inline-block;
+      background: #FFC107;
+      color: #00332a;
+      padding: 8px 20px;
+      border-radius: 24px;
+      font-weight: 700;
+      font-size: 10pt;
+      margin-top: 24px;
+    }
+    h2 {
+      color: #004D40;
+      font-size: 14pt;
+      border-bottom: 2px solid #FFC107;
+      padding-bottom: 4px;
+      margin-top: 22px;
+      page-break-after: avoid;
+    }
+    h3 { color: #00695C; font-size: 11pt; margin-top: 14px; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 10px 0 16px;
+      font-size: 9.5pt;
+    }
+    th {
+      background: #004D40;
+      color: white;
+      text-align: left;
+      padding: 7px 8px;
+    }
+    td { border: 1px solid #dce8e5; padding: 6px 8px; }
+    tr:nth-child(even) td { background: #f5f9f8; }
+    .highlight {
+      background: #e8f5f3;
+      border-left: 4px solid #004D40;
+      padding: 12px 14px;
+      margin: 12px 0;
+    }
+    .kpi-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 14px 0;
+    }
+    .kpi {
+      flex: 1;
+      min-width: 120px;
+      background: #004D40;
+      color: white;
+      padding: 12px;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .kpi .num { font-size: 18pt; font-weight: 800; display: block; }
+    .kpi .lbl { font-size: 8.5pt; opacity: 0.9; }
+    ul { margin: 8px 0; padding-left: 20px; }
+    .footer-note {
+      font-size: 8pt;
+      color: #5a6f6a;
+      margin-top: 24px;
+      border-top: 1px solid #dce8e5;
+      padding-top: 10px;
+    }
+    .page-break { page-break-before: always; }
+    @media print {
+      body { padding: 0; }
+      .no-print { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <section class="cover">
+    <div class="badge">CONFIDENCIAL — PRESENTACIÓN A SOCIO</div>
+    <h1>DestinoPeru</h1>
+    <p class="sub">Super-App de turismo nacional · Informe ejecutivo</p>
+    <p>Marketplace B2C/B2B · Comisión 10% · Plataforma en producción</p>
+    <p class="meta">Mayo 2026<br>github.com/ANTHONY109823/destinoperu<br>destinoperu-production.up.railway.app</p>
+  </section>
+
+  <h2>1. Resumen ejecutivo</h2>
+  <p><strong>DestinoPeru</strong> conecta viajeros peruanos con partners verificados (agencias, hoteles, restaurantes) para reservar experiencias: full-days, trekking, cultural y gastronómico, con pago digital y programa de fidelización.</p>
+
+  <div class="kpi-row">
+    <div class="kpi"><span class="num">10%</span><span class="lbl">Comisión por reserva</span></div>
+    <div class="kpi"><span class="num">LIVE</span><span class="lbl">API + Blazor en Railway</span></div>
+    <div class="kpi"><span class="num">GO</span><span class="lbl">Listo para marketing</span></div>
+  </div>
+
+  <div class="highlight">
+    <strong>Mensaje al socio:</strong> La inversión técnica base está realizada. El siguiente salto es adquisición de partners, marketing y operación comercial — no reconstruir desde cero.
+  </div>
+
+  <table>
+    <tr><th>Indicador</th><th>Estado</th></tr>
+    <tr><td>Producto</td><td>En línea (API + frontend WASM)</td></tr>
+    <tr><td>Fase</td><td>Pre-lanzamiento comercial → go-to-market</td></tr>
+    <tr><td>Modelo</td><td>Comisión 10% sobre GMV de reservas pagadas</td></tr>
+    <tr><td>Diferencial</td><td>Menor comisión que OTAs (15–25%), Yape/Plin, SEO local</td></tr>
+  </table>
+
+  <h2>2. Avance del producto</h2>
+  <h3>2.1 Stack y despliegue</h3>
+  <table>
+    <tr><th>Componente</th><th>Tecnología</th><th>Hosting</th></tr>
+    <tr><td>API</td><td>.NET 10, Clean Architecture</td><td>Railway</td></tr>
+    <tr><td>Frontend</td><td>Blazor WebAssembly</td><td>Railway</td></tr>
+    <tr><td>Base de datos</td><td>PostgreSQL</td><td>Railway</td></tr>
+    <tr><td>Medios</td><td>Cloudinary CDN</td><td>Global</td></tr>
+  </table>
+
+  <h3>2.2 Capacidades implementadas</h3>
+  <ul>
+    <li><strong>Viajero:</strong> búsqueda avanzada, tours con slug SEO, reserva con cupos en tiempo real, checkout Yape/Plin, loyalty 1%.</li>
+    <li><strong>Partner:</strong> alta multi-tipo, panel inventario/fotos, documentos RUC y verificación admin.</li>
+    <li><strong>Plataforma:</strong> panel admin, comisión automática 10%, Dapper (lecturas) + EF Core (escrituras).</li>
+  </ul>
+
+  <h3>2.3 Pulido pre-lanzamiento (no bloqueante)</h3>
+  <ul>
+    <li>UI admin/partner ampliada · Pasarela bancaria certificada · Catálogo real de partners · App móvil nativa (fase 2).</li>
+  </ul>
+
+  <div class="page-break"></div>
+
+  <h2>3. Mercado y oportunidad (datos sectoriales)</h2>
+  <table>
+    <tr><th>Métrica</th><th>Cifra</th><th>Fuente</th></tr>
+    <tr><td>Aporte turismo al PIB Perú (2024)</td><td>~USD 21.600 MM (7,5% PIB)</td><td>WTTC / Oxford Economics</td></tr>
+    <tr><td>Proyección PIB turismo (2025)</td><td>&gt; USD 23.000 MM (+6,9%)</td><td>WTTC</td></tr>
+    <tr><td>Gasto turismo doméstico (2024)</td><td>USD 11.400 MM (+9%)</td><td>WTTC</td></tr>
+    <tr><td>Proyección gasto doméstico (2025)</td><td>USD 12.000 MM</td><td>WTTC</td></tr>
+    <tr><td>Empleos soportados (2024)</td><td>~1,11 millones</td><td>WTTC</td></tr>
+    <tr><td>Travel &amp; Tourism Perú (2023)</td><td>USD 12.600 MM ingresos sector</td><td>MarketLine</td></tr>
+  </table>
+
+  <h3>Segmento inicial (beachhead)</h3>
+  <table>
+    <tr><th>Segmento</th><th>Ticket referencia</th></tr>
+    <tr><td>Full-days (Paracas, Ica, etc.)</td><td>S/ 150 – 250</td></tr>
+    <tr><td>Cusco / Puno (city tour, trekking)</td><td>S/ 165 – 350</td></tr>
+    <tr><td>Lima gastronómico / ciudad</td><td>S/ 120 – 200</td></tr>
+  </table>
+
+  <h3>Posicionamiento vs. OTAs</h3>
+  <table>
+    <tr><th>Canal</th><th>Comisión al proveedor</th></tr>
+    <tr><td>Viator / intermediarios Booking</td><td>20 – 25%</td></tr>
+    <tr><td>GetYourGuide</td><td>20 – 30%</td></tr>
+    <tr><td>Klook</td><td>15 – 25%</td></tr>
+    <tr><td>Airbnb Experiences</td><td>20%</td></tr>
+    <tr><td><strong>DestinoPeru</strong></td><td><strong>10%</strong></td></tr>
+  </table>
+  <p>Ejemplo: tour S/ 200 → OTA cobra S/ 40–50; DestinoPeru cobra <strong>S/ 20</strong> al partner.</p>
+
+  <h2>4. Modelo de negocio</h2>
+  <p><strong>Ingreso = GMV reservas pagadas × 10%</strong></p>
+  <p>Ingresos futuros: destacados, suscripción Partner Pro, seguros, publicidad destinos, white-label municipal.</p>
+
+  <div class="page-break"></div>
+
+  <h2>5. Proyección financiera (modelo — no histórico auditado)</h2>
+  <p>Tipo de cambio ref.: USD 1 ≈ S/ 3,75. Ticket medio base: S/ 200 → ingreso S/ 20 por reserva.</p>
+
+  <h3>Escenario mes 12 — Año 1</h3>
+  <table>
+    <tr><th>Escenario</th><th>Partners</th><th>Reservas/mes</th><th>GMV/mes (S/)</th><th>Comisión/mes (S/)</th><th>Ingreso anual aprox. (S/)</th></tr>
+    <tr><td>Conservador</td><td>25</td><td>400</td><td>64.000</td><td>6.400</td><td>~350.000</td></tr>
+    <tr><td>Base</td><td>60</td><td>1.200</td><td>240.000</td><td>24.000</td><td>~1.200.000</td></tr>
+    <tr><td>Optimista</td><td>120</td><td>3.500</td><td>980.000</td><td>98.000</td><td>~4.500.000</td></tr>
+  </table>
+
+  <h3>Punto de equilibrio operativo (estimado)</h3>
+  <table>
+    <tr><th>Concepto mensual</th><th>USD</th></tr>
+    <tr><td>Railway (API + Blazor + Postgres)</td><td>40 – 120</td></tr>
+    <tr><td>Cloudinary + dominio + herramientas</td><td>15 – 80</td></tr>
+    <tr><td>Marketing digital mínimo</td><td>300 – 800</td></tr>
+    <tr><td>Soporte / operaciones part-time</td><td>400 – 1.000</td></tr>
+    <tr><td><strong>Opex total MVP</strong></td><td><strong>~800 – 2.000</strong></td></tr>
+  </table>
+  <p>Equilibrio aproximado: <strong>100–150 reservas/mes</strong>. Con 400+ reservas/mes hay margen para reinvertir en marketing.</p>
+
+  <h3>ROI marco para socio</h3>
+  <table>
+    <tr><th>Partida</th><th>Estimación</th></tr>
+    <tr><td>Desarrollo ya realizado (valor mercado)</td><td>USD 25.000 – 45.000</td></tr>
+    <tr><td>Lanzamiento comercial (3 meses)</td><td>USD 3.000 – 8.000</td></tr>
+    <tr><td>Payback (escenario base)</td><td>12 – 18 meses</td></tr>
+    <tr><td>ROI potencial 36 meses (optimista)</td><td>3 – 5× capital lanzamiento</td></tr>
+  </table>
+
+  <h2>6. Escalabilidad</h2>
+  <ul>
+    <li><strong>Técnica:</strong> Dapper + índices SQL, bloqueo atómico de cupos, Cloudinary, PostgreSQL escalable.</li>
+    <li><strong>Capacidad sin re-arquitectura:</strong> miles de búsquedas/min y cientos de reservas concurrentes (upgrade plan cloud).</li>
+    <li><strong>Próximo escalón:</strong> Redis, read replicas, pasarela certificada, API B2B agencias.</li>
+  </ul>
+
+  <div class="page-break"></div>
+
+  <h2>7. Roadmap 18 meses</h2>
+  <table>
+    <tr><th>Fase</th><th>Plazo</th><th>Meta</th></tr>
+    <tr><td>L0 — Ahora</td><td>Q2 2026</td><td>Producción estable, catálogo real</td></tr>
+    <tr><td>L1 — Tracción</td><td>90 días</td><td>20 partners, 500 reservas</td></tr>
+    <tr><td>L2 — Escala regional</td><td>6 meses</td><td>60 partners, S/ 200k GMV/mes</td></tr>
+    <tr><td>L3 — Liderazgo</td><td>12 meses</td><td>Top 3 destinos digitales PE</td></tr>
+    <tr><td>L4 — Consolidación</td><td>18 meses</td><td>S/ 1M+ comisión/mes</td></tr>
+  </table>
+
+  <h2>8. Plan de marketing (trimestre 1)</h2>
+  <table>
+    <tr><th>Canal</th><th>Acción</th><th>Presupuesto/mes (S/)</th></tr>
+    <tr><td>SEO</td><td>Slugs + blog destinos</td><td>1.500 contenido</td></tr>
+    <tr><td>Meta / TikTok</td><td>UGC full-days</td><td>2.000 – 4.000</td></tr>
+    <tr><td>Google Ads</td><td>“tour paracas”, “full day ica”</td><td>1.500 – 3.000</td></tr>
+    <tr><td>B2B directo</td><td>Agencias Lima / Cusco</td><td>Tiempo fundador</td></tr>
+    <tr><td>Alianzas hoteles</td><td>Revenue share</td><td>Variable</td></tr>
+  </table>
+  <p><strong>Presupuesto marketing T1:</strong> S/ 15.000 – 30.000 (USD 4.000 – 8.000).</p>
+
+  <h3>Calendario 90 días</h3>
+  <ul>
+    <li><strong>Sem 1–2:</strong> 10 partners firmados + fotos reales.</li>
+    <li><strong>Sem 3–4:</strong> Primeras 50 reservas con incentivo lanzamiento.</li>
+    <li><strong>Sem 5–8:</strong> Campañas Meta/Google Cusco + Costa.</li>
+    <li><strong>Sem 9–12:</strong> Caso de éxito + “Partner fundador” (8% comisión 6 meses).</li>
+  </ul>
+
+  <h2>9. Estructura sugerida con socio</h2>
+  <table>
+    <tr><th>Rol</th><th>Aporte</th><th>Entregable</th></tr>
+    <tr><td>Fundador tech</td><td>Plataforma y producto</td><td>Roadmap, uptime, evolución</td></tr>
+    <tr><td>Socio comercial</td><td>Red agencias + capital marketing</td><td>Partners, ventas B2B</td></tr>
+    <tr><td>Socio estratégico (opc.)</td><td>Turismo / hotelería</td><td>Credibilidad, contratos</td></tr>
+  </table>
+
+  <h2>10. Conclusión</h2>
+  <ol>
+    <li>Producto en línea con flujo completo reserva → pago → comisión → loyalty.</li>
+    <li>Mercado doméstico USD 11–12 mil millones y en crecimiento (WTTC).</li>
+    <li>Modelo 10% vs. 20–25% OTA: argumento de venta fuerte.</li>
+    <li>Inversión pendiente es <strong>comercial</strong>, no técnica masiva.</li>
+    <li>Escenario base: ~S/ 1,2 MM/año en comisiones con ejecución disciplinada.</li>
+  </ol>
+
+  <div class="highlight">
+    <strong>Próximo paso con el socio:</strong> acordar capital marketing (USD 5–10k), meta 20 partners en 60 días y reparto equity/beneficios; activar campaña Lima – Ica – Cusco.
+  </div>
+
+  <p class="footer-note">
+    Fuentes: WTTC/Oxford Economics (2024–2025), PromPerú/Andina, MarketLine; comisiones OTA: análisis sectorial 2025–2026.
+    Proyecciones: modelo DestinoPeru, no resultados auditados. Documento generado Mayo 2026.
+    Repositorio: github.com/ANTHONY109823/destinoperu
+  </p>
+
+  <p class="no-print" style="margin-top:20px;font-size:9pt;color:#666;">
+    Para guardar como PDF: Ctrl+P → Destino «Guardar como PDF» → A4.
+  </p>
+</body>
+</html>

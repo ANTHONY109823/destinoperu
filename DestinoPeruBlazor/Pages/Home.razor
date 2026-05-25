@@ -4,43 +4,75 @@
 @using DestinoPeruBlazor.Components
 @inject ApiService Api
 
-<PageTitle>Destino Peru - Super App de Turismo</PageTitle>
+<PageTitle>DestinoPerú — Tours y experiencias en Perú</PageTitle>
 
-<section class="hero-premium hero">
-    <div class="hero-content container">
-        <span class="hero-badge">Natural Premium</span>
-        <h1>Explora el Peru sin limites</h1>
-        <p>Full-days, trekking y experiencias con partners verificados.</p>
+<section class="home-hero">
+    <div class="home-hero-overlay"></div>
+    <div class="container home-hero-content">
+        <h1>Descubre el Perú con agencias verificadas</h1>
+        <p class="home-hero-sub">Reserva full days, trekking y experiencias únicas. Paga con Yape o Plin y viaja con confianza.</p>
+
+        <div class="home-search-box">
+            <div class="home-search-grid">
+                <select class="form-select" @bind="department">
+                    <option value="">Todos los departamentos</option>
+                    @foreach (var d in PeruDepartments)
+                    {
+                        <option value="@d">@d</option>
+                    }
+                </select>
+                <input class="form-control" placeholder="Ciudad o destino" @bind="location" />
+                <select class="form-select" @bind="adventureType">
+                    <option value="">Tipo de experiencia</option>
+                    <option value="FullDay">Full Day</option>
+                    <option value="Trekking">Trekking</option>
+                    <option value="Cultural">Cultural</option>
+                    <option value="Gastronomico">Gastronómico</option>
+                    <option value="Aventura">Aventura</option>
+                </select>
+                <input type="date" class="form-control" @bind="fromDate" />
+                <input type="number" class="form-control" placeholder="Precio máx. (S/)" @bind="maxPrice" />
+                <button class="btn btn-primary btn-home-search" @onclick="Search" disabled="@loading">Buscar experiencias</button>
+            </div>
+        </div>
     </div>
 </section>
 
-<section class="search-epic container">
-    <div class="search-epic-inner">
-        <h2 class="search-title">Busca tu proxima aventura</h2>
-        <div class="filters-grid filters-epic">
-            <select class="form-select" @bind="department">
-                <option value="">Todos los departamentos</option>
-                @foreach (var d in departments)
-                {
-                    <option value="@d">@d</option>
-                }
-            </select>
-            <input class="form-control" placeholder="Ciudad o destino" @bind="location" />
-            <select class="form-select" @bind="adventureType">
-                <option value="">Tipo de aventura</option>
-                <option value="FullDay">Full Day</option>
-                <option value="Trekking">Trekking</option>
-                <option value="Cultural">Cultural</option>
-                <option value="Gastronomico">Gastronomico</option>
-            </select>
-            <input type="date" class="form-control" @bind="fromDate" />
-            <input type="number" class="form-control" placeholder="Precio max (S/)" @bind="maxPrice" />
-            <button class="btn btn-primary btn-search" @onclick="Search" disabled="@loading">Buscar</button>
+<section class="container home-destinos">
+    <h2 class="section-title">Destinos populares</h2>
+    <div class="destinos-grid">
+        @foreach (var d in PopularDestinations)
+        {
+            <button type="button" class="destino-card" @onclick="() => FilterByDepartment(d.Name)">
+                <div class="destino-img" style="background-image: url('@d.Image')"></div>
+                <span class="destino-name">@d.Name</span>
+            </button>
+        }
+    </div>
+</section>
+
+<section class="home-trust">
+    <div class="container trust-grid">
+        <div class="trust-item">
+            <span class="trust-icon">📱</span>
+            <h3>Pago seguro con Yape y Plin</h3>
+            <p>Checkout rápido y validación por la agencia.</p>
+        </div>
+        <div class="trust-item">
+            <span class="trust-icon">✓</span>
+            <h3>Agencias verificadas</h3>
+            <p>Partners con documentación y revisión DestinoPerú.</p>
+        </div>
+        <div class="trust-item">
+            <span class="trust-icon">💬</span>
+            <h3>Soporte cercano</h3>
+            <p>Atención en español para viajeros y operadores.</p>
         </div>
     </div>
 </section>
 
 <section class="container tours-section">
+    <h2 class="section-title">Experiencias disponibles</h2>
     @if (loading)
     {
         <div class="tours-grid" aria-busy="true">
@@ -50,7 +82,7 @@
     else if (!loadSuccess)
     {
         <EmptyState Icon="⚠️" Title="No pudimos cargar los tours"
-                    Message="Revisa tu conexion o intenta de nuevo.">
+                    Message="Revisa tu conexión o intenta de nuevo.">
             <button class="btn btn-primary" @onclick="Search">Reintentar</button>
         </EmptyState>
     }
@@ -63,7 +95,7 @@
     }
     else
     {
-        <p class="tours-count">@totalCount experiencia@(totalCount == 1 ? "" : "s") · pagina @currentPage / @totalPages</p>
+        <p class="tours-count">@totalCount experiencia@(totalCount == 1 ? "" : "s") · página @currentPage de @totalPages</p>
         <div class="tours-grid">
             @foreach (var tour in tours)
             {
@@ -74,11 +106,22 @@
         {
             <div class="pagination-bar">
                 <button class="btn btn-outline-primary btn-sm" disabled="@(currentPage <= 1)" @onclick="PrevPage">Anterior</button>
-                <span>Pagina @currentPage de @totalPages</span>
+                <span>Página @currentPage de @totalPages</span>
                 <button class="btn btn-outline-primary btn-sm" disabled="@(currentPage >= totalPages)" @onclick="NextPage">Siguiente</button>
             </div>
         }
     }
+</section>
+
+<section class="home-cta">
+    <div class="container home-cta-inner">
+        <h2>¿Listo para tu próxima aventura?</h2>
+        <p>Explora cientos de tours en todo el Perú o regístrate como agencia partner.</p>
+        <div class="home-cta-actions">
+            <a class="btn btn-primary btn-lg" href="/">Ver tours</a>
+            <a class="btn btn-outline-primary btn-lg" href="register">Registrar mi agencia</a>
+        </div>
+    </div>
 </section>
 
 @code {
@@ -94,10 +137,31 @@
     private bool loading = true;
     private bool loadSuccess = true;
 
-    private static readonly string[] departments =
-        ["Lima", "Cusco", "Arequipa", "Ica", "Puno", "La Libertad", "Amazonas", "Junin"];
+    private static readonly string[] PeruDepartments =
+    [
+        "Amazonas", "Áncash", "Apurímac", "Arequipa", "Ayacucho", "Cajamarca", "Callao",
+        "Cusco", "Huancavelica", "Huánuco", "Ica", "Junín", "La Libertad", "Lambayeque",
+        "Lima", "Loreto", "Madre de Dios", "Moquegua", "Pasco", "Piura", "Puno",
+        "San Martín", "Tacna", "Tumbes", "Ucayali"
+    ];
+
+    private static readonly (string Name, string Image)[] PopularDestinations =
+    [
+        ("Cusco", "https://images.unsplash.com/photo-1526392060635-9d601b837dd0?w=600"),
+        ("Ica", "https://images.unsplash.com/photo-1587595431973-160d0d94add1?w=600"),
+        ("Arequipa", "https://images.unsplash.com/photo-1516026679272-898a54700f3f?w=600"),
+        ("Lima", "https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=600"),
+        ("Puno", "https://images.unsplash.com/photo-1476514525535-07fb3b4eae35?w=600")
+    ];
 
     protected override async Task OnInitializedAsync() => await LoadTours();
+
+    private async Task FilterByDepartment(string dept)
+    {
+        department = dept;
+        currentPage = 1;
+        await LoadTours();
+    }
 
     private async Task Search() { currentPage = 1; await LoadTours(); }
     private async Task PrevPage() { if (currentPage > 1) { currentPage--; await LoadTours(); } }

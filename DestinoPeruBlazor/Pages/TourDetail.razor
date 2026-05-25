@@ -11,37 +11,53 @@
 {
     <MetaTags Title="@(string.IsNullOrWhiteSpace(tour.MetaTitle) ? tour.Title : tour.MetaTitle)"
               Description="@(string.IsNullOrWhiteSpace(tour.MetaDescription) ? tour.Description : tour.MetaDescription)"
-              ImageUrl="@OptimizedImage" />
+              ImageUrl="@ActiveImage" />
 }
 
-<PageTitle>@(tour?.Title ?? "Tour") - Destino Peru</PageTitle>
+<PageTitle>@(tour?.Title ?? "Tour") - DestinoPerú</PageTitle>
 
-<div class="container py-4">
+<div class="container py-4 tour-detail-page">
+    <BackToHome />
+
     @if (loading) { <p>Cargando...</p> }
     else if (!string.IsNullOrEmpty(error)) { <div class="alert alert-danger">@error</div> }
     else if (tour is not null)
     {
         <div class="tour-detail">
-            <div class="tour-detail-header" style="@HeaderStyle">
-                <span class="tour-detail-dept">@tour.Department · @tour.AdventureType</span>
-                <h1>@tour.Title</h1>
-                <p>@tour.Location · @tour.Date.ToString("dddd, dd MMMM yyyy")</p>
+            <div class="tour-gallery">
+                <div class="tour-gallery-main" style="@MainImageStyle"></div>
+                <div class="tour-gallery-thumbs">
+                    @for (var i = 0; i < galleryUrls.Count; i++)
+                    {
+                        var idx = i;
+                        <button type="button"
+                                class="tour-gallery-thumb @(idx == selectedImage ? "active" : "")"
+                                style="background-image: url('@CloudinaryHelper.Optimize(galleryUrls[idx], 400)')"
+                                @onclick="() => selectedImage = idx"
+                                aria-label="Ver imagen @(idx + 1)"></button>
+                    }
+                </div>
             </div>
+
             <div class="row mt-4">
                 <div class="col-lg-8">
+                    <span class="tour-detail-dept-inline">@tour.Department · @tour.AdventureType</span>
+                    <h1 class="tour-detail-title">@tour.Title</h1>
+                    <p class="text-muted">@tour.Location · @tour.Date.ToString("dddd, dd MMMM yyyy", new System.Globalization.CultureInfo("es-PE"))</p>
                     <p class="lead">@tour.Description</p>
                     <ul class="tour-meta-list">
-                        <li><strong>Partner:</strong> @tour.PartnerName</li>
+                        <li><strong>Operador:</strong> @tour.PartnerName</li>
                         <li><strong>Precio:</strong> S/ @tour.Price.ToString("N2") por persona</li>
-                        <li><strong>Cupos disponibles:</strong> @tour.AvailableCapacity / @tour.Capacity</li>
+                        <li><strong>Cupos:</strong> @tour.AvailableCapacity disponibles de @tour.Capacity</li>
                     </ul>
                 </div>
                 <div class="col-lg-4">
-                    <div class="booking-card">
+                    <div class="booking-card booking-card-sticky">
+                        <p class="booking-price">S/ @tour.Price.ToString("N2") <small>/ persona</small></p>
                         <h4>Reservar</h4>
                         @if (!Auth.IsAuthenticated)
                         {
-                            <p>Inicia sesion para reservar.</p>
+                            <p>Inicia sesión para reservar.</p>
                             <a class="btn btn-primary w-100" href="login">Ingresar</a>
                         }
                         else
@@ -71,22 +87,31 @@
     [Parameter] public string Slug { get; set; } = "";
 
     private TourDto? tour;
+    private List<string> galleryUrls = [];
+    private int selectedImage;
     private bool loading = true;
     private bool booking;
     private int quantity = 1;
     private string? error;
     private string? bookingError;
 
-    private string OptimizedImage => tour?.ImageUrl is not null ? CloudinaryHelper.Optimize(tour.ImageUrl, 1200) : "";
-    private string HeaderStyle => tour is null || string.IsNullOrEmpty(tour.ImageUrl)
+    private string ActiveImage => galleryUrls.Count > 0
+        ? CloudinaryHelper.Optimize(galleryUrls[selectedImage], 1200)
+        : "";
+
+    private string MainImageStyle => string.IsNullOrEmpty(ActiveImage)
         ? "background: linear-gradient(135deg, #004D40, #00695C)"
-        : $"background-image: url('{CloudinaryHelper.Optimize(tour.ImageUrl, 1200)}')";
+        : $"background-image: url('{ActiveImage}')";
 
     protected override async Task OnInitializedAsync()
     {
         await Auth.InitializeAsync();
         var response = await Api.GetTourBySlugAsync(Slug);
-        if (response.Success && response.Data is not null) tour = response.Data;
+        if (response.Success && response.Data is not null)
+        {
+            tour = response.Data;
+            galleryUrls = TourGalleryHelper.GetGalleryUrls(tour.ImageUrl, tour.Slug).ToList();
+        }
         else error = response.ErrorMessage ?? "Tour no encontrado.";
         loading = false;
     }
@@ -98,7 +123,8 @@
         var result = await Api.CreateReservationAsync(new CreateReservationRequest { TourId = tour.Id, Quantity = quantity });
         if (result.Success && result.Data is not null)
             Nav.NavigateTo($"checkout/{result.Data.Id}");
-        else bookingError = result.ErrorMessage;
+        else
+            bookingError = result.ErrorMessage;
         booking = false;
     }
 }

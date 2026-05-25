@@ -564,3 +564,219 @@ a:hover { color: var(--dp-primary-light); }
     font-size: 0.85rem;
     margin-bottom: 0.5rem;
 }
+
+/* Volver al inicio */
+.btn-back-home {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: var(--dp-primary);
+    font-weight: 600;
+    margin-bottom: 1rem;
+    text-decoration: none;
+}
+.btn-back-home:hover { color: var(--dp-primary-light); }
+
+/* Tarjeta tour clicable */
+.tour-card-link {
+    display: flex;
+    flex-direction: column;
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+}
+.tour-card-link:hover {
+    transform: scale(1.03);
+    box-shadow: var(--dp-shadow-hover);
+}
+.tour-card-link .tour-card-btn { pointer-events: none; }
+
+/* Home rediseñada */
+.home-hero {
+    position: relative;
+    min-height: 420px;
+    background: url('https://images.unsplash.com/photo-1587595431973-160d0d94add1?w=1600') center/cover no-repeat;
+    display: flex;
+    align-items: center;
+    color: white;
+}
+.home-hero-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(0, 51, 42, 0.88), rgba(0, 105, 92, 0.75));
+}
+.home-hero-content {
+    position: relative;
+    z-index: 1;
+    padding: 3rem 1rem 2rem;
+    width: 100%;
+}
+.home-hero h1 {
+    font-size: clamp(1.6rem, 5vw, 2.5rem);
+    font-weight: 800;
+    margin: 0 0 0.75rem;
+    max-width: 640px;
+}
+.home-hero-sub {
+    font-size: 1.05rem;
+    opacity: 0.95;
+    max-width: 520px;
+    margin-bottom: 1.5rem;
+}
+.home-search-box {
+    background: white;
+    border-radius: var(--dp-radius);
+    padding: 1.25rem;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.2);
+    max-width: 900px;
+}
+.home-search-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.65rem;
+}
+@media (min-width: 576px) { .home-search-grid { grid-template-columns: 1fr 1fr; } }
+@media (min-width: 992px) { .home-search-grid { grid-template-columns: repeat(3, 1fr); } }
+.btn-home-search { grid-column: 1 / -1; }
+
+.section-title {
+    color: var(--dp-primary);
+    font-weight: 700;
+    margin: 2rem 0 1rem;
+    font-size: 1.35rem;
+}
+.home-destinos { padding-bottom: 0.5rem; }
+.destinos-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+}
+@media (min-width: 576px) { .destinos-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (min-width: 992px) { .destinos-grid { grid-template-columns: repeat(5, 1fr); } }
+.destino-card {
+    border: none;
+    padding: 0;
+    background: transparent;
+    cursor: pointer;
+    text-align: left;
+}
+.destino-img {
+    height: 100px;
+    border-radius: var(--dp-radius-sm);
+    background-size: cover;
+    background-position: center;
+}
+.destino-name {
+    display: block;
+    font-weight: 600;
+    color: var(--dp-primary-dark);
+    margin-top: 0.4rem;
+    font-size: 0.9rem;
+}
+.home-trust {
+    background: var(--dp-secondary);
+    padding: 2rem 0;
+    margin: 1rem 0;
+}
+.trust-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+}
+@media (min-width: 768px) { .trust-grid { grid-template-columns: repeat(3, 1fr); } }
+.trust-item {
+    background: white;
+    padding: 1.25rem;
+    border-radius: var(--dp-radius-sm);
+    text-align: center;
+    box-shadow: var(--dp-shadow);
+}
+.trust-icon { font-size: 2rem; display: block; margin-bottom: 0.5rem; }
+.trust-item h3 { font-size: 1rem; color: var(--dp-primary); margin: 0 0 0.35rem; }
+.home-cta {
+    background: linear-gradient(135deg, var(--dp-primary-dark), var(--dp-primary));
+    color: white;
+    padding: 2.5rem 0;
+    margin-top: 2rem;
+}
+.home-cta-inner { text-align: center; }
+.home-cta h2 { margin: 0 0 0.5rem; }
+.home-cta-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    justify-content: center;
+    margin-top: 1.25rem;
+}
+.home-cta .btn-outline-primary {
+    color: white !important;
+    border-color: white !important;
+}
+.home-cta .btn-outline-primary:hover { background: rgba(255,255,255,0.15) !important; }
+
+/* Galería detalle tour */
+.tour-gallery-main {
+    height: 320px;
+    border-radius: var(--dp-radius);
+    background-size: cover;
+    background-position: center;
+}
+.tour-gallery-thumbs {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.65rem;
+    flex-wrap: wrap;
+}
+.tour-gallery-thumb {
+    width: 72px;
+    height: 72px;
+    border: 3px solid transparent;
+    border-radius: 8px;
+    background-size: cover;
+    background-position: center;
+    cursor: pointer;
+    padding: 0;
+}
+.tour-gallery-thumb.active { border-color: var(--dp-offer); }
+.tour-detail-dept-inline {
+    display: inline-block;
+    background: var(--dp-secondary);
+    color: var(--dp-primary);
+    padding: 0.25rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    margin-bottom: 0.5rem;
+}
+.tour-detail-title { color: var(--dp-primary-dark); font-weight: 800; }
+.booking-card-sticky { position: sticky; top: 1rem; }
+.booking-price { font-size: 1.5rem; font-weight: 800; color: var(--dp-primary); margin-bottom: 0.5rem; }
+
+/* Próximamente */
+.coming-soon-hero {
+    text-align: center;
+    padding: 3rem 1.5rem;
+    background: var(--dp-surface);
+    border-radius: var(--dp-radius);
+    box-shadow: var(--dp-shadow);
+    margin-top: 1rem;
+}
+.coming-soon-icon { font-size: 4rem; display: block; margin-bottom: 1rem; }
+.coming-soon-hero h1 { color: var(--dp-primary); font-weight: 800; }
+.coming-soon-lead { font-size: 1.15rem; color: var(--dp-text); }
+.coming-soon-invite { color: var(--dp-muted); max-width: 480px; margin: 1rem auto 1.5rem; }
+.coming-soon-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; justify-content: center; }
+
+.auth-demo-hint {
+    font-size: 0.85rem;
+    background: var(--dp-secondary);
+    padding: 0.65rem 0.85rem;
+    border-radius: var(--dp-radius-sm);
+    margin-bottom: 1rem;
+    color: var(--dp-primary-dark);
+}
+
+@media (max-width: 380px) {
+    .home-hero { min-height: 360px; }
+    .tour-gallery-main { height: 220px; }
+    .tour-gallery-thumb { width: 56px; height: 56px; }
+}
