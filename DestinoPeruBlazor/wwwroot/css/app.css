@@ -1059,6 +1059,30 @@ a:hover { color: var(--dp-primary-light); }
     color: white;
 }
 
+.compare-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+.compare-card {
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    padding: 1rem;
+    background: #fff;
+}
+.compare-price { font-size: 1.25rem; font-weight: 700; color: var(--dp-primary); }
+.loyalty-banner {
+    background: #e8f5e9;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+}
+@media print {
+    .no-print, .dp-nav, .back-home { display: none !important; }
+    .manifest-print .container { max-width: 100%; }
+    .manifest-table { font-size: 11pt; }
+}
+
 @media (max-width: 380px) {
     .home-hero { min-height: 400px; }
     .tour-gallery-main { height: 220px; }

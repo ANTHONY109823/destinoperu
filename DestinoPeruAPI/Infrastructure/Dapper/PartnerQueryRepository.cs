@@ -121,4 +121,25 @@ public class PartnerQueryRepository(IDbConnectionFactory connectionFactory) : IP
 
         return dash with { VendorSales = vendors };
     }
+
+    public async Task<IReadOnlyList<AgencyRankingDto>> GetAgencyRankingAsync()
+    {
+        using var conn = connectionFactory.CreateConnection();
+        conn.Open();
+        const string sql = """
+            SELECT p."Id" AS "PartnerId", p."Name",
+                COALESCE((
+                    SELECT SUM(r."Total") FROM "Reservations" r
+                    INNER JOIN "Tours" t ON t."Id" = r."TourId"
+                    WHERE t."PartnerId" = p."Id" AND r."Status" IN ('Paid', 'Confirmed')
+                ), 0) AS "Revenue",
+                (SELECT COUNT(*) FROM "Reservations" r
+                    INNER JOIN "Tours" t ON t."Id" = r."TourId"
+                    WHERE t."PartnerId" = p."Id") AS "Reservations",
+                (SELECT COUNT(*) FROM "Tours" t WHERE t."PartnerId" = p."Id" AND t."IsActive" = true) AS "TourCount"
+            FROM "Partners" p
+            ORDER BY "Revenue" DESC
+            """;
+        return (await conn.QueryAsync<AgencyRankingDto>(sql)).ToList();
+    }
 }

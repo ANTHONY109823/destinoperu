@@ -1,3 +1,4 @@
+using DestinoPeruAPI.Application.Common;
 using DestinoPeruAPI.Application.DTOs;
 using DestinoPeruAPI.Application.Interfaces;
 using DestinoPeruAPI.Domain.Entities;
@@ -12,6 +13,7 @@ public class SuperAdminService(
     IPartnerQueryRepository partnerQuery,
     IUserRepository userRepository,
     IJwtService jwtService,
+    TourService tourService,
     AppDbContext appDb)
 {
     public async Task<SuperAdminMetricsDto> GetMetricsAsync()
@@ -21,14 +23,27 @@ public class SuperAdminService(
         {
             var all = (await partnerRepository.GetAllAsync()).ToList();
             return new SuperAdminMetricsDto(
-                0, all.Count, all.Count(p => p.Status == "Pending"), 0, 0, 0, 0, 0);
+                await appDb.Users.CountAsync(), all.Count,
+                all.Count(p => p.Status == "Pending"),
+                await appDb.Tours.CountAsync(t => t.IsActive),
+                await appDb.Reservations.CountAsync(), 0, 0,
+                await appDb.Users.CountAsync(u => u.Role == RoleNames.Cliente));
         }
     }
+
+    public Task<IReadOnlyList<AgencyRankingDto>> GetRankingAsync() => partnerQuery.GetAgencyRankingAsync();
 
     public async Task<IReadOnlyList<PartnerListItemDto>> GetPartnersAsync()
     {
         try { return await partnerQuery.GetAllPartnersListAsync(); }
         catch { return await GetPartnersFromEfAsync(); }
+    }
+
+    public async Task<IReadOnlyList<AgencyStaffDto>> GetPartnerStaffAsync(int partnerId)
+    {
+        var staff = await partnerRepository.GetStaffByPartnerIdAsync(partnerId);
+        return staff.Select(s => new AgencyStaffDto(
+            s.UserId, s.User.Name, s.User.Email, s.DisplayName, s.StaffRole)).ToList();
     }
 
     private async Task<IReadOnlyList<PartnerListItemDto>> GetPartnersFromEfAsync()
@@ -57,7 +72,7 @@ public class SuperAdminService(
         {
             Name = request.AdminName.Trim(),
             Email = email,
-            Role = "Admin",
+            Role = RoleNames.Admin,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.AdminPassword, 12),
             CreatedAt = DateTime.UtcNow
         };
@@ -79,16 +94,32 @@ public class SuperAdminService(
             CreatedAt = DateTime.UtcNow
         };
         await partnerRepository.AddAsync(partner);
-        return new ApiResponse<PartnerDto>(true, "Agencia creada con administrador inicial.", MapPartner(partner, admin.Name));
+        return new ApiResponse<PartnerDto>(true, "Agencia y administrador inicial creados.", MapPartner(partner, admin.Name));
+    }
+
+    public async Task<ApiResponse<PartnerDto>> UpdateAgencyAsync(int partnerId, UpdateAgencyRequest request)
+    {
+        var partner = await partnerRepository.GetByIdAsync(partnerId);
+        if (partner == null) return new ApiResponse<PartnerDto>(false, "Agencia no encontrada.", null);
+
+        if (!string.IsNullOrWhiteSpace(request.Name)) partner.Name = request.Name.Trim();
+        if (!string.IsNullOrWhiteSpace(request.RUC)) partner.RUC = request.RUC.Trim();
+        if (request.OperatingDepartment != null) partner.OperatingDepartment = request.OperatingDepartment;
+        if (request.LogoUrl != null) partner.LogoUrl = request.LogoUrl;
+        if (request.ContactEmail != null) partner.ContactEmail = request.ContactEmail;
+        if (request.ContactPhone != null) partner.ContactPhone = request.ContactPhone;
+        if (!string.IsNullOrWhiteSpace(request.Status)) partner.Status = request.Status;
+
+        await partnerRepository.UpdateAsync(partner);
+        return new ApiResponse<PartnerDto>(true, "Agencia actualizada.", MapPartner(partner, partner.User?.Name ?? ""));
     }
 
     public async Task<ApiResponse<bool>> SuspendPartnerAsync(int partnerId, bool suspend)
     {
-        var partner = await partnerRepository.GetByIdAsync(partnerId);
-        if (partner == null) return new ApiResponse<bool>(false, "Agencia no encontrada.", false);
-        partner.Status = suspend ? "Suspended" : "Approved";
-        await partnerRepository.UpdateAsync(partner);
-        return new ApiResponse<bool>(true, suspend ? "Agencia suspendida." : "Agencia reactivada.", true);
+        var r = await UpdateAgencyAsync(partnerId, new UpdateAgencyRequest(null, null, null, null, null, null, suspend ? "Suspended" : "Approved"));
+        return r.Success
+            ? new ApiResponse<bool>(true, suspend ? "Agencia suspendida." : "Agencia reactivada.", true)
+            : new ApiResponse<bool>(false, r.Message, false);
     }
 
     public async Task<ApiResponse<AuthResponse>> ImpersonateAsync(int targetUserId, int superAdminId)
@@ -97,21 +128,24 @@ public class SuperAdminService(
         if (target == null) return new ApiResponse<AuthResponse>(false, "Usuario no encontrado.", null);
 
         int? partnerId = null;
-        if (target.Role is "Admin" or "Agencia")
+        if (target.Role is RoleNames.Admin or RoleNames.Agencia)
         {
             var p = await partnerRepository.GetByUserIdAsync(target.Id);
             partnerId = p?.Id;
         }
-        else if (target.Role == "Vendedor")
+        else if (target.Role == RoleNames.Vendedor)
         {
             var staff = await partnerRepository.GetStaffByUserIdAsync(target.Id);
             partnerId = staff?.PartnerId;
         }
 
         var token = jwtService.GenerateToken(target.Id, target.Email, target.Role, target.Name, partnerId, impersonating: true);
-        return new ApiResponse<AuthResponse>(true, "Modo soporte (suplantación) activado.",
+        return new ApiResponse<AuthResponse>(true, "Modo soporte activado.",
             new AuthResponse(token, target.Name, target.Email, target.Role, target.Id, partnerId, true));
     }
+
+    public async Task<ApiResponse<TourDto>> CreateTourForPartnerAsync(int partnerId, CreateTourRequest request) =>
+        await tourService.CreateForPartnerAsync(request, partnerId);
 
     private static PartnerDto MapPartner(Partner p, string userName) => new(
         p.Id, p.UserId, userName, p.Name, p.RUC, p.PartnerType, p.Status, p.VerificationStatus,
@@ -124,17 +158,18 @@ public class AgencyAdminService(
     IUserRepository userRepository,
     IReservationRepository reservationRepository,
     ITourRepository tourRepository,
-    TourService tourService)
+    TourService tourService,
+    AppDbContext appDb)
 {
     public async Task<int?> ResolvePartnerIdAsync(int userId, string role)
     {
-        if (role == "SuperAdmin") return null;
-        if (role is "Admin" or "Agencia")
+        if (role == RoleNames.SuperAdmin) return null;
+        if (role is RoleNames.Admin or RoleNames.Agencia)
         {
             var p = await partnerRepository.GetByUserIdAsync(userId);
             return p?.Id;
         }
-        if (role == "Vendedor")
+        if (role == RoleNames.Vendedor)
         {
             var staff = await partnerRepository.GetStaffByUserIdAsync(userId);
             return staff?.PartnerId;
@@ -149,13 +184,12 @@ public class AgencyAdminService(
             var d = await partnerQuery.GetAgencyDashboardAsync(partnerId);
             if (d is not null) return new ApiResponse<AgencyDashboardDto>(true, null, d);
         }
-        catch { /* fallback EF */ }
+        catch { /* EF fallback */ }
 
         var partner = await partnerRepository.GetWithToursAsync(partnerId);
         if (partner is null) return new ApiResponse<AgencyDashboardDto>(false, "Agencia no encontrada.", null);
-        var tourCount = partner.Tours.Count(t => t.IsActive);
         return new ApiResponse<AgencyDashboardDto>(true, null, new AgencyDashboardDto(
-            partner.Id, partner.Name, tourCount, 0, 0, 0, 0, []));
+            partner.Id, partner.Name, partner.Tours.Count(t => t.IsActive), 0, 0, 0, 0, []));
     }
 
     public async Task<ApiResponse<AgencyProfileDto>> GetProfileAsync(int partnerId)
@@ -167,9 +201,35 @@ public class AgencyAdminService(
             p.ContactEmail, p.ContactPhone, p.Status, p.CommissionRate));
     }
 
+    public async Task<ApiResponse<AgencyProfileDto>> UpdateProfileAsync(int partnerId, UpdateAgencyRequest request, string role)
+    {
+        if (role is not (RoleNames.Admin or RoleNames.SuperAdmin))
+            return new ApiResponse<AgencyProfileDto>(false, "Solo el administrador puede editar el perfil.", null);
+
+        var p = await partnerRepository.GetByIdAsync(partnerId);
+        if (p is null) return new ApiResponse<AgencyProfileDto>(false, "Agencia no encontrada.", null);
+
+        if (!string.IsNullOrWhiteSpace(request.Name)) p.Name = request.Name!.Trim();
+        if (request.LogoUrl != null) p.LogoUrl = request.LogoUrl;
+        if (request.OperatingDepartment != null) p.OperatingDepartment = request.OperatingDepartment;
+        if (request.ContactEmail != null) p.ContactEmail = request.ContactEmail;
+        if (request.ContactPhone != null) p.ContactPhone = request.ContactPhone;
+
+        await partnerRepository.UpdateAsync(p);
+        return await GetProfileAsync(partnerId);
+    }
+
+    public async Task<ApiResponse<List<AgencyTourListItemDto>>> GetToursAsync(int partnerId)
+    {
+        var tours = await appDb.Tours.Where(t => t.PartnerId == partnerId)
+            .OrderByDescending(t => t.CreatedAt)
+            .Select(t => new AgencyTourListItemDto(t.Id, t.Title, t.Slug, t.Department, t.Price, t.AvailableCapacity, t.Capacity, t.IsActive))
+            .ToListAsync();
+        return new ApiResponse<List<AgencyTourListItemDto>>(true, null, tours);
+    }
+
     public async Task<ApiResponse<List<ReservationDto>>> GetReservationsAsync(int partnerId) =>
-        new(true, null, (await reservationRepository.GetByPartnerAsync(partnerId))
-            .Select(MapReservation).ToList());
+        new(true, null, (await reservationRepository.GetByPartnerAsync(partnerId)).Select(MapReservation).ToList());
 
     public async Task<ApiResponse<bool>> SetReservationStatusAsync(int reservationId, int partnerId, string status)
     {
@@ -178,16 +238,15 @@ public class AgencyAdminService(
         if (r == null) return new ApiResponse<bool>(false, "Reserva no encontrada.", false);
         r.Status = status;
         await reservationRepository.UpdateAsync(r);
-        return new ApiResponse<bool>(true, $"Reserva marcada como {status}.", true);
+        return new ApiResponse<bool>(true, $"Reserva {status}.", true);
     }
 
     public async Task<ApiResponse<VendorSalesDto>> CreateVendorAsync(int partnerId, CreateVendorRequest request, string role)
     {
-        if (role != "Admin" && role != "SuperAdmin")
-            return new ApiResponse<VendorSalesDto>(false, "Solo el administrador de agencia puede crear vendedores.", null);
+        if (role is not (RoleNames.Admin or RoleNames.SuperAdmin))
+            return new ApiResponse<VendorSalesDto>(false, "Solo el administrador puede crear vendedores.", null);
 
-        var count = await partnerRepository.GetStaffCountAsync(partnerId);
-        if (count >= 5)
+        if (await partnerRepository.GetStaffCountAsync(partnerId) >= 5)
             return new ApiResponse<VendorSalesDto>(false, "Máximo 5 vendedores por agencia.", null);
 
         var email = request.Email.ToLower().Trim();
@@ -198,7 +257,7 @@ public class AgencyAdminService(
         {
             Name = request.DisplayName.Trim(),
             Email = email,
-            Role = "Vendedor",
+            Role = RoleNames.Vendedor,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password, 12),
             CreatedAt = DateTime.UtcNow
         };
@@ -208,30 +267,77 @@ public class AgencyAdminService(
             PartnerId = partnerId,
             UserId = user.Id,
             DisplayName = request.DisplayName.Trim(),
-            StaffRole = "Vendedor"
+            StaffRole = RoleNames.Vendedor
         });
         return new ApiResponse<VendorSalesDto>(true, "Vendedor creado.", new VendorSalesDto(user.Id, user.Name, 0, 0));
     }
 
-    public async Task<ApiResponse<TourDto>> CreateTourAsync(CreateTourRequest request, int userId, string role)
+    public async Task<ApiResponse<TourDto>> CreateTourAsync(CreateTourRequest request, int userId, string role, int? partnerIdFromHeader)
     {
-        if (role is not ("Admin" or "Agencia" or "SuperAdmin"))
+        if (role is not (RoleNames.Admin or RoleNames.SuperAdmin))
             return new ApiResponse<TourDto>(false, "Solo el administrador de agencia puede crear tours.", null);
+
+        if (role == RoleNames.SuperAdmin && partnerIdFromHeader.HasValue)
+            return await tourService.CreateForPartnerAsync(request, partnerIdFromHeader.Value);
+
         return await tourService.CreateAsync(request, userId);
     }
 
-    public async Task<ApiResponse<bool>> UpdateTourCapacityAsync(int tourId, int partnerId, int available)
+    public async Task<ApiResponse<bool>> UpdateTourCapacityAsync(int tourId, int partnerId, int available, string role)
     {
+        if (role is not (RoleNames.Admin or RoleNames.Vendedor or RoleNames.SuperAdmin))
+            return new ApiResponse<bool>(false, "Sin permiso.", false);
+
         var tour = await tourRepository.GetByIdAsync(tourId);
         if (tour == null || tour.PartnerId != partnerId)
             return new ApiResponse<bool>(false, "Tour no encontrado.", false);
-        tour.AvailableCapacity = available;
+        tour.AvailableCapacity = Math.Clamp(available, 0, tour.Capacity);
         await tourRepository.UpdateAsync(tour);
         return new ApiResponse<bool>(true, "Cupos actualizados.", true);
+    }
+
+    public async Task<ApiResponse<ManifestDto>> GetManifestAsync(int partnerId, int? tourId)
+    {
+        var reservations = (await reservationRepository.GetByPartnerAsync(partnerId))
+            .Where(r => r.Status is "Confirmed" or "Paid")
+            .Where(r => !tourId.HasValue || r.TourId == tourId.Value)
+            .ToList();
+
+        if (reservations.Count == 0)
+            return new ApiResponse<ManifestDto>(false, "No hay pasajeros confirmados.", null);
+
+        var first = reservations[0];
+        var lines = new List<ManifestPassengerLineDto>();
+        foreach (var r in reservations)
+        {
+            if (r.Passengers?.Count > 0)
+            {
+                foreach (var p in r.Passengers)
+                    lines.Add(new ManifestPassengerLineDto(p.FullName, p.Dni, p.PickupPoint, 1));
+            }
+            else
+                lines.Add(new ManifestPassengerLineDto(r.User?.Name ?? "Pasajero", "—", "—", r.Quantity));
+        }
+
+        var partner = await partnerRepository.GetByIdAsync(partnerId);
+        return new ApiResponse<ManifestDto>(true, null, new ManifestDto(
+            first.Tour?.Title ?? "Tour",
+            first.Tour?.Date ?? DateTime.UtcNow,
+            partner?.Name ?? "Agencia",
+            lines));
     }
 
     private static ReservationDto MapReservation(Reservation r) => new(
         r.Id, r.UserId, r.User?.Name ?? "", r.TourId, r.Tour?.Title ?? "", r.Tour?.Slug ?? "",
         r.Tour?.Location ?? "", r.Tour?.Date ?? DateTime.UtcNow, r.Quantity, r.Total, r.Commission,
         r.LoyaltyPointsEarned, r.Status, r.CreatedAt);
+}
+
+public class UserAccountService(ILoyaltyRepository loyaltyRepository)
+{
+    public async Task<ApiResponse<LoyaltyDto>> GetLoyaltyAsync(int userId)
+    {
+        var account = await loyaltyRepository.GetByUserAsync(userId);
+        return new ApiResponse<LoyaltyDto>(true, null, new LoyaltyDto(account?.Points ?? 0, account?.LifetimePoints ?? 0));
+    }
 }

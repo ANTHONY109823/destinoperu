@@ -13,5 +13,7 @@ builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(apiUrl) 
 builder.Services.AddScoped<ToastService>();
 builder.Services.AddScoped<AuthStateService>();
 builder.Services.AddScoped<ApiService>();
+builder.Services.AddScoped<CartService>();
+builder.Services.AddScoped<CompareService>();
 
 await builder.Build().RunAsync();

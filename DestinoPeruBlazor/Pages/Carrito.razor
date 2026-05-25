@@ -1,0 +1,93 @@
+@page "/carrito"
+@using DestinoPeruBlazor.Models
+@using DestinoPeruBlazor.Services
+@inject CartService Cart
+@inject AuthStateService Auth
+@inject ApiService Api
+@inject NavigationManager Nav
+@inject ToastService Toast
+@implements IDisposable
+
+<PageTitle>Carrito - DestinoPerú</PageTitle>
+
+<div class="container py-4">
+    <BackToHome />
+    <h1>Carrito multidestino</h1>
+    <p class="text-muted">Reserva varios tours de distintos departamentos en un solo flujo.</p>
+
+    @if (Cart.Items.Count == 0)
+    {
+        <p class="text-muted">Tu carrito está vacío. Explora tours en el inicio.</p>
+        <a class="btn btn-primary" href="/">Buscar tours</a>
+    }
+    else
+    {
+        @foreach (var item in Cart.Items)
+        {
+            <div class="reservation-item">
+                <div>
+                    <strong>@item.Title</strong>
+                    <p class="mb-0 text-muted">@item.Department · @item.Quantity pax · S/ @((item.Price * item.Quantity).ToString("N2"))</p>
+                </div>
+                <div>
+                    <a class="btn btn-outline-primary btn-sm" href="/tour/@item.Slug">Ver</a>
+                    <button class="btn btn-outline-danger btn-sm" @onclick="() => Remove(item.TourId)">Quitar</button>
+                </div>
+            </div>
+        }
+        <p class="lead mt-3">Total estimado: <strong>S/ @total.ToString("N2")</strong></p>
+
+        @if (!Auth.IsAuthenticated)
+        {
+            <a class="btn btn-primary" href="/login">Ingresar para reservar</a>
+        }
+        else if (Auth.Role != "Cliente")
+        {
+            <p class="alert alert-warning">El carrito es para clientes. Usa el panel de agencia para operaciones.</p>
+        }
+        else
+        {
+            <button class="btn btn-primary" disabled="@checkingOut" @onclick="CheckoutAll">
+                @(checkingOut ? "Reservando..." : "Reservar todos")
+            </button>
+        }
+    }
+</div>
+
+@code {
+    private decimal total => Cart.Items.Sum(i => i.Price * i.Quantity);
+    private bool checkingOut;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Cart.InitializeAsync();
+        Cart.OnChange += StateHasChanged;
+    }
+
+    private async Task Remove(int tourId)
+    {
+        await Cart.RemoveAsync(tourId);
+        StateHasChanged();
+    }
+
+    private async Task CheckoutAll()
+    {
+        checkingOut = true;
+        foreach (var item in Cart.Items.ToList())
+        {
+            var r = await Api.CreateReservationAsync(new CreateReservationRequest { TourId = item.TourId, Quantity = item.Quantity });
+            if (!r.Success)
+            {
+                Toast.ShowError(r.ErrorMessage ?? $"Error en {item.Title}");
+                checkingOut = false;
+                return;
+            }
+        }
+        await Cart.ClearAsync();
+        Toast.ShowSuccess("Reservas creadas. Completa el pago en Mis reservas.");
+        Nav.NavigateTo("/mis-reservas");
+        checkingOut = false;
+    }
+
+    public void Dispose() => Cart.OnChange -= StateHasChanged;
+}

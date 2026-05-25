@@ -25,6 +25,7 @@ public interface IPartnerRepository
     Task<int> GetStaffCountAsync(int partnerId);
     Task<PartnerStaff?> GetStaffByUserIdAsync(int userId);
     Task<PartnerStaff> AddStaffAsync(PartnerStaff staff);
+    Task<IReadOnlyList<PartnerStaff>> GetStaffByPartnerIdAsync(int partnerId);
 }
 
 public interface ITourRepository

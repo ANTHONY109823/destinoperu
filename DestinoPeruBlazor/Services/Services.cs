@@ -245,6 +245,58 @@ public class ApiService
         catch (Exception ex) { return Fail<VendorSalesDto>("Error al crear vendedor.", ex); }
     }
 
+    public async Task<ApiResult<List<AgencyRankingDto>>> GetSuperAdminRankingAsync() =>
+        await GetJsonAsync<List<AgencyRankingDto>>($"{_baseUrl}/superadmin/ranking", "Ranking no disponible.", showToast: false);
+
+    public async Task<ApiResult<List<AgencyStaffDto>>> GetPartnerStaffAsync(int partnerId) =>
+        await GetJsonAsync<List<AgencyStaffDto>>($"{_baseUrl}/superadmin/partners/{partnerId}/staff", "Equipo no disponible.", showToast: false);
+
+    public async Task<ApiResult<bool>> UpdatePartnerAsync(int partnerId, UpdateAgencyRequest request)
+    {
+        try
+        {
+            PrepareRequest();
+            var response = await _http.PutAsJsonAsync($"{_baseUrl}/superadmin/partners/{partnerId}", request);
+            return response.IsSuccessStatusCode ? ApiResult<bool>.Ok(true) : Fail<bool>("No se pudo actualizar la agencia.");
+        }
+        catch (Exception ex) { return Fail<bool>("Error al actualizar agencia.", ex); }
+    }
+
+    public async Task<ApiResult<AgencyProfileDto>> UpdateAgencyProfileAsync(UpdateAgencyRequest request)
+    {
+        try
+        {
+            PrepareRequest();
+            var response = await _http.PutAsJsonAsync($"{_baseUrl}/agency/profile", request);
+            if (!response.IsSuccessStatusCode) return Fail<AgencyProfileDto>("No se pudo guardar el perfil.");
+            return await GetAgencyProfileAsync();
+        }
+        catch (Exception ex) { return Fail<AgencyProfileDto>("Error de perfil.", ex); }
+    }
+
+    public async Task<ApiResult<List<AgencyTourListItemDto>>> GetAgencyToursAsync() =>
+        await GetJsonAsync<List<AgencyTourListItemDto>>($"{_baseUrl}/agency/tours", "Tours no disponibles.", showToast: false);
+
+    public async Task<ApiResult<bool>> UpdateTourCapacityAsync(int tourId, int available)
+    {
+        try
+        {
+            PrepareRequest();
+            var response = await _http.PutAsync($"{_baseUrl}/agency/tours/{tourId}/capacity?available={available}", null);
+            return response.IsSuccessStatusCode ? ApiResult<bool>.Ok(true) : Fail<bool>("No se actualizaron cupos.");
+        }
+        catch (Exception ex) { return Fail<bool>("Error de inventario.", ex); }
+    }
+
+    public async Task<ApiResult<ManifestDto>> GetManifestAsync(int? tourId = null)
+    {
+        var q = tourId.HasValue ? $"?tourId={tourId}" : "";
+        return await GetJsonAsync<ManifestDto>($"{_baseUrl}/agency/manifest{q}", "Manifiesto no disponible.", showToast: false);
+    }
+
+    public async Task<ApiResult<LoyaltyDto>> GetLoyaltyAsync() =>
+        await GetJsonAsync<LoyaltyDto>($"{_baseUrl}/users/me/loyalty", "Puntos no disponibles.", showToast: false);
+
     public async Task<ApiResult<TourDto>> CreateAgencyTourAsync(CreateTourRequest request)
     {
         try

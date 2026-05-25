@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using DestinoPeruAPI.Application.Common;
 using DestinoPeruAPI.Application.DTOs;
 using DestinoPeruAPI.Application.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -8,19 +9,32 @@ namespace DestinoPeruAPI.API.Controllers;
 
 [ApiController]
 [Route("api/superadmin")]
-[Authorize(Roles = "SuperAdmin")]
+[Authorize(Roles = RoleNames.SuperAdmin)]
 public class SuperAdminController(SuperAdminService superAdminService) : ControllerBase
 {
     [HttpGet("metrics")]
     public async Task<IActionResult> GetMetrics() => Ok(await superAdminService.GetMetricsAsync());
 
+    [HttpGet("ranking")]
+    public async Task<IActionResult> GetRanking() => Ok(await superAdminService.GetRankingAsync());
+
     [HttpGet("partners")]
     public async Task<IActionResult> GetPartners() => Ok(await superAdminService.GetPartnersAsync());
+
+    [HttpGet("partners/{partnerId:int}/staff")]
+    public async Task<IActionResult> GetStaff(int partnerId) => Ok(await superAdminService.GetPartnerStaffAsync(partnerId));
 
     [HttpPost("partners")]
     public async Task<IActionResult> CreateAgency([FromBody] CreateAgencyRequest request)
     {
         var r = await superAdminService.CreateAgencyAsync(request);
+        return r.Success ? Ok(r) : BadRequest(r);
+    }
+
+    [HttpPut("partners/{id:int}")]
+    public async Task<IActionResult> UpdateAgency(int id, [FromBody] UpdateAgencyRequest request)
+    {
+        var r = await superAdminService.UpdateAgencyAsync(id, request);
         return r.Success ? Ok(r) : BadRequest(r);
     }
 
@@ -38,11 +52,18 @@ public class SuperAdminController(SuperAdminService superAdminService) : Control
         var r = await superAdminService.ImpersonateAsync(userId, superId);
         return r.Success ? Ok(r) : BadRequest(r);
     }
+
+    [HttpPost("partners/{partnerId:int}/tours")]
+    public async Task<IActionResult> CreateTourForPartner(int partnerId, [FromBody] CreateTourRequest request)
+    {
+        var r = await superAdminService.CreateTourForPartnerAsync(partnerId, request);
+        return r.Success ? Ok(r) : BadRequest(r);
+    }
 }
 
 [ApiController]
 [Route("api/agency")]
-[Authorize(Roles = "Admin,Vendedor,Agencia,SuperAdmin")]
+[Authorize(Roles = $"{RoleNames.Admin},{RoleNames.Vendedor},{RoleNames.Agencia},{RoleNames.SuperAdmin}")]
 public class AgencyController(AgencyAdminService agencyService) : ControllerBase
 {
     private int UserId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
@@ -57,10 +78,7 @@ public class AgencyController(AgencyAdminService agencyService) : ControllerBase
         if (int.TryParse(User.FindFirstValue("partner_id"), out var fromClaim))
             return fromClaim;
 
-        var pid = await agencyService.ResolvePartnerIdAsync(UserId, Role);
-        if (pid.HasValue) return pid;
-
-        return Role == "SuperAdmin" ? null : null;
+        return await agencyService.ResolvePartnerIdAsync(UserId, Role);
     }
 
     [HttpGet("profile")]
@@ -72,6 +90,16 @@ public class AgencyController(AgencyAdminService agencyService) : ControllerBase
         return r.Success ? Ok(r.Data) : NotFound(r);
     }
 
+    [HttpPut("profile")]
+    [Authorize(Roles = $"{RoleNames.Admin},{RoleNames.SuperAdmin}")]
+    public async Task<IActionResult> UpdateProfile([FromBody] UpdateAgencyRequest request)
+    {
+        var partnerId = await PartnerIdOrBadRequest();
+        if (!partnerId.HasValue) return Forbid();
+        var r = await agencyService.UpdateProfileAsync(partnerId.Value, request, Role);
+        return r.Success ? Ok(r.Data) : BadRequest(r);
+    }
+
     [HttpGet("dashboard")]
     public async Task<IActionResult> Dashboard()
     {
@@ -79,6 +107,15 @@ public class AgencyController(AgencyAdminService agencyService) : ControllerBase
         if (!partnerId.HasValue) return Forbid();
         var r = await agencyService.GetDashboardAsync(partnerId.Value);
         return r.Success ? Ok(r.Data) : NotFound(r);
+    }
+
+    [HttpGet("tours")]
+    public async Task<IActionResult> Tours()
+    {
+        var partnerId = await PartnerIdOrBadRequest();
+        if (!partnerId.HasValue) return Forbid();
+        var r = await agencyService.GetToursAsync(partnerId.Value);
+        return Ok(r.Data);
     }
 
     [HttpGet("reservations")]
@@ -90,8 +127,17 @@ public class AgencyController(AgencyAdminService agencyService) : ControllerBase
         return Ok(r.Data);
     }
 
+    [HttpGet("manifest")]
+    public async Task<IActionResult> Manifest([FromQuery] int? tourId = null)
+    {
+        var partnerId = await PartnerIdOrBadRequest();
+        if (!partnerId.HasValue) return Forbid();
+        var r = await agencyService.GetManifestAsync(partnerId.Value, tourId);
+        return r.Success ? Ok(r.Data) : NotFound(r);
+    }
+
     [HttpPut("reservations/{id:int}/status")]
-    [Authorize(Roles = "Admin,Vendedor,Agencia,SuperAdmin")]
+    [Authorize(Roles = $"{RoleNames.Admin},{RoleNames.Vendedor},{RoleNames.SuperAdmin}")]
     public async Task<IActionResult> SetReservationStatus(int id, [FromQuery] string status = "Confirmed")
     {
         var partnerId = await PartnerIdOrBadRequest();
@@ -101,7 +147,7 @@ public class AgencyController(AgencyAdminService agencyService) : ControllerBase
     }
 
     [HttpPost("vendors")]
-    [Authorize(Roles = "Admin,SuperAdmin")]
+    [Authorize(Roles = $"{RoleNames.Admin},{RoleNames.SuperAdmin}")]
     public async Task<IActionResult> CreateVendor([FromBody] CreateVendorRequest request)
     {
         var partnerId = await PartnerIdOrBadRequest();
@@ -111,19 +157,35 @@ public class AgencyController(AgencyAdminService agencyService) : ControllerBase
     }
 
     [HttpPost("tours")]
-    [Authorize(Roles = "Admin,Agencia,SuperAdmin")]
+    [Authorize(Roles = $"{RoleNames.Admin},{RoleNames.SuperAdmin}")]
     public async Task<IActionResult> CreateTour([FromBody] CreateTourRequest request)
     {
-        var r = await agencyService.CreateTourAsync(request, UserId, Role);
+        int? headerPartner = Request.Headers.TryGetValue("X-Partner-Id", out var h) && int.TryParse(h.FirstOrDefault(), out var pid) ? pid : null;
+        var r = await agencyService.CreateTourAsync(request, UserId, Role, headerPartner);
         return r.Success ? Ok(r) : BadRequest(r);
     }
 
     [HttpPut("tours/{tourId:int}/capacity")]
+    [Authorize(Roles = $"{RoleNames.Admin},{RoleNames.Vendedor},{RoleNames.SuperAdmin}")]
     public async Task<IActionResult> UpdateCapacity(int tourId, [FromQuery] int available)
     {
         var partnerId = await PartnerIdOrBadRequest();
         if (!partnerId.HasValue) return Forbid();
-        var r = await agencyService.UpdateTourCapacityAsync(tourId, partnerId.Value, available);
+        var r = await agencyService.UpdateTourCapacityAsync(tourId, partnerId.Value, available, Role);
         return r.Success ? Ok(r) : BadRequest(r);
+    }
+}
+
+[ApiController]
+[Route("api/users")]
+[Authorize]
+public class UsersController(UserAccountService userAccountService) : ControllerBase
+{
+    [HttpGet("me/loyalty")]
+    public async Task<IActionResult> Loyalty()
+    {
+        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var r = await userAccountService.GetLoyaltyAsync(userId);
+        return Ok(r.Data);
     }
 }

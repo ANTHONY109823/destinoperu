@@ -45,6 +45,24 @@ public record SuperAdminMetricsDto(
     int TotalUsers, int TotalPartners, int PendingPartners, int TotalTours,
     int TotalReservations, decimal TotalRevenue, decimal TotalCommissions, int ActiveUsers);
 
+public record AgencyRankingDto(int PartnerId, string Name, decimal Revenue, int Reservations, int TourCount);
+
+public record UpdateAgencyRequest(
+    string? Name, string? RUC, string? OperatingDepartment, string? LogoUrl,
+    string? ContactEmail, string? ContactPhone, string? Status);
+
+public record LoyaltyDto(int Points, int LifetimePoints);
+
+public record AgencyStaffDto(int UserId, string Name, string Email, string DisplayName, string StaffRole);
+
+public record ManifestDto(
+    string TourTitle, DateTime TourDate, string AgencyName,
+    IReadOnlyList<ManifestPassengerLineDto> Passengers);
+
+public record ManifestPassengerLineDto(string FullName, string Dni, string PickupPoint, int Quantity);
+
+public record AgencyTourListItemDto(int Id, string Title, string Slug, string Department, decimal Price, int AvailableCapacity, int Capacity, bool IsActive);
+
 public record AgencyDashboardDto(
     int PartnerId, string PartnerName, int TotalTours, int PendingReservations,
     int ConfirmedReservations, decimal TotalRevenue, decimal AgencyCommissions,

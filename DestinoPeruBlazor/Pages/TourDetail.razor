@@ -5,6 +5,9 @@
 @using DestinoPeruBlazor.Components
 @inject ApiService Api
 @inject AuthStateService Auth
+@inject CartService Cart
+@inject CompareService Compare
+@inject ToastService Toast
 @inject NavigationManager Nav
 
 @if (tour is not null)
@@ -75,6 +78,11 @@
                             <button class="btn btn-primary w-100" disabled="@booking" @onclick="Reserve">
                                 @(booking ? "Procesando..." : "Reservar ahora")
                             </button>
+                            @if (Auth.Role == "Cliente" || !Auth.IsAuthenticated)
+                            {
+                                <button type="button" class="btn btn-outline-primary w-100 mt-2" @onclick="AddToCart">Agregar al carrito</button>
+                            }
+                            <button type="button" class="btn btn-outline-secondary w-100 mt-2" @onclick="ToggleCompare">@(inCompare ? "Quitar de comparar" : "Comparar tour")</button>
                         }
                     </div>
                 </div>
@@ -94,6 +102,7 @@
     private int quantity = 1;
     private string? error;
     private string? bookingError;
+    private bool inCompare;
 
     private string ActiveImage => galleryUrls.Count > 0
         ? CloudinaryHelper.Optimize(galleryUrls[selectedImage], 1200)
@@ -106,6 +115,8 @@
     protected override async Task OnInitializedAsync()
     {
         await Auth.InitializeAsync();
+        await Compare.InitializeAsync();
+        inCompare = Compare.Slugs.Contains(Slug);
         var response = await Api.GetTourBySlugAsync(Slug);
         if (response.Success && response.Data is not null)
         {
@@ -126,5 +137,23 @@
         else
             bookingError = result.ErrorMessage;
         booking = false;
+    }
+
+    private async Task AddToCart()
+    {
+        if (tour is null) return;
+        await Cart.InitializeAsync();
+        await Cart.AddAsync(tour, quantity);
+        Toast.ShowSuccess("Añadido al carrito.");
+    }
+
+    private async Task ToggleCompare()
+    {
+        if (tour is null) return;
+        await Compare.InitializeAsync();
+        var ok = await Compare.ToggleAsync(tour.Slug);
+        if (!ok) { Toast.ShowWarning("Máximo 3 tours en comparación."); return; }
+        inCompare = Compare.Slugs.Contains(tour.Slug);
+        Toast.ShowSuccess(inCompare ? "Añadido a comparar." : "Quitado de comparar.");
     }
 }

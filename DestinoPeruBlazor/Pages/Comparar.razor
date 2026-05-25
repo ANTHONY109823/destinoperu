@@ -1,0 +1,56 @@
+@page "/comparar"
+@using DestinoPeruBlazor.Models
+@using DestinoPeruBlazor.Services
+@inject CompareService Compare
+@inject ApiService Api
+
+<PageTitle>Comparar tours - DestinoPerú</PageTitle>
+
+<div class="container py-4">
+    <BackToHome />
+    <h1>Comparación de tours</h1>
+    <p class="text-muted">Hasta 3 experiencias lado a lado (departamento, precio, cupos).</p>
+
+    @if (loading)
+    {
+        <p>Cargando...</p>
+    }
+    else if (tours.Count == 0)
+    {
+        <p class="text-muted">Selecciona «Comparar» en el detalle de un tour para añadirlo aquí.</p>
+        <a class="btn btn-primary" href="/">Explorar tours</a>
+    }
+    else
+    {
+        <div class="compare-grid">
+            @foreach (var t in tours)
+            {
+                <div class="compare-card">
+                    <h3>@t.Title</h3>
+                    <p><strong>@t.Department</strong> · @t.AdventureType</p>
+                    <p>@t.Location</p>
+                    <p class="compare-price">S/ @t.Price.ToString("N2")</p>
+                    <p>Cupos: @t.AvailableCapacity / @t.Capacity</p>
+                    <p class="small">@t.Date.ToString("dd/MM/yyyy")</p>
+                    <a class="btn btn-primary btn-sm" href="/tour/@t.Slug">Reservar</a>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private List<TourDto> tours = [];
+    private bool loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Compare.InitializeAsync();
+        foreach (var slug in Compare.Slugs)
+        {
+            var r = await Api.GetTourBySlugAsync(slug);
+            if (r.Success && r.Data is not null) tours.Add(r.Data);
+        }
+        loading = false;
+    }
+}

@@ -1,5 +1,6 @@
 ﻿@using DestinoPeruBlazor.Services
 @inject AuthStateService Auth
+@inject CartService Cart
 @inject NavigationManager Nav
 @implements IDisposable
 
@@ -31,7 +32,10 @@
             {
                 @if (Auth.Role == "Cliente")
                 {
+                    <NavLink class="dp-link" href="/carrito" @onclick="CloseMenu">Carrito @cartLabel</NavLink>
+                    <NavLink class="dp-link" href="/comparar" @onclick="CloseMenu">Comparar</NavLink>
                     <NavLink class="dp-link" href="/mis-reservas" @onclick="CloseMenu">Mis reservas</NavLink>
+                    <NavLink class="dp-link" href="/fidelidad" @onclick="CloseMenu">Puntos</NavLink>
                 }
                 @if (Auth.Role == "SuperAdmin")
                 {
@@ -62,10 +66,32 @@
 
 @code {
     private bool menuOpen;
+    private string cartLabel = "";
 
     private bool ShowPublicCategories => !Auth.IsAuthenticated || Auth.Role is "Cliente" or "SuperAdmin";
 
-    protected override void OnInitialized() => Auth.OnChange += StateHasChanged;
+    protected override async Task OnInitializedAsync()
+    {
+        Auth.OnChange += HandleAuthChange;
+        await RefreshCartLabelAsync();
+    }
+
+    private void HandleAuthChange() =>
+        _ = InvokeAsync(async () =>
+        {
+            await RefreshCartLabelAsync();
+            StateHasChanged();
+        });
+
+    private async Task RefreshCartLabelAsync()
+    {
+        if (Auth.Role == "Cliente")
+        {
+            await Cart.InitializeAsync();
+            cartLabel = Cart.Items.Count > 0 ? $"({Cart.Items.Count})" : "";
+        }
+        else cartLabel = "";
+    }
 
     private void ToggleMenu() => menuOpen = !menuOpen;
     private void CloseMenu() => menuOpen = false;
@@ -77,5 +103,5 @@
         Nav.NavigateTo("/");
     }
 
-    public void Dispose() => Auth.OnChange -= StateHasChanged;
+    public void Dispose() => Auth.OnChange -= HandleAuthChange;
 }

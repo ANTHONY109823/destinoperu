@@ -111,6 +111,38 @@ public class TourService(
         return new ApiResponse<TourDto>(true, "Tour creado.", created);
     }
 
+    public async Task<ApiResponse<TourDto>> CreateForPartnerAsync(CreateTourRequest request, int partnerId)
+    {
+        var partner = await partnerRepository.GetByIdAsync(partnerId);
+        if (partner == null) return new ApiResponse<TourDto>(false, "Agencia no encontrada.", null);
+
+        var slug = SlugHelper.Generate(request.Title);
+        var existing = await tourCommand.GetBySlugAsync(slug);
+        if (existing != null) slug += $"-{DateTime.UtcNow.Ticks % 10000}";
+
+        var imageUrl = string.IsNullOrEmpty(request.ImageUrl) ? null : imageService.OptimizeUrl(request.ImageUrl);
+        var tour = new Tour
+        {
+            PartnerId = partner.Id,
+            Slug = slug,
+            Title = request.Title,
+            Description = request.Description,
+            MetaTitle = request.MetaTitle ?? request.Title,
+            MetaDescription = request.MetaDescription ?? request.Description[..Math.Min(160, request.Description.Length)],
+            Price = request.Price,
+            Location = request.Location,
+            Department = request.Department,
+            AdventureType = request.AdventureType,
+            Date = request.Date,
+            Capacity = request.Capacity,
+            AvailableCapacity = request.Capacity,
+            ImageUrl = imageUrl
+        };
+        await tourCommand.AddAsync(tour);
+        var created = await tourQuery.GetByIdAsync(tour.Id);
+        return new ApiResponse<TourDto>(true, "Tour creado.", created);
+    }
+
     public async Task<ApiResponse<bool>> DeleteAsync(int id, int userId, string role)
     {
         var tour = await tourCommand.GetByIdAsync(id);

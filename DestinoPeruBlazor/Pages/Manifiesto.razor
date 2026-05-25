@@ -1,0 +1,100 @@
+@page "/manifiesto"
+@using DestinoPeruBlazor.Models
+@using DestinoPeruBlazor.Services
+@inject ApiService Api
+@inject AuthStateService Auth
+@inject IJSRuntime JS
+
+<PageTitle>Manifiesto legal - DestinoPerú</PageTitle>
+
+<div class="container py-4 @(printMode ? "manifest-print" : "")">
+    @if (!Auth.IsAuthenticated || Auth.Role is not ("Admin" or "Vendedor" or "SuperAdmin"))
+    {
+        <div class="alert alert-warning">Acceso restringido al personal de agencia.</div>
+    }
+    else if (loading)
+    {
+        <p class="text-muted">Generando manifiesto...</p>
+    }
+    else if (manifest is null)
+    {
+        <div class="alert alert-info">No hay pasajeros confirmados para el manifiesto.</div>
+    }
+    else
+    {
+        <div class="d-flex justify-content-between align-items-start mb-3 no-print">
+            <a class="btn btn-outline-secondary btn-sm" href="@backUrl">← Volver al panel</a>
+            <button class="btn btn-primary btn-sm" @onclick="Print">Imprimir / PDF</button>
+        </div>
+
+        <header class="manifest-header text-center mb-4">
+            <h1 class="h4 mb-1">MANIFIESTO DE PASAJEROS</h1>
+            <p class="mb-0"><strong>@manifest.AgencyName</strong></p>
+            <p class="mb-0">Tour: @manifest.TourTitle</p>
+            <p class="mb-0">Fecha salida: @manifest.TourDate.ToString("dd/MM/yyyy HH:mm")</p>
+            <p class="small text-muted">Documento generado @DateTime.Now.ToString("dd/MM/yyyy HH:mm") — DestinoPerú</p>
+        </header>
+
+        <table class="table table-bordered manifest-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Nombre completo</th>
+                    <th>DNI</th>
+                    <th>Punto recojo</th>
+                </tr>
+            </thead>
+            <tbody>
+                @{ var n = 0; }
+                @foreach (var p in manifest.Passengers)
+                {
+                    n++;
+                    <tr>
+                        <td>@n</td>
+                        <td>@p.FullName</td>
+                        <td>@p.Dni</td>
+                        <td>@p.PickupPoint</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <footer class="manifest-footer mt-5">
+            <div class="row">
+                <div class="col-6">
+                    <p>Responsable operaciones: _________________________</p>
+                </div>
+                <div class="col-6 text-end">
+                    <p>Firma guía / conductor: _________________________</p>
+                </div>
+            </div>
+            <p class="small text-muted text-center">Este documento cumple registro interno de pasajeros para operadores turísticos registrados en DestinoPerú.</p>
+        </footer>
+    }
+</div>
+
+@code {
+    private ManifestDto? manifest;
+    private bool loading = true;
+    private bool printMode;
+    private string backUrl = "/vendedor";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Auth.InitializeAsync();
+        backUrl = Auth.Role == "Admin" ? "/admin" : "/vendedor";
+        if (Auth.IsAuthenticated && Auth.Role is "Admin" or "Vendedor" or "SuperAdmin")
+        {
+            var r = await Api.GetManifestAsync();
+            if (r.Success) manifest = r.Data;
+        }
+        loading = false;
+    }
+
+    private async Task Print()
+    {
+        printMode = true;
+        StateHasChanged();
+        await JS.InvokeVoidAsync("print");
+    }
+}

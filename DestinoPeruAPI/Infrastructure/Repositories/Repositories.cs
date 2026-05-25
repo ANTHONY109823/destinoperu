@@ -38,6 +38,9 @@ public class PartnerRepository(AppDbContext context) : IPartnerRepository
         await context.SaveChangesAsync();
         return staff;
     }
+
+    public async Task<IReadOnlyList<PartnerStaff>> GetStaffByPartnerIdAsync(int partnerId) =>
+        await context.PartnerStaff.Include(s => s.User).Where(s => s.PartnerId == partnerId).ToListAsync();
 }
 
 public class TourRepository(AppDbContext context) : ITourRepository

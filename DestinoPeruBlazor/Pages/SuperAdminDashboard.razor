@@ -47,6 +47,7 @@
 
         <div class="panel-tabs">
             <button type="button" class="panel-tab @(tab == "agencies" ? "active" : "")" @onclick='() => tab = "agencies"'>Agencias (@partners.Count)</button>
+            <button type="button" class="panel-tab @(tab == "ranking" ? "active" : "")" @onclick='() => tab = "ranking"'>Ranking</button>
             <button type="button" class="panel-tab @(tab == "create" ? "active" : "")" @onclick='() => tab = "create"'>Nueva agencia</button>
             <button type="button" class="panel-tab @(tab == "config" ? "active" : "")" @onclick='() => tab = "config"'>Configuración</button>
         </div>
@@ -83,7 +84,9 @@
                                     <td><span class="badge-status @(p.Status == "Approved" ? "ok" : "")">@p.Status</span></td>
                                     <td>S/ @p.Revenue.ToString("N0")</td>
                                     <td class="actions-cell">
-                                        <button class="btn btn-outline-primary btn-sm" @onclick="() => ImpersonateAdmin(p)">Suplantar</button>
+                                        <button class="btn btn-outline-primary btn-sm" @onclick='() => ImpersonateUser(p.AdminUserId, "Admin")'>Suplantar admin</button>
+                                        <button class="btn btn-outline-secondary btn-sm" @onclick="() => ShowStaff(p)">Equipo</button>
+                                        <button class="btn btn-outline-secondary btn-sm" @onclick="() => EditPartner(p)">Editar</button>
                                         @if (p.Status != "Suspended")
                                         {
                                             <button class="btn btn-outline-danger btn-sm" @onclick="() => Suspend(p)">Suspender</button>
@@ -99,7 +102,70 @@
                     </table>
                 </div>
             }
-            <p class="small text-muted mt-2">Agencias demo de prueba incluidas en el seed (Cusco Andes, Lima City, Agencia Demo, etc.).</p>
+            <p class="small text-muted mt-2">Suplantación: entra como admin o vendedor para soporte sin cambiar contraseñas.</p>
+
+            @if (staffPartner is not null)
+            {
+                <section class="dash-panel mt-3">
+                    <h4>Equipo — @staffPartner.Name</h4>
+                    @if (staffLoading) { <p>Cargando...</p> }
+                    else if (staffList.Count == 0) { <p class="text-muted">Sin vendedores registrados.</p> }
+                    else
+                    {
+                        @foreach (var s in staffList)
+                        {
+                            <div class="reservation-row">
+                                <span>@s.DisplayName (@s.StaffRole) — @s.Email</span>
+                                <button class="btn btn-primary btn-sm" @onclick="() => ImpersonateUser(s.UserId, s.StaffRole)">Suplantar</button>
+                            </div>
+                        }
+                    }
+                    <button class="btn btn-link btn-sm" @onclick="() => staffPartner = null">Cerrar</button>
+                </section>
+            }
+
+            @if (editPartner is not null)
+            {
+                <section class="dash-panel mt-3">
+                    <h4>Editar @editPartner.Name</h4>
+                    <div class="admin-form-grid">
+                        <input class="form-control" @bind="editForm.Name" placeholder="Nombre" />
+                        <input class="form-control" @bind="editForm.RUC" placeholder="RUC" />
+                        <input class="form-control" @bind="editForm.OperatingDepartment" placeholder="Departamento" />
+                        <input class="form-control" @bind="editForm.LogoUrl" placeholder="Logo URL" />
+                        <input class="form-control" @bind="editForm.ContactEmail" placeholder="Email contacto" />
+                        <input class="form-control" @bind="editForm.ContactPhone" placeholder="Teléfono" />
+                    </div>
+                    <button class="btn btn-primary btn-sm" @onclick="SaveEdit">Guardar</button>
+                    <button class="btn btn-link btn-sm" @onclick="() => editPartner = null">Cancelar</button>
+                </section>
+            }
+        }
+        else if (tab == "ranking")
+        {
+            <div class="partner-table-wrap mt-3">
+                @if (ranking.Count == 0) { <p class="text-muted">Sin datos de ranking.</p> }
+                else
+                {
+                    <table class="partner-table">
+                        <thead><tr><th>#</th><th>Agencia</th><th>Recaudado</th><th>Reservas</th><th>Tours</th></tr></thead>
+                        <tbody>
+                            @{ var rank = 0; }
+                            @foreach (var row in ranking)
+                            {
+                                rank++;
+                                <tr>
+                                    <td>@rank</td>
+                                    <td>@row.Name</td>
+                                    <td>S/ @row.Revenue.ToString("N0")</td>
+                                    <td>@row.Reservations</td>
+                                    <td>@row.TourCount</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            </div>
         }
         else if (tab == "create")
         {
@@ -136,8 +202,14 @@
 @code {
     private SuperAdminMetricsDto? metrics;
     private List<PartnerListItemDto> partners = [];
+    private List<AgencyRankingDto> ranking = [];
+    private List<AgencyStaffDto> staffList = [];
+    private PartnerListItemDto? staffPartner;
+    private PartnerListItemDto? editPartner;
+    private UpdateAgencyRequest editForm = new();
     private CreateAgencyRequest newAgency = new() { AdminPassword = "Admin2026!" };
     private string tab = "agencies";
+    private bool staffLoading;
     private bool loading = true;
     private bool saving;
     private string? apiWarning;
@@ -161,7 +233,34 @@
         if (p.Success && p.Data is not null) partners = p.Data;
         else if (string.IsNullOrEmpty(apiWarning)) apiWarning = p.ErrorMessage;
 
+        var rk = await Api.GetSuperAdminRankingAsync();
+        if (rk.Success && rk.Data is not null) ranking = rk.Data;
+
         loading = false;
+    }
+
+    private async Task ShowStaff(PartnerListItemDto p)
+    {
+        staffPartner = p;
+        staffLoading = true;
+        staffList = [];
+        var r = await Api.GetPartnerStaffAsync(p.Id);
+        if (r.Success && r.Data is not null) staffList = r.Data;
+        staffLoading = false;
+    }
+
+    private void EditPartner(PartnerListItemDto p)
+    {
+        editPartner = p;
+        editForm = new UpdateAgencyRequest { Name = p.Name, RUC = p.RUC, OperatingDepartment = p.OperatingDepartment };
+    }
+
+    private async Task SaveEdit()
+    {
+        if (editPartner is null) return;
+        var r = await Api.UpdatePartnerAsync(editPartner.Id, editForm);
+        if (r.Success) { Toast.ShowSuccess("Agencia actualizada."); editPartner = null; await LoadData(); }
+        else Toast.ShowError(r.ErrorMessage ?? "Error");
     }
 
     private async Task CreateAgency()
@@ -179,13 +278,20 @@
         saving = false;
     }
 
-    private async Task ImpersonateAdmin(PartnerListItemDto p)
+    private async Task ImpersonateUser(int userId, string expectedRole)
     {
-        var r = await Api.ImpersonateAsync(p.AdminUserId);
+        var r = await Api.ImpersonateAsync(userId);
         if (r.Success && r.Data is not null)
         {
             await Auth.SetAuthAsync(r.Data);
-            Nav.NavigateTo(r.Data.Role == "Admin" ? "/admin" : "/");
+            var dest = r.Data.Role switch
+            {
+                "Admin" => "/admin",
+                "Vendedor" => "/vendedor",
+                "Agencia" => "/partner",
+                _ => "/"
+            };
+            Nav.NavigateTo(dest);
         }
         else Toast.ShowError(r.ErrorMessage ?? "No se pudo suplantar.");
     }

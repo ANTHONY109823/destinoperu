@@ -37,7 +37,7 @@ public class ToursController(TourService tourService) : ControllerBase
         return r.Success ? Ok(r) : NotFound(r);
     }
 
-    [HttpPost][Authorize(Roles = "Agencia,Admin,SuperAdmin")]
+    [HttpPost][Authorize(Roles = "Admin,SuperAdmin")]
     public async Task<IActionResult> Create([FromBody] CreateTourRequest request)
     {
         var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);

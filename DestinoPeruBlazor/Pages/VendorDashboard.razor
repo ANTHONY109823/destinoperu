@@ -58,19 +58,25 @@
         {
             <section class="dash-panel">
                 <h3>Manifiesto de pasajeros</h3>
-                <ul class="manifest-list">
-                    @foreach (var r in reservations.Where(x => x.Status is "Confirmed" or "Paid"))
-                    {
-                        <li>@r.TourTitle — @r.TourDate.ToString("dd/MM/yyyy") · @r.Quantity pax · @r.UserName</li>
-                    }
-                </ul>
+                <p>Vista legal imprimible con DNI y punto de recojo.</p>
+                <a class="btn btn-primary" href="/manifiesto" target="_blank">Abrir manifiesto (imprimir / PDF)</a>
             </section>
         }
         else
         {
             <section class="dash-panel">
                 <h3>Inventario en tiempo real</h3>
-                <p class="text-muted">Actualiza cupos al vender por la calle. Coordina con tu administrador para bloquear fechas.</p>
+                <p class="text-muted">Sincroniza cupos con ventas en calle (offline).</p>
+                @if (agencyTours.Count == 0) { <p class="text-muted">Sin tours activos.</p> }
+                @foreach (var t in agencyTours)
+                {
+                    <div class="reservation-row">
+                        <span>@t.Title — @t.Department</span>
+                        <input type="number" class="form-control form-control-sm" style="max-width:5rem" @bind="capacityEdits[t.Id]" />
+                        <button class="btn btn-outline-primary btn-sm" @onclick="() => SaveCapacity(t.Id)">Actualizar</button>
+                    </div>
+                }
+                <a class="btn btn-outline-secondary mt-2" href="/checkout">Checkout QR / comprobantes</a>
             </section>
         }
     }
@@ -80,6 +86,8 @@
     private AgencyProfileDto? profile;
     private AgencyDashboardDto? dashboard;
     private List<ReservationDto> reservations = [];
+    private List<AgencyTourListItemDto> agencyTours = [];
+    private Dictionary<int, int> capacityEdits = new();
     private VendorSalesDto? mySales;
     private string tab = "payments";
     private bool loading = true;
@@ -103,7 +111,23 @@
             reservations = r.Data;
             pendingCount = reservations.Count(x => x.Status == "Pending");
         }
+
+        var tr = await Api.GetAgencyToursAsync();
+        if (tr.Success && tr.Data is not null)
+        {
+            agencyTours = tr.Data;
+            capacityEdits = agencyTours.ToDictionary(t => t.Id, t => t.AvailableCapacity);
+        }
+
         loading = false;
+    }
+
+    private async Task SaveCapacity(int tourId)
+    {
+        if (!capacityEdits.TryGetValue(tourId, out var cap)) return;
+        var res = await Api.UpdateTourCapacityAsync(tourId, cap);
+        if (res.Success) Toast.ShowSuccess("Cupos actualizados.");
+        else Toast.ShowError(res.ErrorMessage ?? "Error");
     }
 
     private async Task Approve(int id)

@@ -183,6 +183,80 @@ public class CreateTourRequest
     public string? ImageUrl { get; set; }
 }
 
+public class AgencyRankingDto
+{
+    public int PartnerId { get; set; }
+    public string Name { get; set; } = "";
+    public decimal Revenue { get; set; }
+    public int Reservations { get; set; }
+    public int TourCount { get; set; }
+}
+
+public class UpdateAgencyRequest
+{
+    public string? Name { get; set; }
+    public string? RUC { get; set; }
+    public string? OperatingDepartment { get; set; }
+    public string? LogoUrl { get; set; }
+    public string? ContactEmail { get; set; }
+    public string? ContactPhone { get; set; }
+    public string? Status { get; set; }
+}
+
+public class AgencyStaffDto
+{
+    public int UserId { get; set; }
+    public string Name { get; set; } = "";
+    public string Email { get; set; } = "";
+    public string DisplayName { get; set; } = "";
+    public string StaffRole { get; set; } = "";
+}
+
+public class AgencyTourListItemDto
+{
+    public int Id { get; set; }
+    public string Title { get; set; } = "";
+    public string Slug { get; set; } = "";
+    public string Department { get; set; } = "";
+    public decimal Price { get; set; }
+    public int AvailableCapacity { get; set; }
+    public int Capacity { get; set; }
+    public bool IsActive { get; set; }
+}
+
+public class ManifestDto
+{
+    public string TourTitle { get; set; } = "";
+    public DateTime TourDate { get; set; }
+    public string AgencyName { get; set; } = "";
+    public List<ManifestPassengerLineDto> Passengers { get; set; } = [];
+}
+
+public class ManifestPassengerLineDto
+{
+    public string FullName { get; set; } = "";
+    public string Dni { get; set; } = "";
+    public string PickupPoint { get; set; } = "";
+    public int Quantity { get; set; }
+}
+
+public class LoyaltyDto
+{
+    public int Points { get; set; }
+    public int LifetimePoints { get; set; }
+}
+
+public class CartItem
+{
+    public int TourId { get; set; }
+    public string Slug { get; set; } = "";
+    public string Title { get; set; } = "";
+    public string Department { get; set; } = "";
+    public decimal Price { get; set; }
+    public int Quantity { get; set; } = 1;
+    public DateTime AddedAt { get; set; } = DateTime.UtcNow;
+}
+
 public class LoginRequest { public string Email { get; set; } = ""; public string Password { get; set; } = ""; }
 public class RegisterRequest { public string Name { get; set; } = ""; public string Email { get; set; } = ""; public string Password { get; set; } = ""; public string Role { get; set; } = "Cliente"; }
 public class CreateReservationRequest { public int TourId { get; set; } public int Quantity { get; set; } public List<PassengerDto>? Passengers { get; set; } }

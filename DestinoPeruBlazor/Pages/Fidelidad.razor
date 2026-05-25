@@ -1,0 +1,52 @@
+@page "/fidelidad"
+@using DestinoPeruBlazor.Models
+@using DestinoPeruBlazor.Services
+@inject ApiService Api
+@inject AuthStateService Auth
+@inject NavigationManager Nav
+
+<PageTitle>Puntos de fidelidad - DestinoPerú</PageTitle>
+
+<div class="container py-4">
+    <BackToHome />
+    @if (!Auth.IsAuthenticated || Auth.Role != "Cliente")
+    {
+        <div class="alert alert-warning">Inicia sesión como cliente para ver tus puntos.</div>
+    }
+    else if (loading)
+    {
+        <p class="text-muted">Cargando...</p>
+    }
+    else if (loyalty is not null)
+    {
+        <h1>Mis puntos DestinoPerú</h1>
+        <div class="metrics-grid metrics-grid-compact">
+            <div class="metric-card metric-highlight">
+                <span class="metric-value">@loyalty.Points</span>
+                <span class="metric-label">Puntos disponibles</span>
+            </div>
+            <div class="metric-card">
+                <span class="metric-value">@loyalty.LifetimePoints</span>
+                <span class="metric-label">Acumulados históricos</span>
+            </div>
+        </div>
+        <p class="text-muted">Ganas ~1% del monto de cada reserva confirmada. Canje próximamente.</p>
+        <a class="btn btn-primary" href="/">Reservar más tours</a>
+    }
+</div>
+
+@code {
+    private LoyaltyDto? loyalty;
+    private bool loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Auth.InitializeAsync();
+        if (Auth.Role == "Cliente")
+        {
+            var r = await Api.GetLoyaltyAsync();
+            if (r.Success) loyalty = r.Data;
+        }
+        loading = false;
+    }
+}
