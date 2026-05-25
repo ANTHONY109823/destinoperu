@@ -6,34 +6,31 @@
 
 <PageTitle>DestinoPerú — Tours y experiencias en Perú</PageTitle>
 
-<section class="home-hero">
+<section class="home-hero" style="background-image: url('https://images.unsplash.com/photo-1587595431973-160d0d94add1?w=1600&q=80');">
     <div class="home-hero-overlay"></div>
-    <div class="container home-hero-inner">
-        <div class="home-hero-text">
+    <div class="container home-hero-stack">
+        <div class="home-hero-head">
             <h1>Descubre el Perú con agencias verificadas</h1>
             <p class="home-hero-sub">Reserva full days, trekking y experiencias únicas. Paga con Yape o Plin y viaja con confianza.</p>
         </div>
 
-        <div class="home-search-card">
-            <div class="home-search-row home-search-row-top">
-                <div class="home-search-field">
-                    <label class="home-search-label">Departamento</label>
+        <div class="home-search-card home-search-linear">
+            <div class="home-search-linear-grid">
+                <div class="hs-field">
+                    <label>Departamento</label>
                     <select class="form-select" @bind="department">
-                        <option value="">Todos los departamentos</option>
-                        @foreach (var d in PeruDepartments)
-                        {
-                            <option value="@d">@d</option>
-                        }
+                        <option value="">Todos</option>
+                        @foreach (var d in PeruDepartments) { <option value="@d">@d</option> }
                     </select>
                 </div>
-                <div class="home-search-field">
-                    <label class="home-search-label">Ciudad o destino</label>
-                    <input class="form-control" placeholder="Ej. Cusco, Miraflores" @bind="location" />
+                <div class="hs-field">
+                    <label>Ciudad</label>
+                    <input class="form-control" placeholder="Cusco, Lima..." @bind="location" />
                 </div>
-                <div class="home-search-field">
-                    <label class="home-search-label">Tipo de experiencia</label>
+                <div class="hs-field">
+                    <label>Experiencia</label>
                     <select class="form-select" @bind="adventureType">
-                        <option value="">Cualquier tipo</option>
+                        <option value="">Todas</option>
                         <option value="FullDay">Full Day</option>
                         <option value="Trekking">Trekking</option>
                         <option value="Cultural">Cultural</option>
@@ -41,18 +38,19 @@
                         <option value="Aventura">Aventura</option>
                     </select>
                 </div>
-            </div>
-            <div class="home-search-row home-search-row-bottom">
-                <div class="home-search-field">
-                    <label class="home-search-label">Fecha</label>
+                <div class="hs-field">
+                    <label>Fecha</label>
                     <input type="date" class="form-control" @bind="fromDate" />
                 </div>
-                <div class="home-search-field">
-                    <label class="home-search-label">Precio máximo (S/)</label>
-                    <input type="number" class="form-control" placeholder="Sin límite" @bind="maxPrice" min="0" />
+                <div class="hs-field">
+                    <label>Precio máx.</label>
+                    <input type="number" class="form-control" placeholder="S/" @bind="maxPrice" min="0" />
+                </div>
+                <div class="hs-field hs-field-btn">
+                    <label>&nbsp;</label>
+                    <button type="button" class="btn btn-primary btn-search-linear" @onclick="Search" disabled="@loading">Buscar</button>
                 </div>
             </div>
-            <button class="btn btn-primary btn-home-search" @onclick="Search" disabled="@loading">Buscar experiencias</button>
         </div>
     </div>
 </section>
@@ -96,10 +94,7 @@
     {
         <p class="tours-count">@totalCount experiencia@(totalCount == 1 ? "" : "s") · página @currentPage de @totalPages</p>
         <div class="tours-grid">
-            @foreach (var tour in tours)
-            {
-                <TourCard Tour="tour" />
-            }
+            @foreach (var tour in tours) { <TourCard Tour="tour" /> }
         </div>
         @if (totalPages > 1)
         {
@@ -116,35 +111,28 @@
     <div class="container trust-strip">
         <div class="trust-strip-item">
             <span class="trust-strip-icon">📱</span>
-            <div>
-                <strong>Yape y Plin</strong>
-                <span>Pago seguro validado por la agencia.</span>
-            </div>
+            <div><strong>Yape y Plin</strong><span>Pago seguro validado.</span></div>
         </div>
         <div class="trust-strip-item">
             <span class="trust-strip-icon">✓</span>
-            <div>
-                <strong>Agencias verificadas</strong>
-                <span>Partners con documentación revisada.</span>
-            </div>
+            <div><strong>Agencias verificadas</strong><span>Partners revisados.</span></div>
         </div>
         <div class="trust-strip-item">
             <span class="trust-strip-icon">💬</span>
-            <div>
-                <strong>Soporte cercano</strong>
-                <span>Atención en español para viajeros.</span>
-            </div>
+            <div><strong>Soporte cercano</strong><span>Atención en español.</span></div>
         </div>
     </div>
 </section>
 
 <section class="home-cta">
-    <div class="container home-cta-inner">
-        <h2>¿Listo para tu próxima aventura?</h2>
-        <p>Explora cientos de tours en todo el Perú o regístrate como agencia partner.</p>
-        <div class="home-cta-actions">
-            <a class="btn btn-primary btn-lg" href="/">Ver tours</a>
-            <a class="btn btn-outline-primary btn-lg" href="register">Registrar mi agencia</a>
+    <div class="container">
+        <div class="home-cta-box">
+            <h2>¿Listo para tu próxima aventura?</h2>
+            <p>Explora tours en todo el Perú o únete como agencia partner en DestinoPerú.</p>
+            <div class="home-cta-btns">
+                <a class="btn-cta btn-cta-main" href="/">Ver tours disponibles</a>
+                <a class="btn-cta btn-cta-alt" href="/login">Acceso agencias</a>
+            </div>
         </div>
     </div>
 </section>
@@ -172,22 +160,16 @@
 
     private static readonly (string Name, string Image)[] PopularDestinations =
     [
-        ("Cusco", "https://images.unsplash.com/photo-1526392060635-9d601b837dd0?w=600"),
-        ("Ica", "https://images.unsplash.com/photo-1587595431973-160d0d94add1?w=600"),
-        ("Arequipa", "https://images.unsplash.com/photo-1516026679272-898a54700f3f?w=600"),
-        ("Lima", "https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=600"),
-        ("Puno", "https://images.unsplash.com/photo-1476514525535-07fb3b4eae35?w=600")
+        ("Cusco", "https://images.unsplash.com/photo-1526392060635-9d601b837dd0?w=600&q=80"),
+        ("Ica", "https://images.unsplash.com/photo-1587595431973-160d0d94add1?w=600&q=80"),
+        ("Arequipa", "https://images.unsplash.com/photo-1516026679272-898a54700f3f?w=600&q=80"),
+        ("Lima", "https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=600&q=80"),
+        ("Puno", "https://images.unsplash.com/photo-1476514525535-07fb3b4eae35?w=600&q=80")
     ];
 
     protected override async Task OnInitializedAsync() => await LoadTours();
 
-    private async Task FilterByDepartment(string dept)
-    {
-        department = dept;
-        currentPage = 1;
-        await LoadTours();
-    }
-
+    private async Task FilterByDepartment(string dept) { department = dept; currentPage = 1; await LoadTours(); }
     private async Task Search() { currentPage = 1; await LoadTours(); }
     private async Task PrevPage() { if (currentPage > 1) { currentPage--; await LoadTours(); } }
     private async Task NextPage() { if (currentPage < totalPages) { currentPage++; await LoadTours(); } }

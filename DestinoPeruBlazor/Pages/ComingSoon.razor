@@ -5,19 +5,22 @@
 
 <PageTitle>@Content.Title - DestinoPerú</PageTitle>
 
-<div class="container py-4">
-    <BackToHome />
+<div class="coming-soon-page">
+    <div class="container">
+        <BackToHome />
 
-    <section class="coming-soon-hero">
-        <span class="coming-soon-icon">@Content.Icon</span>
-        <h1>Próximamente</h1>
-        <p class="coming-soon-lead">@Content.Lead</p>
-        <p class="coming-soon-invite">@Content.Invite</p>
-        <div class="coming-soon-actions">
-            <a class="btn btn-primary" href="/register">Registrar mi negocio</a>
-            <a class="btn btn-outline-primary" href="/">Explorar tours</a>
-        </div>
-    </section>
+        <section class="coming-soon-card">
+            <div class="coming-soon-badge">Próximamente</div>
+            <span class="coming-soon-icon-lg">@Content.Icon</span>
+            <h1>@Content.Title</h1>
+            <p class="coming-soon-lead">@Content.Lead</p>
+            <p class="coming-soon-invite">@Content.Invite</p>
+            <div class="coming-soon-actions">
+                <a class="btn-cta btn-cta-main" href="/login">Acceso para negocios</a>
+                <a class="btn-cta btn-cta-alt" href="/">Explorar tours</a>
+            </div>
+        </section>
+    </div>
 </div>
 
 @code {
@@ -28,7 +31,7 @@
     private static readonly CategoryContent Hotel = new(
         "Hoteles", "🏨",
         "Pronto: los mejores hoteles del Perú en un solo lugar.",
-        "¿Eres hotel? Regístrate y sé de los primeros en aparecer en DestinoPerú.");
+        "¿Eres hotel? Regístrate y sé de los primeros en DestinoPerú.");
 
     private static readonly CategoryContent Restaurant = new(
         "Restaurantes", "🍽️",

@@ -17,9 +17,13 @@
         <h2>@(IsRegister ? "Crear cuenta" : "Iniciar sesión")</h2>
 
         <div class="auth-tabs">
-            <NavLink class="auth-tab-link" href="/login" Match="NavLinkMatch.All">Ingresar</NavLink>
-            <NavLink class="auth-tab-link" href="/register">Registrarse</NavLink>
+            <NavLink class="auth-tab-link" href="/login" Match="NavLinkMatch.Prefix">Ingresar</NavLink>
+            <NavLink class="auth-tab-link" href="/register">Crear cuenta viajero</NavLink>
         </div>
+        @if (!IsRegister)
+        {
+            <p class="auth-hint small text-muted">Agencias, vendedores y administradores: usa tus credenciales en esta pantalla.</p>
+        }
 
         @if (!string.IsNullOrEmpty(successMessage))
         {

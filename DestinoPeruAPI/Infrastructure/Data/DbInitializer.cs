@@ -50,9 +50,10 @@ public static class DbInitializer
         await UpsertUserAsync(db, SuperAdminEmail, "Super Admin DestinoPerú", "SuperAdmin", SystemPassword, logger);
 
         var agencyAdmin = await UpsertUserAsync(db, AgencyAdminEmail, "Admin Agencia Demo", "Admin", SystemPassword, logger);
-        if (!await db.Partners.AnyAsync(p => p.UserId == agencyAdmin.Id))
+        var agencyPartner = await db.Partners.FirstOrDefaultAsync(p => p.UserId == agencyAdmin.Id);
+        if (agencyPartner is null)
         {
-            db.Partners.Add(new Partner
+            agencyPartner = new Partner
             {
                 UserId = agencyAdmin.Id,
                 Name = "Agencia Demo DestinoPerú",
@@ -64,9 +65,16 @@ public static class DbInitializer
                 ContactEmail = AgencyAdminEmail,
                 CommissionRate = 0.10m,
                 CreatedAt = DateTime.UtcNow
-            });
+            };
+            db.Partners.Add(agencyPartner);
             await db.SaveChangesAsync();
             logger.LogInformation("Partner demo vinculado a {Email}", AgencyAdminEmail);
+        }
+        else
+        {
+            agencyPartner.Status = "Approved";
+            agencyPartner.OperatingDepartment ??= "Lima";
+            await db.SaveChangesAsync();
         }
     }
 

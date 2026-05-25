@@ -13,13 +13,13 @@
 
     @if (Auth.Impersonating)
     {
-        <div class="impersonation-banner">Modo soporte: actuando como <strong>@Auth.Name</strong> (@Auth.Role)</div>
+        <div class="impersonation-banner">Modo soporte: actuando como <strong>@Auth.Name</strong></div>
     }
 
     @if (!CanAccess)
     {
         <div class="panel-access-denied alert alert-warning">
-            Acceso solo para administradores de agencia.
+            Acceso solo para administradores de agencia. Usa <strong>Ingresar</strong> con tus credenciales.
             <a class="btn btn-primary btn-sm ms-2" href="/login">Ingresar</a>
         </div>
     }
@@ -27,89 +27,111 @@
     {
         <p class="text-muted">Cargando panel de agencia...</p>
     }
-    else if (dashboard is not null)
+    else
     {
-        <h1 class="dashboard-title">@dashboard.PartnerName</h1>
-        <p class="text-muted">Administración operativa · Hasta 5 vendedores</p>
+        <h1 class="dashboard-title">@(dashboard?.PartnerName ?? "Mi agencia")</h1>
+        <p class="text-muted">Administración operativa · Crear hasta 5 vendedores</p>
 
-        <div class="metrics-grid">
-            <div class="metric-card"><span class="metric-value">@dashboard.TotalTours</span><span class="metric-label">Tours activos</span></div>
-            <div class="metric-card metric-warn"><span class="metric-value">@dashboard.PendingReservations</span><span class="metric-label">Reservas pendientes</span></div>
-            <div class="metric-card"><span class="metric-value">@dashboard.ConfirmedReservations</span><span class="metric-label">Confirmadas</span></div>
-            <div class="metric-card metric-highlight"><span class="metric-value">S/ @dashboard.TotalRevenue.ToString("N0")</span><span class="metric-label">Recaudado</span></div>
-        </div>
+        @if (!string.IsNullOrEmpty(error))
+        {
+            <div class="alert alert-warning d-flex flex-wrap align-items-center gap-2">
+                @error
+                <button class="btn btn-outline-primary btn-sm" @onclick="Load">Reintentar</button>
+                @if (!Auth.PartnerId.HasValue)
+                {
+                    <span class="small">Cierra sesión y vuelve a ingresar con <strong>admin@destinoperu.com</strong> tras el redeploy de la API.</span>
+                }
+            </div>
+        }
+
+        @if (dashboard is not null)
+        {
+            <div class="metrics-grid">
+                <div class="metric-card"><span class="metric-value">@dashboard.TotalTours</span><span class="metric-label">Tours</span></div>
+                <div class="metric-card metric-warn"><span class="metric-value">@dashboard.PendingReservations</span><span class="metric-label">Pendientes</span></div>
+                <div class="metric-card"><span class="metric-value">@dashboard.ConfirmedReservations</span><span class="metric-label">Confirmadas</span></div>
+                <div class="metric-card metric-highlight"><span class="metric-value">S/ @dashboard.TotalRevenue.ToString("N0")</span><span class="metric-label">Recaudado</span></div>
+            </div>
+        }
 
         <div class="panel-tabs">
+            <button type="button" class="panel-tab @(tab == "team" ? "active" : "")" @onclick='() => tab = "team"'>+ Vendedores</button>
             <button type="button" class="panel-tab @(tab == "reservations" ? "active" : "")" @onclick='() => tab = "reservations"'>Reservas</button>
-            <button type="button" class="panel-tab @(tab == "team" ? "active" : "")" @onclick='() => tab = "team"'>Vendedores</button>
             <button type="button" class="panel-tab @(tab == "tours" ? "active" : "")" @onclick='() => tab = "tours"'>Nuevo tour</button>
             <button type="button" class="panel-tab @(tab == "brand" ? "active" : "")" @onclick='() => tab = "brand"'>Marca</button>
         </div>
 
-        @if (tab == "reservations")
+        @if (tab == "team")
+        {
+            <section class="dash-panel dash-panel-highlight">
+                <h3>Crear vendedor (máx. 5)</h3>
+                <p class="text-muted small">Cada vendedor tiene métricas de ventas individuales.</p>
+                <div class="admin-form-grid">
+                    <input class="form-control" placeholder="Nombre en operaciones *" @bind="newVendor.DisplayName" />
+                    <input class="form-control" type="email" placeholder="Email *" @bind="newVendor.Email" />
+                    <input class="form-control" type="password" placeholder="Contraseña *" @bind="newVendor.Password" />
+                </div>
+                <button class="btn btn-primary" @onclick="CreateVendor" disabled="@(string.IsNullOrWhiteSpace(newVendor.Email))">
+                    Crear vendedor
+                </button>
+
+                @if (dashboard?.VendorSales.Count > 0)
+                {
+                    <hr />
+                    <h4 class="mt-3">Equipo actual</h4>
+                    @foreach (var v in dashboard!.VendorSales)
+                    {
+                        <p class="mb-1"><strong>@v.Name</strong> — @v.Reservations reservas · S/ @v.Revenue.ToString("N2")</p>
+                    }
+                }
+            </section>
+        }
+        else if (tab == "reservations")
         {
             <div class="partner-table-wrap">
-                <table class="partner-table">
-                    <thead>
-                        <tr><th>Tour</th><th>Cliente</th><th>Total</th><th>Estado</th><th></th></tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var r in reservations)
-                        {
-                            <tr>
-                                <td>@r.TourTitle</td>
-                                <td>@r.UserName</td>
-                                <td>S/ @r.Total.ToString("N2")</td>
-                                <td>@r.Status</td>
-                                <td>
-                                    @if (r.Status == "Pending")
-                                    {
-                                        <button class="btn btn-primary btn-sm" @onclick="() => Approve(r.Id)">Aprobar</button>
-                                        <button class="btn btn-outline-danger btn-sm" @onclick="() => Reject(r.Id)">Rechazar</button>
-                                    }
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
+                @if (reservations.Count == 0)
+                {
+                    <p class="text-muted">Sin reservas aún.</p>
+                }
+                else
+                {
+                    <table class="partner-table">
+                        <thead>
+                            <tr><th>Tour</th><th>Cliente</th><th>Total</th><th>Estado</th><th></th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var r in reservations)
+                            {
+                                <tr>
+                                    <td>@r.TourTitle</td>
+                                    <td>@r.UserName</td>
+                                    <td>S/ @r.Total.ToString("N2")</td>
+                                    <td>@r.Status</td>
+                                    <td>
+                                        @if (r.Status == "Pending")
+                                        {
+                                            <button class="btn btn-primary btn-sm" @onclick="() => Approve(r.Id)">Aprobar</button>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
             </div>
-        }
-        else if (tab == "team")
-        {
-            <section class="dash-panel">
-                <h3>Ventas por vendedor</h3>
-                @if (dashboard.VendorSales.Count == 0)
-                {
-                    <p class="text-muted">Aún no hay vendedores. Crea hasta 5 perfiles.</p>
-                }
-                @foreach (var v in dashboard.VendorSales)
-                {
-                    <p><strong>@v.Name</strong> — @v.Reservations reservas · S/ @v.Revenue.ToString("N2")</p>
-                }
-                <hr />
-                <h4>Nuevo vendedor</h4>
-                <div class="admin-form-grid">
-                    <input class="form-control" placeholder="Nombre en operaciones" @bind="newVendor.DisplayName" />
-                    <input class="form-control" type="email" placeholder="Email" @bind="newVendor.Email" />
-                    <input class="form-control" type="password" placeholder="Contraseña" @bind="newVendor.Password" />
-                </div>
-                <button class="btn btn-primary" @onclick="CreateVendor">Crear vendedor</button>
-            </section>
         }
         else if (tab == "tours")
         {
             <section class="dash-panel">
-                <h3>Añadir tour (solo Admin de agencia)</h3>
+                <h3>Publicar tour</h3>
                 <div class="admin-form-grid">
-                    <input class="form-control" placeholder="Título" @bind="newTour.Title" />
+                    <input class="form-control" placeholder="Título *" @bind="newTour.Title" />
                     <input class="form-control" placeholder="Ubicación" @bind="newTour.Location" />
                     <input class="form-control" placeholder="Departamento" @bind="newTour.Department" />
                     <select class="form-select" @bind="newTour.AdventureType">
                         <option value="FullDay">Full Day</option>
                         <option value="Trekking">Trekking</option>
                         <option value="Cultural">Cultural</option>
-                        <option value="Gastronomico">Gastronómico</option>
-                        <option value="Aventura">Aventura</option>
                     </select>
                     <input type="number" class="form-control" placeholder="Precio S/" @bind="newTour.Price" />
                     <input type="number" class="form-control" placeholder="Cupos" @bind="newTour.Capacity" />
@@ -122,15 +144,11 @@
         else
         {
             <section class="dash-panel">
-                <h3>Carrusel y perfil público</h3>
-                <p class="text-muted">Sube fotos y videos desde el panel partner o arrastra archivos en la zona de carga. El carrusel se muestra en la ficha de tu agencia.</p>
-                <a class="btn btn-outline-primary" href="/partner">Gestionar medios</a>
+                <h3>Carrusel y perfil</h3>
+                <p class="text-muted">Gestiona fotos y videos de tu agencia.</p>
+                <a class="btn btn-outline-primary" href="/partner">Abrir gestión de medios</a>
             </section>
         }
-    }
-    else
-    {
-        <div class="alert alert-danger">@error</div>
     }
 </div>
 
@@ -139,7 +157,7 @@
     private List<ReservationDto> reservations = [];
     private CreateVendorRequest newVendor = new();
     private CreateTourRequest newTour = new() { Date = DateTime.Today.AddDays(7), AdventureType = "FullDay", Capacity = 20 };
-    private string tab = "reservations";
+    private string tab = "team";
     private bool loading = true;
     private string? error;
 
@@ -155,39 +173,40 @@
     private async Task Load()
     {
         loading = true;
+        error = null;
         var d = await Api.GetAgencyDashboardAsync();
         if (d.Success) dashboard = d.Data;
-        else error = d.ErrorMessage;
+        else error = d.ErrorMessage ?? "No se pudo cargar el panel. Verifica la API en Railway.";
+
         var r = await Api.GetAgencyReservationsAsync();
         if (r.Success && r.Data is not null) reservations = r.Data;
+
         loading = false;
     }
 
     private async Task Approve(int id)
     {
         var res = await Api.SetReservationStatusAsync(id, "Confirmed");
-        if (res.Success) await Load();
-        else Toast.ShowError(res.ErrorMessage ?? "Error");
-    }
-
-    private async Task Reject(int id)
-    {
-        var res = await Api.SetReservationStatusAsync(id, "Cancelled");
-        if (res.Success) await Load();
+        if (res.Success) { await Load(); Toast.ShowSuccess("Reserva aprobada."); }
         else Toast.ShowError(res.ErrorMessage ?? "Error");
     }
 
     private async Task CreateVendor()
     {
+        if (string.IsNullOrWhiteSpace(newVendor.DisplayName) || string.IsNullOrWhiteSpace(newVendor.Email) || newVendor.Password.Length < 6)
+        {
+            Toast.ShowWarning("Completa nombre, email y contraseña (mín. 6 caracteres).");
+            return;
+        }
         var res = await Api.CreateVendorAsync(newVendor);
-        if (res.Success) { newVendor = new(); await Load(); Toast.ShowSuccess("Vendedor creado."); }
-        else Toast.ShowError(res.ErrorMessage ?? "Error");
+        if (res.Success) { newVendor = new(); tab = "team"; await Load(); Toast.ShowSuccess("Vendedor creado correctamente."); }
+        else Toast.ShowError(res.ErrorMessage ?? "Error al crear vendedor.");
     }
 
     private async Task CreateTour()
     {
-        if (string.IsNullOrWhiteSpace(newTour.Description))
-            newTour.Description = newTour.Title;
+        if (string.IsNullOrWhiteSpace(newTour.Title)) { Toast.ShowWarning("Ingresa el título del tour."); return; }
+        if (string.IsNullOrWhiteSpace(newTour.Description)) newTour.Description = newTour.Title;
         var res = await Api.CreateAgencyTourAsync(newTour);
         if (res.Success) Toast.ShowSuccess("Tour publicado.");
         else Toast.ShowError(res.ErrorMessage ?? "Error");

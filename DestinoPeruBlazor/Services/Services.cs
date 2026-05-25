@@ -77,8 +77,13 @@ public class AuthStateService
     public void ApplyAuth(HttpClient client)
     {
         client.DefaultRequestHeaders.Remove("Authorization");
+        client.DefaultRequestHeaders.Remove("X-Partner-Id");
         if (IsAuthenticated)
+        {
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Token);
+            if (PartnerId.HasValue)
+                client.DefaultRequestHeaders.Add("X-Partner-Id", PartnerId.Value.ToString());
+        }
     }
 
     private void Notify() => OnChange?.Invoke();
@@ -246,7 +251,13 @@ public class ApiService
         {
             PrepareRequest();
             var response = await _http.GetAsync(url);
-            if (!response.IsSuccessStatusCode) return Fail<T>(failMessage);
+            if (!response.IsSuccessStatusCode)
+            {
+                var msg = (int)response.StatusCode == 403
+                    ? "Sin acceso al panel. Cierra sesión e ingresa de nuevo con tu cuenta de agencia."
+                    : failMessage;
+                return Fail<T>(msg);
+            }
             var data = await response.Content.ReadFromJsonAsync<T>(JsonOptions);
             return data is not null ? ApiResult<T>.Ok(data) : Fail<T>("Sin datos");
         }

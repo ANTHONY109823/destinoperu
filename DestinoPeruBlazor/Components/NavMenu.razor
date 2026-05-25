@@ -3,7 +3,7 @@
 @inject NavigationManager Nav
 @implements IDisposable
 
-<header class="dp-nav" style="background: linear-gradient(135deg, #00332a 0%, #004D40 100%);">
+<header class="dp-nav">
     <div class="dp-nav-inner container">
         <a class="dp-brand" href="/" @onclick="CloseMenu">
             <span class="dp-brand-text">Destino<strong>Perú</strong></span>
@@ -30,7 +30,7 @@
                 {
                     <NavLink class="dp-link" href="/superadmin" @onclick="CloseMenu">Super Admin</NavLink>
                 }
-                @if (Auth.Role is "Admin" or "SuperAdmin")
+                @if (Auth.Role == "Admin")
                 {
                     <NavLink class="dp-link" href="/admin" @onclick="CloseMenu">Mi agencia</NavLink>
                 }
@@ -42,18 +42,12 @@
                 {
                     <NavLink class="dp-link" href="/partner" @onclick="CloseMenu">Partner</NavLink>
                 }
-            }
-
-            @if (!Auth.IsAuthenticated)
-            {
-                <NavLink class="dp-link" href="/login" @onclick="CloseMenu">Ingresar</NavLink>
-                <NavLink class="dp-link dp-link-register" href="/register" @onclick="CloseMenu">Registrarse</NavLink>
+                <span class="dp-user">Hola, @Auth.Name</span>
+                <button type="button" class="btn btn-nav-outline btn-sm" @onclick="Logout">Salir</button>
             }
             else
             {
-                <NavLink class="dp-link" href="/login" @onclick="CloseMenu">Mi cuenta</NavLink>
-                <span class="dp-user">Hola, @Auth.Name</span>
-                <button type="button" class="btn btn-nav-outline btn-sm" @onclick="Logout">Salir</button>
+                <NavLink class="dp-link dp-link-ingresar" href="/login" @onclick="CloseMenu">Ingresar</NavLink>
             }
         </nav>
     </div>

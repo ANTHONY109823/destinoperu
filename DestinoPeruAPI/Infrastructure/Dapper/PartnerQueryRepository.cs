@@ -98,18 +98,27 @@ public class PartnerQueryRepository(IDbConnectionFactory connectionFactory) : IP
         var dash = await conn.QueryFirstOrDefaultAsync<AgencyDashboardDto>(sql, new { partnerId });
         if (dash is null) return null;
 
-        const string vendorSql = """
-            SELECT u."Id" AS "UserId", COALESCE(s."DisplayName", u."Name") AS "Name",
-                COUNT(r."Id") AS "Reservations",
-                COALESCE(SUM(r."Total"), 0) AS "Revenue"
-            FROM "PartnerStaff" s
-            INNER JOIN "Users" u ON u."Id" = s."UserId"
-            LEFT JOIN "Reservations" r ON r."UserId" = u."Id"
-            LEFT JOIN "Tours" t ON t."Id" = r."TourId" AND t."PartnerId" = s."PartnerId"
-            WHERE s."PartnerId" = @partnerId
-            GROUP BY u."Id", s."DisplayName", u."Name"
-            """;
-        var vendors = (await conn.QueryAsync<VendorSalesDto>(vendorSql, new { partnerId })).ToList();
+        var vendors = new List<VendorSalesDto>();
+        try
+        {
+            const string vendorSql = """
+                SELECT u."Id" AS "UserId", COALESCE(s."DisplayName", u."Name") AS "Name",
+                    COUNT(r."Id")::int AS "Reservations",
+                    COALESCE(SUM(r."Total"), 0) AS "Revenue"
+                FROM "PartnerStaff" s
+                INNER JOIN "Users" u ON u."Id" = s."UserId"
+                LEFT JOIN "Reservations" r ON r."UserId" = u."Id"
+                LEFT JOIN "Tours" t ON t."Id" = r."TourId" AND t."PartnerId" = s."PartnerId"
+                WHERE s."PartnerId" = @partnerId
+                GROUP BY u."Id", s."DisplayName", u."Name"
+                """;
+            vendors = (await conn.QueryAsync<VendorSalesDto>(vendorSql, new { partnerId })).ToList();
+        }
+        catch
+        {
+            /* PartnerStaff puede no existir hasta aplicar migración */
+        }
+
         return dash with { VendorSales = vendors };
     }
 }

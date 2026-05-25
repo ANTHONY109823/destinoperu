@@ -50,12 +50,17 @@ public class AgencyController(AgencyAdminService agencyService) : ControllerBase
 
     private async Task<int?> PartnerIdOrBadRequest()
     {
-        var pid = await agencyService.ResolvePartnerIdAsync(UserId, Role);
-        if (!pid.HasValue && Role != "SuperAdmin")
-            return null;
-        if (Role == "SuperAdmin" && Request.Headers.TryGetValue("X-Partner-Id", out var h) && int.TryParse(h, out var fromHeader))
+        if (Request.Headers.TryGetValue("X-Partner-Id", out var headerVal) &&
+            int.TryParse(headerVal.FirstOrDefault(), out var fromHeader))
             return fromHeader;
-        return pid;
+
+        if (int.TryParse(User.FindFirstValue("partner_id"), out var fromClaim))
+            return fromClaim;
+
+        var pid = await agencyService.ResolvePartnerIdAsync(UserId, Role);
+        if (pid.HasValue) return pid;
+
+        return Role == "SuperAdmin" ? null : null;
     }
 
     [HttpGet("dashboard")]
