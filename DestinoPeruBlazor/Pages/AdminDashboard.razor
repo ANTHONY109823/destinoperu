@@ -143,11 +143,12 @@
         }
         else if (tab == "ops")
         {
-            <InventoryOpsPanel Tours="agencyTours"
-                               PendingReservations="PendingReservations"
-                               CapacityEdits="capacityEdits"
-                               OnApprove="Approve"
-                               OnSaveCapacity="SaveCapacity" />
+            <AdminOperationsPanel Tours="agencyTours"
+                                  PendingReservations="PendingReservations"
+                                  CapacityEdits="capacityEdits"
+                                  CanManageTours="@(Auth.Role == "Admin")"
+                                  OnApprove="Approve"
+                                  OnToursChanged="Load" />
         }
         else
         {
@@ -250,14 +251,6 @@
     {
         var r = await Api.UpdateAgencyProfileAsync(profileForm);
         if (r.Success) { profile = r.Data; Toast.ShowSuccess("Perfil actualizado."); }
-        else Toast.ShowError(r.ErrorMessage ?? "Error");
-    }
-
-    private async Task SaveCapacity(int tourId)
-    {
-        if (!capacityEdits.TryGetValue(tourId, out var cap)) return;
-        var r = await Api.UpdateTourCapacityAsync(tourId, cap);
-        if (r.Success) { Toast.ShowSuccess("Cupos actualizados."); await Load(); }
         else Toast.ShowError(r.ErrorMessage ?? "Error");
     }
 

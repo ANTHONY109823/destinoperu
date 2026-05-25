@@ -188,6 +188,8 @@ public class AgencyTourListItemDto
     public int AvailableCapacity { get; set; }
     public int Capacity { get; set; }
     public bool IsActive { get; set; }
+    public string? ImageUrl { get; set; }
+    public string AdventureType { get; set; } = "FullDay";
     public string UnitLabel { get; set; } = "cupos";
 }
 

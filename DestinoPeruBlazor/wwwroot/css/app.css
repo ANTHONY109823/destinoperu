@@ -1259,6 +1259,50 @@ a:hover { color: var(--dp-primary-light); }
     width: 2rem; height: 2rem; border: 1px solid #ccc; border-radius: 8px;
     background: #fff; cursor: pointer; font-weight: 700;
 }
+.sa-mini-table { display: flex; flex-direction: column; gap: 0.35rem; }
+.sa-mini-row {
+    display: grid; grid-template-columns: 1fr 1fr auto; gap: 0.5rem;
+    padding: 0.4rem 0; border-bottom: 1px solid #f0f0f0; font-size: 0.88rem;
+}
+.ops-tour-box-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+}
+.ops-tour-box {
+    background: #fff;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid #e0e8e4;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.06);
+}
+.ops-tour-box-photo {
+    height: 160px;
+    background-size: cover;
+    background-position: center;
+    position: relative;
+}
+.ops-photo-change {
+    position: absolute; bottom: 8px; right: 8px;
+    background: rgba(0,0,0,0.65); color: #fff;
+    padding: 0.35rem 0.65rem; border-radius: 8px;
+    font-size: 0.75rem; cursor: pointer;
+}
+.ops-file-hidden {
+    position: absolute; width: 0; height: 0; opacity: 0; overflow: hidden;
+}
+.ops-tour-box-body { padding: 0.85rem 1rem 1rem; }
+.ops-tour-box-body h5 { margin: 0.2rem 0; font-size: 1rem; color: var(--dp-primary); }
+.ops-tour-type { font-size: 0.7rem; text-transform: uppercase; color: #888; }
+.ops-tour-loc { font-size: 0.82rem; color: #666; margin-bottom: 0.5rem; }
+.ops-cupos-line { font-size: 0.85rem; margin: 0.35rem 0 0.5rem; }
+.ops-tour-box-actions { display: flex; gap: 0.35rem; align-items: center; flex-wrap: wrap; }
+.ops-cap-input { width: 3.5rem; text-align: center; }
+.ops-thumb-preview { width: 56px; height: 56px; object-fit: cover; border-radius: 8px; }
+.ops-add-tour-box { margin-bottom: 1rem; }
+.ops-action-btn { border: none; text-align: left; cursor: pointer; width: 100%; }
+.ops-action-btn.active { border-color: var(--dp-primary); background: #e8f5e9; }
+
 .impersonation-banner {
     background: #fff8e1;
     border: 1px solid #ffcc80;

@@ -62,7 +62,12 @@ public record ManifestDto(
 
 public record ManifestPassengerLineDto(string FullName, string Dni, string PickupPoint, int Quantity);
 
-public record AgencyTourListItemDto(int Id, string Title, string Slug, string Department, decimal Price, int AvailableCapacity, int Capacity, bool IsActive);
+public record AgencyTourListItemDto(
+    int Id, string Title, string Slug, string Department, decimal Price,
+    int AvailableCapacity, int Capacity, bool IsActive,
+    string? ImageUrl = null, string AdventureType = "FullDay");
+
+public record UpdateTourItemRequest(string? ImageUrl = null, int? AvailableCapacity = null);
 
 public record AgencyDashboardDto(
     int PartnerId, string PartnerName, int TotalTours, int PendingReservations,

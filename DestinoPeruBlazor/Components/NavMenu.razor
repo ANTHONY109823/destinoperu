@@ -83,8 +83,11 @@
     protected override async Task OnInitializedAsync()
     {
         Auth.OnChange += HandleAuthChange;
+        Nav.LocationChanged += OnNavChanged;
         await RefreshCartLabelAsync();
     }
+
+    private void OnNavChanged(object? sender, LocationChangedEventArgs e) => _ = InvokeAsync(StateHasChanged);
 
     private void HandleAuthChange() =>
         _ = InvokeAsync(async () =>
@@ -113,5 +116,9 @@
         Nav.NavigateTo("/");
     }
 
-    public void Dispose() => Auth.OnChange -= HandleAuthChange;
+    public void Dispose()
+    {
+        Auth.OnChange -= HandleAuthChange;
+        Nav.LocationChanged -= OnNavChanged;
+    }
 }

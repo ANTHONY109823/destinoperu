@@ -1,0 +1,138 @@
+@using DestinoPeruBlazor.Helpers
+@using DestinoPeruBlazor.Models
+
+@if (Category is null)
+{
+    <p class="text-muted">Categoría no válida.</p>
+}
+else
+{
+    <header class="sa-header sa-header-category">
+        <div>
+            <span class="sa-cat-pill">@Category.Icon @Category.Label</span>
+            <h1 class="dashboard-title mb-1">Administración — @Category.Label</h1>
+            <p class="text-muted mb-0">@Category.AdminHint</p>
+        </div>
+        <a class="btn btn-outline-secondary btn-sm" href="/superadmin/inicio">← Dashboard Inicio</a>
+    </header>
+
+    @if (CategoryMetrics is not null)
+    {
+        <div class="metrics-grid metrics-grid-compact">
+            <div class="metric-card"><span class="metric-value">@CategoryMetrics.Partners</span><span class="metric-label">Socios @Category.Label</span></div>
+            <div class="metric-card"><span class="metric-value">@CategoryMetrics.ActiveItems</span><span class="metric-label">Activos</span></div>
+            <div class="metric-card metric-warn"><span class="metric-value">@CategoryMetrics.PendingPartners</span><span class="metric-label">Pendientes</span></div>
+            <div class="metric-card"><span class="metric-value">@CategoryMetrics.Reservations</span><span class="metric-label">Reservas</span></div>
+            <div class="metric-card metric-highlight"><span class="metric-value">S/ @CategoryMetrics.Revenue.ToString("N0")</span><span class="metric-label">Recaudado</span></div>
+        </div>
+    }
+
+    <div class="panel-tabs sa-tabs">
+        <button type="button" class="panel-tab @(Tab == "partners" ? "active" : "")" @onclick='() => TabChanged.InvokeAsync("partners")'>Socios (@Partners.Count())</button>
+        <button type="button" class="panel-tab @(Tab == "ranking" ? "active" : "")" @onclick='() => TabChanged.InvokeAsync("ranking")'>Ranking</button>
+        <button type="button" class="panel-tab @(Tab == "create" ? "active" : "")" @onclick='() => TabChanged.InvokeAsync("create")'>+ Nuevo @Category.Label</button>
+        <button type="button" class="panel-tab @(Tab == "config" ? "active" : "")" @onclick='() => TabChanged.InvokeAsync("config")'>Config rubro</button>
+    </div>
+
+    @if (Tab == "partners")
+    {
+        @if (!Partners.Any())
+        {
+            <div class="dash-panel text-center py-4">
+                <p class="text-muted">No hay socios de @Category.Label registrados.</p>
+                <button type="button" class="btn btn-primary" @onclick='() => TabChanged.InvokeAsync("create")'>Crear primer perfil</button>
+            </div>
+        }
+        else
+        {
+            <div class="partner-cards-grid">
+                @foreach (var p in Partners)
+                {
+                    <article class="partner-card">
+                        <div class="partner-card-top">
+                            <span class="partner-cat-badge">@Category.Icon @Category.Label</span>
+                            <span class="badge-status @(p.Status == "Approved" ? "ok" : "")">@p.Status</span>
+                        </div>
+                        <h3>@p.Name</h3>
+                        <p class="partner-card-meta">RUC @p.RUC · @(string.IsNullOrWhiteSpace(p.OperatingDepartment) ? "—" : p.OperatingDepartment)</p>
+                        <p class="partner-card-admin">👤 @p.AdminName<br /><small>@p.AdminEmail</small></p>
+                        <div class="partner-card-stats">
+                            <span>@p.StaffCount/5 vendedores</span>
+                            <span>@p.ItemCount publicaciones</span>
+                            <span class="partner-revenue">S/ @p.Revenue.ToString("N0")</span>
+                        </div>
+                        <div class="partner-card-actions">
+                            <button type="button" class="btn btn-primary btn-sm" disabled="@(p.AdminUserId <= 0)"
+                                    @onclick="() => OnImpersonate.InvokeAsync(p.AdminUserId)">Entrar al panel</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="() => OnShowStaff.InvokeAsync(p)">Equipo</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="() => OnEdit.InvokeAsync(p)">Editar</button>
+                            @if (p.Status != "Suspended")
+                            {
+                                <button type="button" class="btn btn-outline-danger btn-sm" @onclick="() => OnSuspend.InvokeAsync(p)">Suspender</button>
+                            }
+                            else
+                            {
+                                <button type="button" class="btn btn-outline-success btn-sm" @onclick="() => OnReactivate.InvokeAsync(p)">Reactivar</button>
+                            }
+                        </div>
+                    </article>
+                }
+            </div>
+        }
+        @ChildContent
+    }
+    else if (Tab == "ranking")
+    {
+        <div class="partner-table-wrap mt-2">
+            @if (!RankingRows.Any()) { <p class="text-muted">Sin ranking en @Category.Label.</p> }
+            else
+            {
+                <table class="partner-table">
+                    <thead><tr><th>#</th><th>Socio</th><th>Recaudado</th><th>Reservas</th></tr></thead>
+                    <tbody>
+                        @{ var n = 0; }
+                        @foreach (var row in RankingRows)
+                        {
+                            n++;
+                            <tr><td>@n</td><td>@row.Name</td><td>S/ @row.Revenue.ToString("N0")</td><td>@row.Reservations</td></tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+    }
+    else if (Tab == "create")
+    {
+        <section class="dash-panel create-profile-panel">
+            <h3>Crear perfil — @Category.Label</h3>
+            <p class="text-muted small">Solo socios de tipo @Category.Label (PartnerType @Category.PartnerType).</p>
+            @CreateForm
+        </section>
+    }
+    else
+    {
+        <section class="dash-panel">
+            <h3>Configuración — @Category.Label</h3>
+            <ul>
+                <li>Comisión plataforma: <strong>10%</strong></li>
+                <li>@Category.ConfigNote</li>
+            </ul>
+        </section>
+    }
+}
+
+@code {
+    [Parameter] public SuperAdminCategory? Category { get; set; }
+    [Parameter] public CategoryMetricsDto? CategoryMetrics { get; set; }
+    [Parameter] public IEnumerable<PartnerListItemDto> Partners { get; set; } = [];
+    [Parameter] public IEnumerable<AgencyRankingDto> RankingRows { get; set; } = [];
+    [Parameter] public string Tab { get; set; } = "partners";
+    [Parameter] public RenderFragment? CreateForm { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public EventCallback<string> TabChanged { get; set; }
+    [Parameter] public EventCallback<int> OnImpersonate { get; set; }
+    [Parameter] public EventCallback<PartnerListItemDto> OnShowStaff { get; set; }
+    [Parameter] public EventCallback<PartnerListItemDto> OnEdit { get; set; }
+    [Parameter] public EventCallback<PartnerListItemDto> OnSuspend { get; set; }
+    [Parameter] public EventCallback<PartnerListItemDto> OnReactivate { get; set; }
+}

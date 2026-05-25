@@ -258,7 +258,9 @@ public class AgencyAdminService(
     {
         var tours = await appDb.Tours.Where(t => t.PartnerId == partnerId)
             .OrderByDescending(t => t.CreatedAt)
-            .Select(t => new AgencyTourListItemDto(t.Id, t.Title, t.Slug, t.Department, t.Price, t.AvailableCapacity, t.Capacity, t.IsActive))
+            .Select(t => new AgencyTourListItemDto(
+                t.Id, t.Title, t.Slug, t.Department, t.Price,
+                t.AvailableCapacity, t.Capacity, t.IsActive, t.ImageUrl, t.AdventureType))
             .ToListAsync();
         return new ApiResponse<List<AgencyTourListItemDto>>(true, null, tours);
     }
@@ -329,6 +331,23 @@ public class AgencyAdminService(
         tour.AvailableCapacity = Math.Clamp(available, 0, tour.Capacity);
         await tourRepository.UpdateAsync(tour);
         return new ApiResponse<bool>(true, "Cupos actualizados.", true);
+    }
+
+    public async Task<ApiResponse<bool>> UpdateTourItemAsync(int tourId, int partnerId, UpdateTourItemRequest request, string role)
+    {
+        if (role is not (RoleNames.Admin or RoleNames.Vendedor or RoleNames.SuperAdmin))
+            return new ApiResponse<bool>(false, "Sin permiso.", false);
+
+        var tour = await tourRepository.GetByIdAsync(tourId);
+        if (tour == null || tour.PartnerId != partnerId)
+            return new ApiResponse<bool>(false, "Tour no encontrado.", false);
+
+        if (request.ImageUrl is not null) tour.ImageUrl = request.ImageUrl;
+        if (request.AvailableCapacity.HasValue)
+            tour.AvailableCapacity = Math.Clamp(request.AvailableCapacity.Value, 0, tour.Capacity);
+
+        await tourRepository.UpdateAsync(tour);
+        return new ApiResponse<bool>(true, "Tour actualizado.", true);
     }
 
     public async Task<ApiResponse<ManifestDto>> GetManifestAsync(int partnerId, int? tourId)

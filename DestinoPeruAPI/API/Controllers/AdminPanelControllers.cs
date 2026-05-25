@@ -182,6 +182,16 @@ public class AgencyController(AgencyAdminService agencyService) : ControllerBase
         var r = await agencyService.UpdateTourCapacityAsync(tourId, partnerId.Value, available, Role);
         return r.Success ? Ok(r) : BadRequest(r);
     }
+
+    [HttpPut("tours/{tourId:int}")]
+    [Authorize(Roles = $"{RoleNames.Admin},{RoleNames.Vendedor},{RoleNames.SuperAdmin}")]
+    public async Task<IActionResult> UpdateTour(int tourId, [FromBody] UpdateTourItemRequest request)
+    {
+        var partnerId = await PartnerIdOrBadRequest();
+        if (!partnerId.HasValue) return Forbid();
+        var r = await agencyService.UpdateTourItemAsync(tourId, partnerId.Value, request, Role);
+        return r.Success ? Ok(r) : BadRequest(r);
+    }
 }
 
 [ApiController]

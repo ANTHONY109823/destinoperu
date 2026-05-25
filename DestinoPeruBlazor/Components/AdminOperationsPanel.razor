@@ -1,0 +1,204 @@
+@using DestinoPeruBlazor.Helpers
+@using DestinoPeruBlazor.Models
+@using DestinoPeruBlazor.Services
+@using Microsoft.AspNetCore.Components.Forms
+@inject ApiService Api
+@inject ToastService Toast
+
+<section class="ops-panel admin-ops-panel">
+    <div class="ops-quick-actions">
+        <a class="ops-action-card" href="/manifiesto" target="_blank">
+            <span class="ops-action-icon">📋</span>
+            <strong>Manifiesto</strong>
+            <small>PDF legal</small>
+        </a>
+        <a class="ops-action-card" href="/checkout">
+            <span class="ops-action-icon">📱</span>
+            <strong>Pagos QR</strong>
+            <small>Yape · Plin</small>
+        </a>
+        @if (CanManageTours)
+        {
+            <button type="button" class="ops-action-card ops-action-btn @(showAddTour ? "active" : "")" @onclick="() => showAddTour = !showAddTour">
+                <span class="ops-action-icon">➕</span>
+                <strong>Nuevo tour</strong>
+                <small>Desde operaciones</small>
+            </button>
+        }
+    </div>
+
+    @if (showAddTour && CanManageTours)
+    {
+        <div class="dash-panel ops-add-tour-box">
+            <h4>Publicar experiencia rápida</h4>
+            <div class="admin-form-grid">
+                <input class="form-control" placeholder="Título *" @bind="quickTour.Title" />
+                <input class="form-control" placeholder="Departamento" @bind="quickTour.Department" />
+                <input type="number" class="form-control" placeholder="Precio" @bind="quickTour.Price" />
+                <input type="number" class="form-control" placeholder="Cupos" @bind="quickTour.Capacity" />
+            </div>
+            <div class="d-flex gap-2 flex-wrap align-items-center">
+                <InputFile OnChange="OnQuickTourPhoto" accept="image/*" class="form-control form-control-sm" style="max-width:220px" />
+                @if (!string.IsNullOrEmpty(quickTour.ImageUrl))
+                {
+                    <img src="@CloudinaryHelper.Optimize(quickTour.ImageUrl, 120)" class="ops-thumb-preview" alt="" />
+                }
+            </div>
+            <button type="button" class="btn btn-primary btn-sm" disabled="@addingTour" @onclick="PublishQuickTour">Publicar</button>
+        </div>
+    }
+
+    <div class="ops-section">
+        <div class="ops-section-head">
+            <h4>Pagos pendientes</h4>
+            <span class="ops-badge @(PendingCount > 0 ? "warn" : "ok")">@PendingCount</span>
+        </div>
+        @if (PendingCount == 0)
+        {
+            <p class="ops-empty">✓ Sin pagos por verificar.</p>
+        }
+        else
+        {
+            @foreach (var r in PendingReservations)
+            {
+                <div class="ops-payment-card">
+                    <div><strong>@r.TourTitle</strong><p class="mb-0 text-muted small">@r.UserName · S/ @r.Total.ToString("N2")</p></div>
+                    <button type="button" class="btn btn-primary btn-sm" @onclick="() => OnApprove.InvokeAsync(r.Id)">Verificar</button>
+                </div>
+            }
+        }
+    </div>
+
+    <div class="ops-section">
+        <div class="ops-section-head">
+            <h4>Inventario — @Tours.Count experiencias</h4>
+            <span class="text-muted small">Toca la foto para cambiarla</span>
+        </div>
+        @if (Tours.Count == 0)
+        {
+            <p class="ops-empty">Aún no hay tours. Usa «Nuevo tour» arriba o la pestaña Nuevo tour.</p>
+        }
+        else
+        {
+            <div class="ops-tour-box-grid">
+                @foreach (var t in Tours)
+                {
+                    var img = GetImage(t);
+                    var pct = t.Capacity > 0 ? (int)(100.0 * GetCap(t.Id) / t.Capacity) : 0;
+                    var level = pct >= 70 ? "high" : pct >= 35 ? "mid" : "low";
+                    <article class="ops-tour-box">
+                        <div class="ops-tour-box-photo" style="background-image:url('@img')">
+                            <label class="ops-photo-change">
+                                📷 Cambiar
+                                <InputFile OnChange="e => OnTourPhoto(t.Id, e)" accept="image/*" class="ops-file-hidden" />
+                            </label>
+                        </div>
+                        <div class="ops-tour-box-body">
+                            <span class="ops-tour-type">@t.AdventureType</span>
+                            <h5>@t.Title</h5>
+                            <p class="ops-tour-loc">@t.Department · S/ @t.Price.ToString("N0")</p>
+                            <div class="inventory-bar"><div class="inventory-bar-fill @level" style="width:@(pct)%"></div></div>
+                            <p class="ops-cupos-line"><strong>@GetCap(t.Id)</strong> / @t.Capacity @UnitLabel(t)</p>
+                            <div class="ops-tour-box-actions">
+                                <button type="button" class="btn-inv" @onclick="() => Adjust(t.Id, -1)">−</button>
+                                <input type="number" class="form-control form-control-sm ops-cap-input" value="@GetCap(t.Id)"
+                                       @onchange="e => SetCap(t.Id, e)" min="0" max="@t.Capacity" />
+                                <button type="button" class="btn-inv" @onclick="() => Adjust(t.Id, 1)">+</button>
+                                <button type="button" class="btn btn-primary btn-sm" @onclick="() => SaveTour(t.Id)">Guardar</button>
+                            </div>
+                        </div>
+                    </article>
+                }
+            </div>
+        }
+    </div>
+</section>
+
+@code {
+    [Parameter] public List<ReservationDto> PendingReservations { get; set; } = [];
+    [Parameter] public List<AgencyTourListItemDto> Tours { get; set; } = [];
+    [Parameter] public Dictionary<int, int> CapacityEdits { get; set; } = new();
+    [Parameter] public bool CanManageTours { get; set; }
+    [Parameter] public EventCallback<int> OnApprove { get; set; }
+    [Parameter] public EventCallback OnToursChanged { get; set; }
+
+    private bool showAddTour;
+    private bool addingTour;
+    private CreateTourRequest quickTour = new() { Date = DateTime.Today.AddDays(14), AdventureType = "FullDay", Capacity = 20, Price = 99 };
+    private int PendingCount => PendingReservations.Count;
+
+    private int GetCap(int id) => CapacityEdits.TryGetValue(id, out var v) ? v : 0;
+
+    private string GetImage(AgencyTourListItemDto t) =>
+        string.IsNullOrWhiteSpace(t.ImageUrl)
+            ? CloudinaryHelper.Optimize(TourGalleryHelper.GetGalleryUrls(null, t.Slug).FirstOrDefault() ?? "", 500)
+            : CloudinaryHelper.Optimize(t.ImageUrl, 500);
+
+    private void Adjust(int id, int delta)
+    {
+        var tour = Tours.FirstOrDefault(x => x.Id == id);
+        if (tour is null) return;
+        CapacityEdits[id] = Math.Clamp(GetCap(id) + delta, 0, tour.Capacity);
+    }
+
+    private void SetCap(int id, ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var v))
+        {
+            var tour = Tours.FirstOrDefault(x => x.Id == id);
+            if (tour is not null) CapacityEdits[id] = Math.Clamp(v, 0, tour.Capacity);
+        }
+    }
+
+    private async Task SaveTour(int tourId)
+    {
+        if (!CapacityEdits.TryGetValue(tourId, out var cap)) return;
+        var r = await Api.UpdateTourCapacityAsync(tourId, cap);
+        if (r.Success) { Toast.ShowSuccess("Cupos guardados."); await OnToursChanged.InvokeAsync(); }
+        else Toast.ShowError(r.ErrorMessage ?? "Error");
+    }
+
+    private async Task OnTourPhoto(int tourId, InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file is null) return;
+        await using var stream = file.OpenReadStream(4_000_000);
+        var up = await Api.UploadImageAsync(stream, file.Name, "tours");
+        if (up.Success && up.Data is not null)
+        {
+            var r = await Api.UpdateTourItemAsync(tourId, up.Data);
+            if (r.Success) { Toast.ShowSuccess("Foto actualizada."); await OnToursChanged.InvokeAsync(); }
+            else Toast.ShowError(r.ErrorMessage ?? "Error");
+        }
+        else Toast.ShowError(up.ErrorMessage ?? "Error al subir");
+    }
+
+    private async Task OnQuickTourPhoto(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file is null) return;
+        await using var stream = file.OpenReadStream(4_000_000);
+        var up = await Api.UploadImageAsync(stream, file.Name, "tours");
+        if (up.Success && up.Data is not null) quickTour.ImageUrl = up.Data;
+    }
+
+    private async Task PublishQuickTour()
+    {
+        if (string.IsNullOrWhiteSpace(quickTour.Title)) { Toast.ShowWarning("Título obligatorio."); return; }
+        if (string.IsNullOrWhiteSpace(quickTour.Description)) quickTour.Description = quickTour.Title;
+        addingTour = true;
+        var r = await Api.CreateAgencyTourAsync(quickTour);
+        if (r.Success)
+        {
+            Toast.ShowSuccess("Tour publicado.");
+            quickTour = new() { Date = DateTime.Today.AddDays(14), AdventureType = "FullDay", Capacity = 20, Price = 99 };
+            showAddTour = false;
+            await OnToursChanged.InvokeAsync();
+        }
+        else Toast.ShowError(r.ErrorMessage ?? "Error");
+        addingTour = false;
+    }
+
+    private static string UnitLabel(AgencyTourListItemDto t) =>
+        t.AdventureType == "CafeBar" || t.Title.Contains("Café", StringComparison.OrdinalIgnoreCase) ? "tazas" : "cupos";
+}

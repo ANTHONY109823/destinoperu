@@ -64,11 +64,12 @@
         }
         else
         {
-            <InventoryOpsPanel Tours="agencyTours"
-                               PendingReservations="PendingReservations"
-                               CapacityEdits="capacityEdits"
-                               OnApprove="Approve"
-                               OnSaveCapacity="SaveCapacity" />
+            <AdminOperationsPanel Tours="agencyTours"
+                                  PendingReservations="PendingReservations"
+                                  CapacityEdits="capacityEdits"
+                                  CanManageTours="false"
+                                  OnApprove="Approve"
+                                  OnToursChanged="ReloadTours" />
         }
     }
 </div>
@@ -114,21 +115,20 @@
         loading = false;
     }
 
-    private async Task SaveCapacity(int tourId)
+    private async Task ReloadTours()
     {
-        if (!capacityEdits.TryGetValue(tourId, out var cap)) return;
-        var res = await Api.UpdateTourCapacityAsync(tourId, cap);
-        if (res.Success)
+        var tr = await Api.GetAgencyToursAsync();
+        if (tr.Success && tr.Data is not null)
         {
-            Toast.ShowSuccess("Cupos actualizados.");
-            var tr = await Api.GetAgencyToursAsync();
-            if (tr.Success && tr.Data is not null)
-            {
-                agencyTours = tr.Data;
-                capacityEdits = agencyTours.ToDictionary(t => t.Id, t => t.AvailableCapacity);
-            }
+            agencyTours = tr.Data;
+            capacityEdits = agencyTours.ToDictionary(t => t.Id, t => t.AvailableCapacity);
         }
-        else Toast.ShowError(res.ErrorMessage ?? "Error");
+        var r = await Api.GetAgencyReservationsAsync();
+        if (r.Success && r.Data is not null)
+        {
+            reservations = r.Data;
+            pendingCount = reservations.Count(x => x.Status == "Pending");
+        }
     }
 
     private async Task Approve(int id)

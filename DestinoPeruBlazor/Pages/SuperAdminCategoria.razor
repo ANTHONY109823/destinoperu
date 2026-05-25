@@ -1,0 +1,239 @@
+@page "/superadmin/tours"
+@page "/superadmin/hoteles"
+@page "/superadmin/restaurantes"
+@page "/superadmin/cafes-bar"
+@using DestinoPeruBlazor.Helpers
+@using DestinoPeruBlazor.Models
+@using DestinoPeruBlazor.Services
+@inject ApiService Api
+@inject AuthStateService Auth
+@inject NavigationManager Nav
+@inject ToastService Toast
+@implements IDisposable
+
+<PageTitle>Super Admin @(_category?.Label ?? "") - DestinoPerú</PageTitle>
+
+<div class="container py-4 dashboard-page superadmin-page">
+    @if (!Auth.IsAuthenticated || Auth.Role != "SuperAdmin")
+    {
+        <div class="panel-access-denied alert alert-warning">
+            Acceso restringido. <a class="btn btn-primary btn-sm ms-2" href="/login">Ingresar</a>
+        </div>
+    }
+    else if (loading)
+    {
+        <p class="text-muted">Cargando panel @(_category?.Label)...</p>
+    }
+    else if (_category is null)
+    {
+        <div class="alert alert-warning">Categoría no encontrada. <a href="/superadmin/inicio">Ir a Inicio</a></div>
+    }
+    else
+    {
+        <SuperAdminNav />
+
+        @if (!string.IsNullOrEmpty(apiWarning))
+        {
+            <div class="alert alert-warning mt-3">@apiWarning</div>
+        }
+
+        <SuperAdminCategoryPanel Category="_category"
+                               CategoryMetrics="_catMetrics"
+                               Partners="FilteredPartners"
+                               RankingRows="CategoryRanking"
+                               Tab="mainTab"
+                               TabChanged="OnTabChanged"
+                               OnImpersonate="ImpersonateUser"
+                               OnShowStaff="ShowStaff"
+                               OnEdit="EditPartner"
+                               OnSuspend="Suspend"
+                               OnReactivate="Reactivate">
+            <CreateForm>
+                <div class="admin-form-grid">
+                    <input class="form-control" placeholder="Nombre comercial *" @bind="newAgency.AgencyName" />
+                    <input class="form-control" placeholder="RUC *" @bind="newAgency.RUC" />
+                    <input class="form-control" placeholder="Departamento *" @bind="newAgency.OperatingDepartment" />
+                    <input class="form-control" placeholder="URL logo" @bind="newAgency.LogoUrl" />
+                    <input class="form-control" placeholder="Nombre admin *" @bind="newAgency.AdminName" />
+                    <input class="form-control" type="email" placeholder="Email admin *" @bind="newAgency.AdminEmail" />
+                    <input class="form-control" type="password" placeholder="Contraseña admin *" @bind="newAgency.AdminPassword" />
+                </div>
+                <button type="button" class="btn btn-primary mt-2" @onclick="CreateAgency" disabled="@saving">Crear @_category.Label</button>
+            </CreateForm>
+            <ChildContent>
+                @if (staffPartner is not null)
+                {
+                    <section class="dash-panel mt-3">
+                        <h4>Equipo — @staffPartner.Name</h4>
+                        @if (staffLoading) { <p>Cargando...</p> }
+                        else if (staffList.Count == 0) { <p class="text-muted">Sin vendedores.</p> }
+                        else
+                        {
+                            @foreach (var s in staffList)
+                            {
+                                <div class="reservation-row">
+                                    <span>@s.DisplayName — @s.Email</span>
+                                    <button type="button" class="btn btn-primary btn-sm" @onclick="() => ImpersonateUser(s.UserId)">Suplantar</button>
+                                </div>
+                            }
+                        }
+                        <button type="button" class="btn btn-link btn-sm" @onclick="() => staffPartner = null">Cerrar</button>
+                    </section>
+                }
+                @if (editPartner is not null)
+                {
+                    <section class="dash-panel mt-3">
+                        <h4>Editar @editPartner.Name</h4>
+                        <div class="admin-form-grid">
+                            <input class="form-control" @bind="editForm.Name" placeholder="Nombre" />
+                            <input class="form-control" @bind="editForm.RUC" placeholder="RUC" />
+                            <input class="form-control" @bind="editForm.OperatingDepartment" placeholder="Depto." />
+                            <input class="form-control" @bind="editForm.LogoUrl" placeholder="Logo" />
+                        </div>
+                        <button type="button" class="btn btn-primary btn-sm" @onclick="SaveEdit">Guardar</button>
+                        <button type="button" class="btn btn-link btn-sm" @onclick="() => editPartner = null">Cancelar</button>
+                    </section>
+                }
+            </ChildContent>
+        </SuperAdminCategoryPanel>
+    }
+</div>
+
+@code {
+    private SuperAdminCategory? _category;
+    private CategoryMetricsDto? _catMetrics;
+    private List<PartnerListItemDto> partners = [];
+    private List<AgencyRankingDto> ranking = [];
+    private List<AgencyStaffDto> staffList = [];
+    private PartnerListItemDto? staffPartner;
+    private PartnerListItemDto? editPartner;
+    private UpdateAgencyRequest editForm = new();
+    private CreateAgencyRequest newAgency = new() { AdminPassword = "Admin2026!" };
+    private string mainTab = "partners";
+    private bool staffLoading;
+    private bool loading = true;
+    private bool saving;
+    private string? apiWarning;
+
+    private IEnumerable<PartnerListItemDto> FilteredPartners =>
+        _category is null ? [] : partners.Where(p => p.PartnerType == _category.PartnerType);
+
+    private IEnumerable<AgencyRankingDto> CategoryRanking =>
+        FilteredPartners
+            .Select(p => ranking.FirstOrDefault(r => r.PartnerId == p.Id)
+                ?? new AgencyRankingDto { PartnerId = p.Id, Name = p.Name, Revenue = p.Revenue, Reservations = 0, TourCount = p.ItemCount })
+            .OrderByDescending(r => r.Revenue);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Auth.InitializeAsync();
+        Nav.LocationChanged += OnLocationChanged;
+        if (Auth.Role != "SuperAdmin") { loading = false; return; }
+        ResolveCategory();
+        await LoadAsync();
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        ResolveCategory();
+        staffPartner = null;
+        editPartner = null;
+        _ = InvokeAsync(async () => { await LoadAsync(); StateHasChanged(); });
+    }
+
+    private void ResolveCategory()
+    {
+        _category = SuperAdminCategories.FromRoute(Nav.Uri);
+        if (_category is not null)
+        {
+            newAgency.PartnerType = _category.PartnerType;
+            _catMetrics = null;
+        }
+    }
+
+    private async Task LoadAsync()
+    {
+        loading = true;
+        apiWarning = null;
+        var d = await Api.GetSuperAdminDashboardAsync();
+        if (d.Success && d.Data is not null && _category is not null)
+            _catMetrics = d.Data.Categories.FirstOrDefault(c => c.Key == _category.Key);
+
+        var p = await Api.GetSuperAdminPartnersAsync();
+        if (p.Success && p.Data is not null) partners = p.Data;
+        else apiWarning = p.ErrorMessage;
+
+        var rk = await Api.GetSuperAdminRankingAsync();
+        if (rk.Success && rk.Data is not null) ranking = rk.Data;
+
+        loading = false;
+    }
+
+    private Task OnTabChanged(string tab) { mainTab = tab; return Task.CompletedTask; }
+
+    private async Task ShowStaff(PartnerListItemDto p)
+    {
+        staffPartner = p;
+        staffLoading = true;
+        staffList = [];
+        var r = await Api.GetPartnerStaffAsync(p.Id);
+        if (r.Success && r.Data is not null) staffList = r.Data;
+        staffLoading = false;
+    }
+
+    private void EditPartner(PartnerListItemDto p)
+    {
+        editPartner = p;
+        editForm = new UpdateAgencyRequest { Name = p.Name, RUC = p.RUC, OperatingDepartment = p.OperatingDepartment };
+    }
+
+    private async Task SaveEdit()
+    {
+        if (editPartner is null) return;
+        var r = await Api.UpdatePartnerAsync(editPartner.Id, editForm);
+        if (r.Success) { Toast.ShowSuccess("Guardado."); editPartner = null; await LoadAsync(); }
+        else Toast.ShowError(r.ErrorMessage ?? "Error");
+    }
+
+    private async Task CreateAgency()
+    {
+        if (_category is not null) newAgency.PartnerType = _category.PartnerType;
+        saving = true;
+        var r = await Api.CreateAgencyAsync(newAgency);
+        if (r.Success)
+        {
+            Toast.ShowSuccess($"Perfil {_category?.Label} creado.");
+            newAgency = new() { AdminPassword = "Admin2026!", PartnerType = _category?.PartnerType ?? 0 };
+            mainTab = "partners";
+            await LoadAsync();
+        }
+        else Toast.ShowError(r.ErrorMessage ?? "Error");
+        saving = false;
+    }
+
+    private async Task ImpersonateUser(int userId)
+    {
+        if (userId <= 0) { Toast.ShowWarning("Sin admin vinculado."); return; }
+        var r = await Api.ImpersonateAsync(userId);
+        if (r.Success && r.Data is not null)
+        {
+            await Auth.SetAuthAsync(r.Data);
+            Nav.NavigateTo(r.Data.Role is "Admin" or "Agencia" ? "/admin" : r.Data.Role == "Vendedor" ? "/vendedor" : "/");
+        }
+        else Toast.ShowError(r.ErrorMessage ?? "Error");
+    }
+
+    private async Task Suspend(PartnerListItemDto p)
+    {
+        var r = await Api.SuspendPartnerAsync(p.Id, true);
+        if (r.Success) { Toast.ShowSuccess("Suspendido."); await LoadAsync(); }
+    }
+
+    private async Task Reactivate(PartnerListItemDto p)
+    {
+        var r = await Api.SuspendPartnerAsync(p.Id, false);
+        if (r.Success) { Toast.ShowSuccess("Reactivado."); await LoadAsync(); }
+    }
+
+    public void Dispose() => Nav.LocationChanged -= OnLocationChanged;
+}

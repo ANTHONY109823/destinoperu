@@ -313,6 +313,18 @@ public class ApiService
     public async Task<ApiResult<List<AgencyTourListItemDto>>> GetAgencyToursAsync() =>
         await GetJsonAsync<List<AgencyTourListItemDto>>($"{_baseUrl}/agency/tours", "Tours no disponibles.", showToast: false);
 
+    public async Task<ApiResult<bool>> UpdateTourItemAsync(int tourId, string? imageUrl = null, int? availableCapacity = null)
+    {
+        try
+        {
+            PrepareRequest();
+            var response = await _http.PutAsJsonAsync($"{_baseUrl}/agency/tours/{tourId}",
+                new { ImageUrl = imageUrl, AvailableCapacity = availableCapacity });
+            return response.IsSuccessStatusCode ? ApiResult<bool>.Ok(true) : Fail<bool>("No se pudo actualizar.");
+        }
+        catch (Exception ex) { return Fail<bool>("Error al actualizar tour.", ex); }
+    }
+
     public async Task<ApiResult<bool>> UpdateTourCapacityAsync(int tourId, int available)
     {
         try

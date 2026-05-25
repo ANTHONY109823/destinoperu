@@ -1,0 +1,128 @@
+@page "/superadmin/inicio"
+@using DestinoPeruBlazor.Helpers
+@using DestinoPeruBlazor.Models
+@using DestinoPeruBlazor.Services
+@inject ApiService Api
+@inject AuthStateService Auth
+@inject NavigationManager Nav
+
+<PageTitle>Inicio Super Admin - DestinoPerú</PageTitle>
+
+<div class="container py-4 dashboard-page superadmin-page">
+    @if (!Auth.IsAuthenticated || Auth.Role != "SuperAdmin")
+    {
+        <div class="panel-access-denied alert alert-warning">
+            Acceso restringido. <a class="btn btn-primary btn-sm ms-2" href="/login">Ingresar</a>
+        </div>
+    }
+    else if (loading)
+    {
+        <p class="text-muted">Cargando resumen global...</p>
+    }
+    else
+    {
+        <SuperAdminNav />
+
+        <header class="sa-header">
+            <h1 class="dashboard-title mb-1">Vista Inicio — Dashboard global</h1>
+            <p class="text-muted mb-0">Consolidado de Tours, Hoteles, Restaurantes y Cafés/Bar · Comisión 10%</p>
+        </header>
+
+        @if (!string.IsNullOrEmpty(apiWarning))
+        {
+            <div class="alert alert-warning">@apiWarning</div>
+        }
+
+        @if (metrics is not null)
+        {
+            <div class="metrics-grid sa-global-metrics">
+                <div class="metric-card"><span class="metric-value">@metrics.TotalUsers</span><span class="metric-label">Usuarios</span></div>
+                <div class="metric-card"><span class="metric-value">@metrics.TotalPartners</span><span class="metric-label">Socios totales</span></div>
+                <div class="metric-card metric-warn"><span class="metric-value">@metrics.PendingPartners</span><span class="metric-label">Pendientes</span></div>
+                <div class="metric-card"><span class="metric-value">@metrics.TotalTours</span><span class="metric-label">Publicaciones</span></div>
+                <div class="metric-card"><span class="metric-value">@metrics.TotalReservations</span><span class="metric-label">Reservas</span></div>
+                <div class="metric-card metric-highlight"><span class="metric-value">S/ @metrics.TotalRevenue.ToString("N0")</span><span class="metric-label">Recaudado global</span></div>
+                <div class="metric-card"><span class="metric-value">S/ @metrics.TotalCommissions.ToString("N0")</span><span class="metric-label">Comisiones 10%</span></div>
+            </div>
+        }
+
+        <h2 class="sa-section-title">Administración por categoría</h2>
+        <p class="text-muted small mb-3">Cada rubro tiene su propio panel Super Admin (socios, crear perfiles, suplantar, ranking).</p>
+
+        <div class="category-hub-grid">
+            @foreach (var cat in SuperAdminCategories.All)
+            {
+                var m = dashboard?.Categories.FirstOrDefault(c => c.Key == cat.Key);
+                <a class="category-hub-card" href="@cat.Route">
+                    <span class="category-hub-icon">@cat.Icon</span>
+                    <h3>@cat.Label</h3>
+                    <p class="category-hub-desc">@cat.Description</p>
+                    @if (m is not null)
+                    {
+                        <ul class="category-hub-stats">
+                            <li><strong>@m.Partners</strong> socios</li>
+                            <li><strong>@m.ActiveItems</strong> activos</li>
+                            <li><strong>@m.Reservations</strong> reservas</li>
+                            <li class="hub-revenue">S/ @m.Revenue.ToString("N0")</li>
+                        </ul>
+                    }
+                    <span class="category-hub-cta">Panel Super Admin @cat.Label →</span>
+                </a>
+            }
+        </div>
+
+        @if (partners.Count > 0)
+        {
+            <section class="dash-panel mt-4">
+                <h3>Resumen rápido de socios (todas las categorías)</h3>
+                <div class="sa-mini-table">
+                    @foreach (var p in partners.Take(8))
+                    {
+                        <div class="sa-mini-row">
+                            <span>@CategoryIcon(p.PartnerType) @p.Name</span>
+                            <span class="text-muted">@p.OperatingDepartment</span>
+                            <span>S/ @p.Revenue.ToString("N0")</span>
+                        </div>
+                    }
+                </div>
+                <p class="small text-muted mt-2">Entra a una categoría arriba para administración completa.</p>
+            </section>
+        }
+    }
+</div>
+
+@code {
+    private SuperAdminDashboardDto? dashboard;
+    private SuperAdminMetricsDto? metrics;
+    private List<PartnerListItemDto> partners = [];
+    private bool loading = true;
+    private string? apiWarning;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Auth.InitializeAsync();
+        if (Auth.Role != "SuperAdmin") { loading = false; return; }
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        loading = true;
+        var d = await Api.GetSuperAdminDashboardAsync();
+        if (d.Success && d.Data is not null) { dashboard = d.Data; metrics = d.Data.Global; }
+        else
+        {
+            var m = await Api.GetSuperAdminMetricsAsync();
+            if (m.Success) metrics = m.Data;
+            else apiWarning = m.ErrorMessage;
+        }
+        var p = await Api.GetSuperAdminPartnersAsync();
+        if (p.Success && p.Data is not null) partners = p.Data;
+        loading = false;
+    }
+
+    private static string CategoryIcon(int type) => type switch
+    {
+        1 => "🏨", 2 => "🍽️", 3 => "☕", _ => "🗺️"
+    };
+}
