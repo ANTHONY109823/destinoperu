@@ -1,4 +1,5 @@
 ﻿using System.Security.Claims;
+using DestinoPeruAPI.Application.Common;
 using DestinoPeruAPI.Application.DTOs;
 using DestinoPeruAPI.Application.Services;
 using DestinoPeruAPI.Domain.Enums;
@@ -40,17 +41,14 @@ public class ToursController(TourService tourService) : ControllerBase
     [HttpPost][Authorize(Roles = "Admin,SuperAdmin")]
     public async Task<IActionResult> Create([FromBody] CreateTourRequest request)
     {
-        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-        var r = await tourService.CreateAsync(request, userId);
+        var r = await tourService.CreateAsync(request, User.GetUserId());
         return r.Success ? Created("", r) : BadRequest(r);
     }
 
     [HttpDelete("{id:int}")][Authorize(Roles = "Agencia,Admin,SuperAdmin")]
     public async Task<IActionResult> Delete(int id)
     {
-        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-        var role = User.FindFirstValue(ClaimTypes.Role) ?? "";
-        var r = await tourService.DeleteAsync(id, userId, role);
+        var r = await tourService.DeleteAsync(id, User.GetUserId(), User.GetRole());
         return r.Success ? Ok(r) : BadRequest(r);
     }
 }
@@ -58,7 +56,7 @@ public class ToursController(TourService tourService) : ControllerBase
 [ApiController][Route("api/partners")]
 public class PartnersController(PartnerService partnerService) : ControllerBase
 {
-    private int UserId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+    private int UserId => User.GetUserId();
 
     [HttpGet("pending")][Authorize(Roles = "SuperAdmin")]
     public async Task<IActionResult> GetPending() => Ok(await partnerService.GetPendingAsync());
@@ -87,7 +85,7 @@ public class PartnersController(PartnerService partnerService) : ControllerBase
     [HttpPut("documents/{id:int}/verify")][Authorize(Roles = "SuperAdmin")]
     public async Task<IActionResult> VerifyDocument(int id, [FromQuery] bool approved)
     {
-        var admin = User.FindFirstValue(ClaimTypes.Name) ?? "Admin";
+        var admin = User.GetClaim(ClaimTypes.Name) ?? "Admin";
         var r = await partnerService.VerifyDocumentAsync(id, admin, approved);
         return r.Success ? Ok(r) : BadRequest(r);
     }
@@ -99,8 +97,7 @@ public class AgenciesController(PartnerService partnerService) : ControllerBase
     [HttpPost][Authorize]
     public async Task<IActionResult> Create([FromBody] CreatePartnerRequest request)
     {
-        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-        var r = await partnerService.CreateAsync(request, userId);
+        var r = await partnerService.CreateAsync(request, User.GetUserId());
         return r.Success ? Created("", r) : BadRequest(r);
     }
 
@@ -122,7 +119,7 @@ public class AdminController(PartnerService partnerService) : ControllerBase
 [ApiController][Route("api/reservations")][Authorize]
 public class ReservationsController(ReservationService reservationService) : ControllerBase
 {
-    private int UserId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+    private int UserId => User.GetUserId();
 
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateReservationRequest request)
@@ -149,7 +146,7 @@ public class ReservationsController(ReservationService reservationService) : Con
 [ApiController][Route("api/payments")][Authorize]
 public class PaymentsController(PaymentService paymentService) : ControllerBase
 {
-    private int UserId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+    private int UserId => User.GetUserId();
 
     [HttpPost]
     public async Task<IActionResult> Process([FromBody] CreatePaymentRequest request)
