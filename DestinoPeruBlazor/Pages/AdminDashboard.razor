@@ -122,7 +122,7 @@
         else if (tab == "tours")
         {
             <section class="dash-panel">
-                <h3>Publicar tour (solo Admin)</h3>
+                <h3>Publicar tour nuevo</h3>
                 <div class="admin-form-grid">
                     <input class="form-control" placeholder="Título *" @bind="newTour.Title" />
                     <input class="form-control" placeholder="Ubicación" @bind="newTour.Location" />
@@ -134,11 +134,52 @@
                         <option value="CafeBar">Café / Bar</option>
                     </select>
                     <input type="number" class="form-control" placeholder="Precio S/" @bind="newTour.Price" />
-                    <input type="number" class="form-control" placeholder="Cupos" @bind="newTour.Capacity" />
+                    <input type="number" class="form-control" placeholder="Asientos bus" @bind="newTour.Capacity" />
                     <input type="date" class="form-control" @bind="newTour.Date" />
                 </div>
-                <textarea class="form-control mb-2" rows="3" @bind="newTour.Description"></textarea>
-                <button class="btn btn-primary" @onclick="CreateTour">Publicar tour</button>
+                <textarea class="form-control mb-2" rows="2" @bind="newTour.Description"></textarea>
+                <button class="btn btn-primary btn-sm" @onclick="CreateTour">+ Publicar tour</button>
+            </section>
+
+            <section class="dash-panel mt-3">
+                <h3>Mis tours (@agencyTours.Count)</h3>
+                @if (agencyTours.Count == 0)
+                {
+                    <p class="text-muted">Aún no tienes tours. Publica el primero arriba.</p>
+                }
+                else
+                {
+                    <div class="agency-tour-manage-grid">
+                        @foreach (var t in agencyTours)
+                        {
+                            <article class="agency-tour-manage-card @(t.IsActive ? "" : "inactive")">
+                                @if (editingTourId == t.Id)
+                                {
+                                    <input class="form-control form-control-sm mb-1" @bind="editTitle" />
+                                    <input class="form-control form-control-sm mb-1" @bind="editDepartment" />
+                                    <input type="number" class="form-control form-control-sm mb-1" @bind="editPrice" />
+                                    <textarea class="form-control form-control-sm mb-1" rows="2" @bind="editDescription"></textarea>
+                                    <div class="d-flex gap-1 flex-wrap">
+                                        <button type="button" class="btn btn-primary btn-sm" @onclick="() => SaveEditTour(t.Id)">Guardar</button>
+                                        <button type="button" class="btn btn-link btn-sm" @onclick="CancelEditTour">Cancelar</button>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <h6>@t.Title @if (!t.IsActive) { <span class="badge bg-secondary">Inactivo</span> }</h6>
+                                    <p class="small text-muted mb-1">@t.Department · S/ @t.Price.ToString("N0") · @t.AvailableCapacity/@t.Capacity cupos</p>
+                                    <div class="d-flex gap-1 flex-wrap">
+                                        <button type="button" class="btn btn-outline-primary btn-sm" @onclick="() => StartEditTour(t)">Editar</button>
+                                        @if (t.IsActive)
+                                        {
+                                            <button type="button" class="btn btn-outline-danger btn-sm" @onclick="() => DeactivateTour(t.Id)">Desactivar</button>
+                                        }
+                                    </div>
+                                }
+                            </article>
+                        }
+                    </div>
+                }
             </section>
         }
         else if (tab == "ops")
@@ -183,6 +224,11 @@
     private string tab = "team";
     private bool loading = true;
     private string? error;
+    private int? editingTourId;
+    private string editTitle = "";
+    private string editDescription = "";
+    private string editDepartment = "";
+    private decimal editPrice;
 
     private List<ReservationDto> PendingReservations => reservations.Where(x => x.Status == "Pending").ToList();
     private bool CanAccess => Auth.IsAuthenticated && Auth.Role is "Admin" or "Agencia";
@@ -258,10 +304,36 @@
         else Toast.ShowError(r.ErrorMessage ?? "Error");
     }
 
+    private void StartEditTour(AgencyTourListItemDto t)
+    {
+        editingTourId = t.Id;
+        editTitle = t.Title;
+        editDescription = t.Title;
+        editDepartment = t.Department;
+        editPrice = t.Price;
+    }
+
+    private void CancelEditTour() => editingTourId = null;
+
+    private async Task SaveEditTour(int id)
+    {
+        var r = await Api.UpdateTourItemAsync(id, title: editTitle, description: editDescription,
+            department: editDepartment, price: editPrice);
+        if (r.Success) { Toast.ShowSuccess("Tour actualizado."); editingTourId = null; await Load(); }
+        else Toast.ShowError(r.ErrorMessage ?? "Error");
+    }
+
+    private async Task DeactivateTour(int id)
+    {
+        var r = await Api.DeactivateAgencyTourAsync(id);
+        if (r.Success) { Toast.ShowSuccess("Tour desactivado."); await Load(); }
+        else Toast.ShowError(r.ErrorMessage ?? "Error");
+    }
+
     private async Task ExitImpersonation()
     {
         if (await Auth.EndImpersonationAsync())
-            Nav.NavigateTo("/superadmin");
+            Nav.NavigateTo("/superadmin/inicio");
         else
             Toast.ShowWarning("No hay sesión de Super Admin guardada. Cierra sesión e ingresa de nuevo.");
     }

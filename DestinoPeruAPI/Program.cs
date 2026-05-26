@@ -5,8 +5,11 @@
 using System.Security.Claims;
 using System.Text;
 using Npgsql;
+using System.Threading.RateLimiting;
+using DestinoPeruAPI.Application.Common;
 using DestinoPeruAPI.Application.Interfaces;
 using DestinoPeruAPI.Application.Services;
+using Microsoft.AspNetCore.RateLimiting;
 using DestinoPeruAPI.Infrastructure;
 using DestinoPeruAPI.Infrastructure.Data;
 using DestinoPeruAPI.Infrastructure.Dapper;
@@ -139,7 +142,7 @@ builder.Services.AddScoped<IJwtService, JwtService>();
 // 3. JWT Authentication
 // -------------------------------------------------------
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
-var secretKey   = jwtSettings["SecretKey"]!;
+var secretKey = JwtSecretResolver.Resolve(builder.Configuration, builder.Environment);
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -164,6 +167,23 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorization();
 
 // -------------------------------------------------------
+// 3b. Rate limiting — auth (5 intentos / IP / minuto)
+// -------------------------------------------------------
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("auth", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            }));
+});
+
+// -------------------------------------------------------
 // 4. CORS — politica permisiva fija (Blazor WASM en Railway)
 // -------------------------------------------------------
 builder.Services.AddCors(options =>
@@ -173,6 +193,12 @@ builder.Services.AddCors(options =>
         policy.AllowAnyOrigin()
               .AllowAnyMethod()
               .AllowAnyHeader();
+
+        // Cuando tengas el dominio fijo del Blazor en Railway, reemplaza lo anterior por:
+        // policy.WithOrigins("https://TU-BLAZOR.up.railway.app")
+        //       .AllowAnyMethod()
+        //       .AllowAnyHeader()
+        //       .AllowCredentials();
     });
 });
 
@@ -231,6 +257,7 @@ if (app.Environment.IsDevelopment())
 if (!app.Configuration.GetValue<bool>("DisableHttpsRedirection"))
     app.UseHttpsRedirection();
 app.UseCors("BlazorPolicy");
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

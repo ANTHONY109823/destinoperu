@@ -182,6 +182,53 @@ public class SuperAdminService(
     public async Task<ApiResponse<TourDto>> CreateTourForPartnerAsync(int partnerId, CreateTourRequest request) =>
         await tourService.CreateForPartnerAsync(request, partnerId);
 
+    public async Task<ApiResponse<CreateDemoAgencyResponse>> CreatePresentationDemoAgencyAsync()
+    {
+        var suffix = DateTime.UtcNow.ToString("HHmmss");
+        var email = $"demo.agencia.{suffix}@destinoperu.com";
+        const string password = "Demo2026!";
+        var cities = new[] { "Cusco", "Lima", "Arequipa", "Ica", "Puno" };
+        var city = cities[Random.Shared.Next(cities.Length)];
+        var ruc = $"20{(DateTime.UtcNow.Ticks % 1_000_000_000):000000000}";
+
+        var create = await CreateAgencyAsync(new CreateAgencyRequest(
+            $"Agencia Demo {city} {suffix}",
+            ruc,
+            city,
+            $"Admin Demo {suffix}",
+            email,
+            password,
+            PartnerType.Agencia,
+            LogoUrl: "https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=400",
+            ContactEmail: email,
+            ContactPhone: "+51 999 000 000"));
+
+        if (!create.Success || create.Data is null)
+            return new ApiResponse<CreateDemoAgencyResponse>(false, create.Message ?? "No se pudo crear la agencia.", null);
+
+        var partnerId = create.Data.Id;
+        var tourDefs = new[]
+        {
+            ($"City Tour {city}", $"Recorrido guiado por lo mejor de {city}.", city, "Cultural", 99m),
+            ($"Full Day Aventura {city}", $"Experiencia full day con almuerzo incluido.", city, "FullDay", 149m),
+            ($"Paquete 2D/1N {city}", $"Escapada de fin de semana desde {city}.", city, "Paquete2D1N", 320m)
+        };
+
+        var created = 0;
+        foreach (var (title, desc, dept, type, price) in tourDefs)
+        {
+            var tr = await tourService.CreateForPartnerAsync(new CreateTourRequest(
+                title, desc, price, dept, dept, type,
+                DateTime.UtcNow.AddDays(10 + created * 3), 24,
+                "https://images.unsplash.com/photo-1587595431973-160d0d94add1?w=800"), partnerId);
+            if (tr.Success) created++;
+        }
+
+        return new ApiResponse<CreateDemoAgencyResponse>(true,
+            $"Agencia demo lista con {created} tours.",
+            new CreateDemoAgencyResponse(partnerId, create.Data.Name, email, password, created));
+    }
+
     private static PartnerDto MapPartner(Partner p, string userName) => new(
         p.Id, p.UserId, userName, p.Name, p.RUC, p.PartnerType, p.Status, p.VerificationStatus,
         p.CommissionRate, p.CreatedAt, 0, p.OperatingDepartment, p.LogoUrl, p.ContactEmail, p.ContactPhone, 0);
@@ -309,15 +356,22 @@ public class AgencyAdminService(
         return new ApiResponse<VendorSalesDto>(true, "Vendedor creado.", new VendorSalesDto(user.Id, user.Name, 0, 0));
     }
 
-    public async Task<ApiResponse<TourDto>> CreateTourAsync(CreateTourRequest request, int userId, string role, int? partnerIdFromHeader)
+    public async Task<ApiResponse<TourDto>> CreateTourAsync(CreateTourRequest request, int userId, string role, int? partnerId)
     {
         if (role is not (RoleNames.Admin or RoleNames.SuperAdmin))
             return new ApiResponse<TourDto>(false, "Solo el administrador de agencia puede crear tours.", null);
 
-        if (role == RoleNames.SuperAdmin && partnerIdFromHeader.HasValue)
-            return await tourService.CreateForPartnerAsync(request, partnerIdFromHeader.Value);
+        if (!partnerId.HasValue)
+            return new ApiResponse<TourDto>(false, "Agencia no identificada.", null);
 
-        return await tourService.CreateAsync(request, userId);
+        if (role == RoleNames.Admin)
+        {
+            var owned = await partnerRepository.GetByUserIdAsync(userId);
+            if (owned is null || owned.Id != partnerId.Value)
+                return new ApiResponse<TourDto>(false, "Sin permiso para esta agencia.", null);
+        }
+
+        return await tourService.CreateForPartnerAsync(request, partnerId.Value);
     }
 
     public async Task<ApiResponse<bool>> UpdateTourCapacityAsync(int tourId, int partnerId, int available, string role)
@@ -350,9 +404,30 @@ public class AgencyAdminService(
         }
         if (request.AvailableCapacity.HasValue)
             tour.AvailableCapacity = Math.Clamp(request.AvailableCapacity.Value, 0, tour.Capacity);
+        if (!string.IsNullOrWhiteSpace(request.Title)) tour.Title = request.Title.Trim();
+        if (request.Description is not null) tour.Description = request.Description;
+        if (request.Price.HasValue) tour.Price = request.Price.Value;
+        if (request.Location is not null) tour.Location = request.Location;
+        if (request.Department is not null) tour.Department = request.Department;
+        if (request.AdventureType is not null) tour.AdventureType = request.AdventureType;
+        if (request.IsActive.HasValue) tour.IsActive = request.IsActive.Value;
 
         await tourRepository.UpdateAsync(tour);
         return new ApiResponse<bool>(true, "Tour actualizado.", true);
+    }
+
+    public async Task<ApiResponse<bool>> DeactivateTourAsync(int tourId, int partnerId, string role)
+    {
+        if (role is not (RoleNames.Admin or RoleNames.SuperAdmin))
+            return new ApiResponse<bool>(false, "Solo el administrador puede desactivar tours.", false);
+
+        var tour = await tourRepository.GetByIdAsync(tourId);
+        if (tour is null || tour.PartnerId != partnerId)
+            return new ApiResponse<bool>(false, "Tour no encontrado.", false);
+
+        tour.IsActive = false;
+        await tourRepository.UpdateAsync(tour);
+        return new ApiResponse<bool>(true, "Tour desactivado (ya no aparece en el catálogo público).", true);
     }
 
     public async Task<ApiResponse<ManifestDto>> GetManifestAsync(int partnerId, int? tourId)

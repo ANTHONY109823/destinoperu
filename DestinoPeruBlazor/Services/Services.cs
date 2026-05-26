@@ -281,6 +281,20 @@ public class ApiService
         catch (Exception ex) { return Fail<VendorSalesDto>("Error al crear vendedor.", ex); }
     }
 
+    public async Task<ApiResult<CreateDemoAgencyResponse>> CreateSuperAdminDemoAgencyAsync()
+    {
+        try
+        {
+            PrepareRequest();
+            var response = await _http.PostAsync($"{_baseUrl}/superadmin/demo-agency", null);
+            var result = await response.Content.ReadFromJsonAsync<ApiResponse<CreateDemoAgencyResponse>>(JsonOptions);
+            if (result?.Success == true && result.Data is not null)
+                return ApiResult<CreateDemoAgencyResponse>.Ok(result.Data);
+            return Fail<CreateDemoAgencyResponse>(result?.Message ?? "No se pudo crear agencia demo.");
+        }
+        catch (Exception ex) { return Fail<CreateDemoAgencyResponse>("Error al crear agencia demo.", ex); }
+    }
+
     public async Task<ApiResult<List<AgencyRankingDto>>> GetSuperAdminRankingAsync() =>
         await GetJsonAsync<List<AgencyRankingDto>>($"{_baseUrl}/superadmin/ranking", "Ranking no disponible.", showToast: false);
 
@@ -313,16 +327,41 @@ public class ApiService
     public async Task<ApiResult<List<AgencyTourListItemDto>>> GetAgencyToursAsync() =>
         await GetJsonAsync<List<AgencyTourListItemDto>>($"{_baseUrl}/agency/tours", "Tours no disponibles.", showToast: false);
 
-    public async Task<ApiResult<bool>> UpdateTourItemAsync(int tourId, string? imageUrl = null, int? availableCapacity = null, int? busTotalSeats = null)
+    public async Task<ApiResult<bool>> UpdateTourItemAsync(
+        int tourId, string? imageUrl = null, int? availableCapacity = null, int? busTotalSeats = null,
+        string? title = null, string? description = null, decimal? price = null,
+        string? department = null, string? adventureType = null, bool? isActive = null)
     {
         try
         {
             PrepareRequest();
             var response = await _http.PutAsJsonAsync($"{_baseUrl}/agency/tours/{tourId}",
-                new { ImageUrl = imageUrl, AvailableCapacity = availableCapacity, BusTotalSeats = busTotalSeats });
+                new
+                {
+                    ImageUrl = imageUrl,
+                    AvailableCapacity = availableCapacity,
+                    BusTotalSeats = busTotalSeats,
+                    Title = title,
+                    Description = description,
+                    Price = price,
+                    Department = department,
+                    AdventureType = adventureType,
+                    IsActive = isActive
+                });
             return response.IsSuccessStatusCode ? ApiResult<bool>.Ok(true) : Fail<bool>("No se pudo actualizar.");
         }
         catch (Exception ex) { return Fail<bool>("Error al actualizar tour.", ex); }
+    }
+
+    public async Task<ApiResult<bool>> DeactivateAgencyTourAsync(int tourId)
+    {
+        try
+        {
+            PrepareRequest();
+            var response = await _http.DeleteAsync($"{_baseUrl}/agency/tours/{tourId}");
+            return response.IsSuccessStatusCode ? ApiResult<bool>.Ok(true) : Fail<bool>("No se pudo desactivar el tour.");
+        }
+        catch (Exception ex) { return Fail<bool>("Error al desactivar tour.", ex); }
     }
 
     public async Task<ApiResult<bool>> UpdateTourCapacityAsync(int tourId, int available)

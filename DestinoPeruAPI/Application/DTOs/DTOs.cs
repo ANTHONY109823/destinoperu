@@ -67,7 +67,14 @@ public record AgencyTourListItemDto(
     int AvailableCapacity, int Capacity, bool IsActive,
     string? ImageUrl = null, string AdventureType = "FullDay");
 
-public record UpdateTourItemRequest(string? ImageUrl = null, int? AvailableCapacity = null, int? BusTotalSeats = null);
+public record UpdateTourItemRequest(
+    string? ImageUrl = null, int? AvailableCapacity = null, int? BusTotalSeats = null,
+    string? Title = null, string? Description = null, decimal? Price = null,
+    string? Location = null, string? Department = null, string? AdventureType = null,
+    bool? IsActive = null);
+
+public record CreateDemoAgencyResponse(
+    int PartnerId, string AgencyName, string AdminEmail, string AdminPassword, int ToursCreated);
 
 public record AgencyDashboardDto(
     int PartnerId, string PartnerName, int TotalTours, int PendingReservations,

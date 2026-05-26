@@ -137,6 +137,15 @@ public class SuperAdminDashboardDto
     public List<CategoryMetricsDto> Categories { get; set; } = [];
 }
 
+public class CreateDemoAgencyResponse
+{
+    public int PartnerId { get; set; }
+    public string AgencyName { get; set; } = "";
+    public string AdminEmail { get; set; } = "";
+    public string AdminPassword { get; set; } = "";
+    public int ToursCreated { get; set; }
+}
+
 public class AgencyDashboardDto
 {
     public int PartnerId { get; set; }

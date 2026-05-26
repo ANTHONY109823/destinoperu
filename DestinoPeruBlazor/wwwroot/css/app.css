@@ -1467,6 +1467,20 @@ a:hover { color: var(--dp-primary-light); }
     gap: 0.5rem;
 }
 
+.agency-tour-manage-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 0.75rem;
+}
+.agency-tour-manage-card {
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    padding: 0.75rem;
+    background: #fff;
+}
+.agency-tour-manage-card.inactive { opacity: 0.65; background: #f5f5f5; }
+.agency-tour-manage-card h6 { font-size: 0.9rem; margin: 0 0 0.35rem; color: var(--dp-primary); }
+
 @media print {
     .no-print, .dp-nav, .back-home { display: none !important; }
     .no-print-col { display: none !important; }
