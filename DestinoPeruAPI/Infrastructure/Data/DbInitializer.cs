@@ -106,14 +106,16 @@ public static class DbInitializer
 
     private static async Task EnsureAdminDemoPartnerAsync(AppDbContext db, User adminUser, ILogger logger)
     {
-        var partner = await db.Partners.FirstOrDefaultAsync(p => p.UserId == adminUser.Id);
-        if (partner is null)
-        {
-            partner = new Partner
+        const string ruc = "20999999991";
+        var partner = await EnsurePartnerForUserAsync(
+            db,
+            adminUser,
+            ruc,
+            () => new Partner
             {
                 UserId = adminUser.Id,
                 Name = "Agencia Demo DestinoPerú",
-                RUC = "20999999991",
+                RUC = ruc,
                 PartnerType = PartnerType.Agencia,
                 Status = "Approved",
                 VerificationStatus = "Verified",
@@ -123,12 +125,9 @@ public static class DbInitializer
                 LogoUrl = "https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=400",
                 CommissionRate = 0.10m,
                 CreatedAt = DateTime.UtcNow
-            };
-            db.Partners.Add(partner);
-            await db.SaveChangesAsync();
-            logger.LogInformation("Partner admin@ creado.");
-            return;
-        }
+            },
+            logger,
+            "Partner admin@");
 
         await EnsureAgencyToursIfFewAsync(db, partner.Id, "demo-agencia-", 3, logger);
     }
@@ -140,10 +139,11 @@ public static class DbInitializer
         {
             var user = await EnsureUserIfMissingAsync(db, s.Email, s.AdminName, RoleNames.Admin, PresentationPassword, logger);
 
-            var partner = await db.Partners.FirstOrDefaultAsync(p => p.UserId == user.Id);
-            if (partner is null)
-            {
-                partner = new Partner
+            var partner = await EnsurePartnerForUserAsync(
+                db,
+                user,
+                s.Ruc,
+                () => new Partner
                 {
                     UserId = user.Id,
                     Name = s.AgencyName,
@@ -157,20 +157,53 @@ public static class DbInitializer
                     LogoUrl = s.Logo,
                     CommissionRate = 0.10m,
                     CreatedAt = DateTime.UtcNow
-                };
-                db.Partners.Add(partner);
-                await db.SaveChangesAsync();
-                logger.LogInformation("Agencia presentación creada: {Name}", s.AgencyName);
-            }
+                },
+                logger,
+                $"Agencia presentación: {s.AgencyName}");
 
             list.Add(partner);
         }
 
-        await EnsureCategoryShowcaseAsync(db);
+        await EnsureCategoryShowcaseAsync(db, logger);
         return list;
     }
 
-    private static async Task EnsureCategoryShowcaseAsync(AppDbContext db)
+    /// <summary>
+    /// Idempotente: busca por UserId o RUC (evita IX_Partners_RUC en redeploys).
+    /// Si el RUC ya existe con otro usuario y el actual no tiene partner, re-vincula.
+    /// </summary>
+    private static async Task<Partner> EnsurePartnerForUserAsync(
+        AppDbContext db,
+        User user,
+        string ruc,
+        Func<Partner> create,
+        ILogger logger,
+        string createdLogLabel)
+    {
+        var partner = await db.Partners.FirstOrDefaultAsync(p => p.UserId == user.Id)
+            ?? await db.Partners.FirstOrDefaultAsync(p => p.RUC == ruc);
+
+        if (partner is not null)
+        {
+            if (partner.UserId != user.Id && !await db.Partners.AnyAsync(p => p.UserId == user.Id))
+            {
+                partner.UserId = user.Id;
+                partner.ContactEmail ??= user.Email;
+                await db.SaveChangesAsync();
+                logger.LogInformation("{Label}: partner RUC {Ruc} vinculado a {Email}", createdLogLabel, ruc, user.Email);
+            }
+
+            return partner;
+        }
+
+        partner = create();
+        db.Partners.Add(partner);
+        await db.SaveChangesAsync();
+        logger.LogInformation("{Label} creado.", createdLogLabel);
+        return partner;
+    }
+
+    private static async Task EnsureCategoryShowcaseAsync(AppDbContext db, ILogger logger)
     {
         var showcases = new (string Email, string Name, string Ruc, string Dept, PartnerType Type)[]
         {
@@ -181,23 +214,27 @@ public static class DbInitializer
 
         foreach (var s in showcases)
         {
-            if (await db.Partners.AnyAsync(p => p.RUC == s.Ruc)) continue;
             var user = await EnsureUserIfMissingAsync(db, s.Email, s.Name, RoleNames.Admin, PresentationPassword, logger: null);
-            db.Partners.Add(new Partner
-            {
-                UserId = user.Id,
-                Name = s.Name,
-                RUC = s.Ruc,
-                PartnerType = s.Type,
-                Status = "Approved",
-                VerificationStatus = "Verified",
-                OperatingDepartment = s.Dept,
-                ContactEmail = s.Email,
-                LogoUrl = "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=400",
-                CommissionRate = 0.10m,
-                CreatedAt = DateTime.UtcNow
-            });
-            await db.SaveChangesAsync();
+            await EnsurePartnerForUserAsync(
+                db,
+                user,
+                s.Ruc,
+                () => new Partner
+                {
+                    UserId = user.Id,
+                    Name = s.Name,
+                    RUC = s.Ruc,
+                    PartnerType = s.Type,
+                    Status = "Approved",
+                    VerificationStatus = "Verified",
+                    OperatingDepartment = s.Dept,
+                    ContactEmail = s.Email,
+                    LogoUrl = "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=400",
+                    CommissionRate = 0.10m,
+                    CreatedAt = DateTime.UtcNow
+                },
+                logger,
+                $"Partner vitrina: {s.Name}");
         }
     }
 
