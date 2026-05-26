@@ -1453,8 +1453,23 @@ a:hover { color: var(--dp-primary-light); }
     border-radius: 8px;
     padding: 0.75rem 1rem;
 }
+.manifest-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+.manifest-download-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
 @media print {
     .no-print, .dp-nav, .back-home { display: none !important; }
+    .no-print-col { display: none !important; }
     .manifest-print .container { max-width: 100%; }
     .manifest-table { font-size: 11pt; }
 }

@@ -1,9 +1,11 @@
 @page "/manifiesto"
+@using DestinoPeruBlazor.Helpers
 @using DestinoPeruBlazor.Models
 @using DestinoPeruBlazor.Services
 @inject ApiService Api
 @inject AuthStateService Auth
 @inject IJSRuntime JS
+@inject ToastService Toast
 
 <PageTitle>Manifiesto legal - DestinoPerú</PageTitle>
 
@@ -22,10 +24,20 @@
     }
     else
     {
-        <div class="d-flex justify-content-between align-items-start mb-3 no-print">
+        <div class="manifest-actions no-print">
             <a class="btn btn-outline-secondary btn-sm" href="@backUrl">← Volver al panel</a>
-            <button class="btn btn-primary btn-sm" @onclick="Print">Imprimir / PDF</button>
+            <div class="manifest-download-group">
+                <button type="button" class="btn btn-primary btn-sm" @onclick="DownloadCsv">
+                    ⬇ Descargar CSV (Excel)
+                </button>
+                <button type="button" class="btn btn-outline-primary btn-sm" @onclick="Print">
+                    ⬇ Guardar PDF
+                </button>
+            </div>
         </div>
+        <p class="small text-muted no-print mb-3">
+            CSV abre en Excel con DNI y punto de recojo. PDF usa «Guardar como PDF» en el diálogo de impresión.
+        </p>
 
         <header class="manifest-header text-center mb-4">
             <h1 class="h4 mb-1">MANIFIESTO DE PASAJEROS</h1>
@@ -42,6 +54,7 @@
                     <th>Nombre completo</th>
                     <th>DNI</th>
                     <th>Punto recojo</th>
+                    <th class="no-print-col">Cant.</th>
                 </tr>
             </thead>
             <tbody>
@@ -54,6 +67,7 @@
                         <td>@p.FullName</td>
                         <td>@p.Dni</td>
                         <td>@p.PickupPoint</td>
+                        <td class="no-print-col">@p.Quantity</td>
                     </tr>
                 }
             </tbody>
@@ -68,7 +82,7 @@
                     <p>Firma guía / conductor: _________________________</p>
                 </div>
             </div>
-            <p class="small text-muted text-center">Este documento cumple registro interno de pasajeros para operadores turísticos registrados en DestinoPerú.</p>
+            <p class="small text-muted text-center">Registro interno de pasajeros — operadores en DestinoPerú.</p>
         </footer>
     }
 </div>
@@ -82,7 +96,12 @@
     protected override async Task OnInitializedAsync()
     {
         await Auth.InitializeAsync();
-        backUrl = Auth.Role == "Admin" ? "/admin" : "/vendedor";
+        backUrl = Auth.Role switch
+        {
+            "Admin" => "/admin",
+            "SuperAdmin" => "/superadmin/inicio",
+            _ => "/vendedor"
+        };
         if (Auth.IsAuthenticated && Auth.Role is "Admin" or "Vendedor" or "SuperAdmin")
         {
             var r = await Api.GetManifestAsync();
@@ -91,10 +110,34 @@
         loading = false;
     }
 
+    private async Task DownloadCsv()
+    {
+        if (manifest is null) return;
+        var rows = new List<string[]>();
+        var i = 0;
+        foreach (var p in manifest.Passengers)
+        {
+            i++;
+            rows.Add([i.ToString(), p.FullName, p.Dni, p.PickupPoint, p.Quantity.ToString()]);
+        }
+        var meta = $"Agencia,{CsvExportHelper.Escape(manifest.AgencyName)}\n" +
+                   $"Tour,{CsvExportHelper.Escape(manifest.TourTitle)}\n" +
+                   $"Fecha salida,{manifest.TourDate:dd/MM/yyyy HH:mm}\n" +
+                   $"Generado,{DateTime.Now:dd/MM/yyyy HH:mm}\n\n";
+        var body = CsvExportHelper.ToCsv(rows, "#,Nombre completo,DNI,Punto recojo,Cantidad");
+        var file = $"manifiesto-{CsvExportHelper.SafeFileName(manifest.TourTitle)}-{DateTime.Now:yyyyMMdd}.csv";
+        await JS.InvokeVoidAsync("destinoPeruDownload.csv", file, meta + body);
+        Toast.ShowSuccess("Manifiesto descargado (CSV).");
+    }
+
     private async Task Print()
     {
         printMode = true;
         StateHasChanged();
-        await JS.InvokeVoidAsync("print");
+        await Task.Delay(150);
+        await JS.InvokeVoidAsync("destinoPeruDownload.printPage");
+        printMode = false;
+        StateHasChanged();
+        Toast.ShowSuccess("Elige «Guardar como PDF» en el diálogo de impresión.");
     }
 }

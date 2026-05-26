@@ -1,5 +1,8 @@
 @using DestinoPeruBlazor.Helpers
 @using DestinoPeruBlazor.Models
+@using DestinoPeruBlazor.Services
+@inject IJSRuntime JS
+@inject ToastService Toast
 
 @if (Category is null)
 {
@@ -87,6 +90,11 @@ else
             @if (!RankingRows.Any()) { <p class="text-muted">Sin ranking en @Category.Label.</p> }
             else
             {
+                <div class="d-flex justify-content-end mb-2">
+                    <button type="button" class="btn btn-outline-primary btn-sm" @onclick="DownloadRankingCsv">
+                        ⬇ Descargar ranking (CSV)
+                    </button>
+                </div>
                 <table class="partner-table">
                     <thead><tr><th>#</th><th>Socio</th><th>Recaudado</th><th>Reservas</th><th>Publicaciones</th></tr></thead>
                     <tbody>
@@ -156,4 +164,14 @@ else
     private async Task ClickEdit(PartnerListItemDto p) => await OnEdit.InvokeAsync(p);
     private async Task ClickSuspend(PartnerListItemDto p) => await OnSuspend.InvokeAsync(p);
     private async Task ClickReactivate(PartnerListItemDto p) => await OnReactivate.InvokeAsync(p);
+
+    private async Task DownloadRankingCsv()
+    {
+        if (Category is null || !RankingRows.Any()) return;
+        var rows = RankingRows.Select((r, i) => new[] { (i + 1).ToString(), r.Name, r.Revenue.ToString("F2"), r.Reservations.ToString(), r.TourCount.ToString() });
+        var csv = CsvExportHelper.ToCsv(rows, "#,Socio,Recaudado S/,Reservas,Publicaciones");
+        var file = $"ranking-{CsvExportHelper.SafeFileName(Category.Key)}-{DateTime.Now:yyyyMMdd}.csv";
+        await JS.InvokeVoidAsync("destinoPeruDownload.csv", file, csv);
+        Toast.ShowSuccess("Ranking descargado.");
+    }
 }
