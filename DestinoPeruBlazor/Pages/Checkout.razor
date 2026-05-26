@@ -13,7 +13,7 @@
     <BackToHome />
     @if (!Auth.IsAuthenticated)
     {
-        <div class="alert alert-warning">Debes <a href="login">iniciar sesion</a> para continuar.</div>
+        <div class="alert alert-warning">Debes <a href="/login">iniciar sesión</a> para continuar.</div>
     }
     else if (loading) { <p>Cargando...</p> }
     else if (IsReservationsList)
@@ -42,7 +42,7 @@
                         <span>S/ @r.Total.ToString("N2")</span>
                         @if (r.Status == "Pending")
                         {
-                            <a class="btn btn-primary btn-sm ms-2" href="checkout/@r.Id">Pagar</a>
+                            <a class="btn btn-primary btn-sm ms-2" href="/checkout/@r.Id">Pagar</a>
                         }
                     </div>
                 </div>

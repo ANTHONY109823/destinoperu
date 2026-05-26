@@ -453,6 +453,16 @@ a:hover { color: var(--dp-primary-light); }
     color: var(--dp-primary-dark) !important;
     border-left: none !important;
 }
+.dp-link-register {
+    border: 1px solid rgba(255, 255, 255, 0.9) !important;
+    border-radius: 8px !important;
+    margin-left: 0.25rem;
+}
+.dp-link-register:hover,
+.dp-link-register.active {
+    background: rgba(255, 255, 255, 0.15) !important;
+    border-left: none !important;
+}
 
 .reservation-item {
     display: flex;
@@ -645,13 +655,26 @@ a:hover { color: var(--dp-primary-light); }
     text-align: center;
     max-width: 720px;
 }
-.home-hero h1 {
+.home-hero h1,
+.home-hero-title {
     color: #fff !important;
     font-size: clamp(1.75rem, 4.5vw, 2.6rem);
     font-weight: 800;
     margin: 0 0 0.5rem;
     line-height: 1.12;
     text-shadow: 0 2px 12px rgba(0,0,0,0.25);
+}
+.home-hero-title:focus,
+.home-hero-title:focus-visible {
+    outline: none;
+    box-shadow: none;
+}
+#page-focus-target:focus {
+    outline: none;
+}
+#page-focus-target:focus-visible {
+    outline: 2px solid var(--dp-accent);
+    outline-offset: 2px;
 }
 .home-hero-sub {
     color: rgba(255,255,255,0.95) !important;

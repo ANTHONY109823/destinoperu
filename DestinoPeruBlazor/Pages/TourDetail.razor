@@ -61,7 +61,7 @@
                         @if (!Auth.IsAuthenticated)
                         {
                             <p>Inicia sesión para reservar.</p>
-                            <a class="btn btn-primary w-100" href="login">Ingresar</a>
+                            <a class="btn btn-primary w-100" href="/login">Ingresar</a>
                         }
                         else
                         {
@@ -133,7 +133,7 @@
         booking = true; bookingError = null;
         var result = await Api.CreateReservationAsync(new CreateReservationRequest { TourId = tour.Id, Quantity = quantity });
         if (result.Success && result.Data is not null)
-            Nav.NavigateTo($"checkout/{result.Data.Id}");
+            Nav.NavigateTo($"/checkout/{result.Data.Id}");
         else
             bookingError = result.ErrorMessage;
         booking = false;

@@ -25,7 +25,7 @@
 @code {
     [Parameter, EditorRequired] public TourDto Tour { get; set; } = default!;
 
-    private string TourHref => $"tour/{(string.IsNullOrEmpty(Tour.Slug) ? Tour.Id.ToString() : Tour.Slug)}";
+    private string TourHref => $"/tour/{(string.IsNullOrEmpty(Tour.Slug) ? Tour.Id.ToString() : Tour.Slug)}";
 
     private string ImageStyle => string.IsNullOrEmpty(Tour.ImageUrl)
         ? "background-image: linear-gradient(135deg, var(--dp-primary), var(--dp-primary-light))"
