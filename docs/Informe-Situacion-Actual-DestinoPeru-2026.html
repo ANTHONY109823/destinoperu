@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Destino Perú — Informe de situación actual (Mayo 2026)</title>
+  <style>
+    @page { size: A4; margin: 16mm 14mm; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      color: #1a2e2a;
+      line-height: 1.5;
+      font-size: 10pt;
+      max-width: 210mm;
+      margin: 0 auto;
+      padding: 10mm;
+    }
+    .cover {
+      page-break-after: always;
+      text-align: center;
+      padding-top: 48mm;
+      background: linear-gradient(165deg, #00332a 0%, #004D40 50%, #00695C 100%);
+      color: white;
+      min-height: 250mm;
+      margin: -10mm;
+      padding-left: 10mm;
+      padding-right: 10mm;
+    }
+    .cover h1 { font-size: 28pt; margin: 0 0 10px; font-weight: 800; }
+    .cover .sub { font-size: 13pt; opacity: 0.95; max-width: 140mm; margin: 0 auto 32px; }
+    .cover .meta { font-size: 10pt; opacity: 0.88; margin-top: 70px; }
+    .cover .badge {
+      display: inline-block;
+      background: #FFC107;
+      color: #00332a;
+      padding: 8px 18px;
+      border-radius: 24px;
+      font-weight: 700;
+      font-size: 9.5pt;
+      margin-top: 20px;
+    }
+    h2 {
+      color: #004D40;
+      font-size: 13pt;
+      border-bottom: 2px solid #FFC107;
+      padding-bottom: 4px;
+      margin-top: 20px;
+      page-break-after: avoid;
+    }
+    h3 { color: #00695C; font-size: 10.5pt; margin-top: 12px; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 8px 0 14px;
+      font-size: 9pt;
+    }
+    th {
+      background: #004D40;
+      color: white;
+      text-align: left;
+      padding: 6px 8px;
+    }
+    td { border: 1px solid #dce8e5; padding: 5px 8px; vertical-align: top; }
+    tr:nth-child(even) td { background: #f5f9f8; }
+    .ok { color: #2e7d32; font-weight: 600; }
+    .warn { color: #e65100; font-weight: 600; }
+    .risk { color: #c62828; font-weight: 600; }
+    .highlight {
+      background: #e8f5f3;
+      border-left: 4px solid #004D40;
+      padding: 10px 12px;
+      margin: 10px 0;
+      font-size: 9.5pt;
+    }
+    .kpi-row { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
+    .kpi {
+      flex: 1;
+      min-width: 100px;
+      background: #004D40;
+      color: white;
+      padding: 10px;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .kpi strong { display: block; font-size: 14pt; }
+    .kpi span { font-size: 8pt; opacity: 0.9; }
+    ul { margin: 6px 0; padding-left: 18px; }
+    li { margin-bottom: 4px; }
+    .footer-note {
+      margin-top: 24px;
+      padding-top: 10px;
+      border-top: 1px solid #ccc;
+      font-size: 8.5pt;
+      color: #666;
+      text-align: center;
+    }
+    .no-print-hint {
+      background: #fff8e1;
+      border: 1px solid #ffcc80;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 9pt;
+      margin-bottom: 12px;
+    }
+    @media print {
+      .no-print { display: none !important; }
+      body { padding: 0; }
+    }
+    code { background: #f0f4f3; padding: 1px 4px; border-radius: 3px; font-size: 8.5pt; }
+  </style>
+</head>
+<body>
+
+  <div class="no-print no-print-hint">
+    <strong>Guardar como PDF:</strong> Ctrl+P → Destino «Guardar como PDF» → A4. También existe copia generada:
+    <code>Informe-Situacion-Actual-DestinoPeru-2026.pdf</code>
+  </div>
+
+  <section class="cover">
+    <h1>Destino Perú</h1>
+    <p class="sub">Informe de situación actual del proyecto<br/>Arquitectura · Seguridad · Roles · Frontend · API</p>
+    <span class="badge">Versión producción — Mayo 2026</span>
+    <p class="meta">
+      Repositorio: github.com/ANTHONY109823/destinoperu<br/>
+      Último commit: <strong>648994f</strong> — descargas CSV/PDF manifiesto y ranking<br/>
+      Stack: Blazor WASM + ASP.NET Core API + PostgreSQL (Railway) + Cloudinary
+    </p>
+  </section>
+
+  <h2>1. Resumen ejecutivo</h2>
+  <div class="highlight">
+    <strong>Destino Perú</strong> es un marketplace de turismo peruano con catálogo público de experiencias,
+    reservas con pago Yape/Plin, programa de fidelidad, y paneles operativos para <strong>Super Administrador</strong>,
+    <strong>administradores de agencia</strong>, <strong>vendedores</strong> y <strong>clientes</strong>.
+    Los errores críticos del panel Super Admin (categoría no encontrada y pestañas inactivas) están <span class="ok">corregidos</span>.
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi"><strong>5</strong><span>Roles de usuario</span></div>
+    <div class="kpi"><strong>4</strong><span>Categorías SA</span></div>
+    <div class="kpi"><strong>2</strong><span>Capas (WASM + API)</span></div>
+    <div class="kpi"><strong>CSV/PDF</strong><span>Descargas activas</span></div>
+  </div>
+
+  <table>
+    <tr><th>Área</th><th>Estado</th><th>Comentario</th></tr>
+    <tr><td>API + PostgreSQL</td><td class="ok">Operativo</td><td>Migraciones y seed al arranque en Railway</td></tr>
+    <tr><td>Super Admin</td><td class="ok">Operativo</td><td>Inicio con gráficos; 4 categorías con socios, ranking, crear agencia</td></tr>
+    <tr><td>Admin agencia</td><td class="ok">Operativo</td><td>Tours, 5 vendedores, operaciones, asientos bus, manifiesto</td></tr>
+    <tr><td>Cliente público</td><td class="ok">Operativo</td><td>Carrito, comparar, checkout, fidelidad</td></tr>
+    <tr><td>Hoteles / Restaurantes / Cafés (público)</td><td class="warn">Próximamente</td><td>Coming Soon; socios sí en panel SA</td></tr>
+    <tr><td>Seguridad producción</td><td class="warn">Mejorable</td><td>Ver sección 6 — acciones recomendadas</td></tr>
+  </table>
+
+  <h2>2. Arquitectura y conexiones</h2>
+  <h3>2.1 Diagrama lógico</h3>
+  <p><strong>Cliente (navegador)</strong> → Blazor WASM → HTTPS JSON + JWT → <strong>DestinoPeruAPI</strong> → PostgreSQL (Railway). Imágenes vía <strong>Cloudinary</strong>. Auth y carrito en <code>localStorage</code>.</p>
+
+  <h3>2.2 Base de datos</h3>
+  <p>La API resuelve la cadena de conexión en este orden:</p>
+  <ol>
+    <li><code>DATABASE_URL</code> / variantes Railway</li>
+    <li><code>ConnectionStrings__DefaultConnection</code></li>
+    <li>Variables <code>PGHOST</code>, <code>PGPORT</code>, etc.</li>
+    <li><code>appsettings.json</code> (solo desarrollo local)</li>
+  </ol>
+
+  <h3>2.3 Frontend → API</h3>
+  <table>
+    <tr><th>Entorno</th><th>URL API</th></tr>
+    <tr><td>Producción (Railway)</td><td><code>https://destinoperu-production.up.railway.app/</code></td></tr>
+    <tr><td>Local</td><td>Configurado en <code>wwwroot/appsettings.json</code></td></tr>
+  </table>
+  <p>CORS: política <code>AllowAnyOrigin</code> (adecuada para WASM; conviene restringir al dominio final en producción).</p>
+
+  <h2>3. Matriz de roles y usuarios</h2>
+  <table>
+    <tr><th>Rol</th><th>Función</th><th>Rutas principales (Blazor)</th><th>API</th></tr>
+    <tr><td><strong>SuperAdmin</strong></td><td>Plataforma: socios, métricas, suplantación</td><td>/superadmin/inicio, /superadmin/tours, hoteles, restaurantes, cafes-bar</td><td>/api/superadmin/*</td></tr>
+    <tr><td><strong>Admin</strong></td><td>Dueño de agencia</td><td>/admin</td><td>/api/agency/*</td></tr>
+    <tr><td><strong>Vendedor</strong></td><td>Pagos, inventario, manifiesto</td><td>/vendedor</td><td>/api/agency/* (sin crear tours)</td></tr>
+    <tr><td><strong>Agencia</strong></td><td>Legacy → migrado a Admin</td><td>/partner</td><td>Igual que Admin</td></tr>
+    <tr><td><strong>Cliente</strong></td><td>Compras y reservas</td><td>/, /carrito, /checkout, /fidelidad</td><td>/api/tours, reservas, pagos</td></tr>
+  </table>
+
+  <h3>3.1 Tipos de socio (PartnerType)</h3>
+  <table>
+    <tr><th>ID</th><th>Categoría</th><th>Panel Super Admin</th><th>Operación completa</th></tr>
+    <tr><td>0</td><td>Agencia (Tours)</td><td class="ok">Sí</td><td class="ok">Tours, reservas, manifiesto</td></tr>
+    <tr><td>1</td><td>Hotel</td><td class="ok">Socios + crear</td><td class="warn">Catálogo público pendiente</td></tr>
+    <tr><td>2</td><td>Restaurante</td><td class="ok">Socios + crear</td><td class="warn">Idem</td></tr>
+    <tr><td>3</td><td>Café / Bar</td><td class="ok">Socios + crear</td><td class="warn">Idem</td></tr>
+  </table>
+
+  <h3>3.2 Cuentas de sistema (seed)</h3>
+  <p>Sembradas al iniciar la API. <strong>No publicar contraseñas en producción</strong> sin rotarlas vía variables de entorno.</p>
+  <table>
+    <tr><th>Email</th><th>Rol</th><th>Uso</th></tr>
+    <tr><td>superadmin@destinoperu.com</td><td>SuperAdmin</td><td>Panel global</td></tr>
+    <tr><td>admin@destinoperu.com</td><td>Admin</td><td>Agencia demo + tours de prueba</td></tr>
+    <tr><td>demo@destinoperu.com</td><td>Cliente</td><td>Flujo de compra demo</td></tr>
+  </table>
+
+  <h2>4. Frontend — módulos y estado</h2>
+  <table>
+    <tr><th>Módulo</th><th>Ruta(s)</th><th>Estado</th></tr>
+    <tr><td>Home y búsqueda</td><td>/</td><td class="ok">OK</td></tr>
+    <tr><td>Detalle tour</td><td>/tour/{slug}</td><td class="ok">OK</td></tr>
+    <tr><td>Auth</td><td>/login, /register</td><td class="ok">Registro solo Cliente (API)</td></tr>
+    <tr><td>Carrito / comparar</td><td>/carrito, /comparar</td><td class="ok">localStorage</td></tr>
+    <tr><td>Checkout / reservas</td><td>/checkout, /mis-reservas</td><td class="ok">OK</td></tr>
+    <tr><td>Fidelidad</td><td>/fidelidad</td><td class="ok">OK</td></tr>
+    <tr><td>Super Admin Inicio</td><td>/superadmin/inicio</td><td class="ok">Gráficos + acceso por categoría</td></tr>
+    <tr><td>Super Admin categorías</td><td>/superadmin/tours, hoteles, etc.</td><td class="ok">Pestañas Socios, Ranking, +Nuevo, Config</td></tr>
+    <tr><td>Admin agencia</td><td>/admin</td><td class="ok">Equipo, reservas, tours, operaciones, marca</td></tr>
+    <tr><td>Vendedor</td><td>/vendedor</td><td class="ok">Pagos, manifiesto, inventario</td></tr>
+    <tr><td>Manifiesto</td><td>/manifiesto</td><td class="ok">Descarga CSV + PDF</td></tr>
+    <tr><td>Hoteles / Rest. / Cafés público</td><td>/hoteles, etc.</td><td class="warn">Coming Soon</td></tr>
+  </table>
+  <p><strong>Nota:</strong> Los paneles Blazor validan rol en UI; la seguridad real está en la API con JWT y <code>[Authorize]</code>.</p>
+
+  <h2>5. Backend — API principal</h2>
+  <table>
+    <tr><th>Prefijo</th><th>Autorización</th><th>Funciones</th></tr>
+    <tr><td>/api/auth</td><td>Público</td><td>Login, registro (Cliente)</td></tr>
+    <tr><td>/api/tours</td><td>Mixto</td><td>Búsqueda pública; CRUD según rol</td></tr>
+    <tr><td>/api/superadmin</td><td>SuperAdmin</td><td>Dashboard, partners, ranking, impersonate, suspend</td></tr>
+    <tr><td>/api/agency</td><td>Admin, Vendedor, SuperAdmin</td><td>Perfil, tours, reservas, manifest, vendors, cupos</td></tr>
+    <tr><td>/api/reservations, /api/payments</td><td>Autenticado</td><td>Reservas y pagos</td></tr>
+  </table>
+  <p><strong>JWT:</strong> HMAC-SHA256, expiración 7 días, claims: <code>NameIdentifier</code>, <code>Role</code>, <code>partner_id</code>, <code>impersonating</code>.</p>
+
+  <h2>6. Seguridad — evaluación</h2>
+  <h3>6.1 Controles implementados</h3>
+  <ul>
+    <li>Contraseñas con <strong>BCrypt</strong> (factor 12).</li>
+    <li>Registro público forzado a rol <strong>Cliente</strong>.</li>
+    <li>Endpoints sensibles con <code>[Authorize(Roles = ...)]</code>.</li>
+    <li>Suplantación valida vínculo partner/vendedor.</li>
+    <li>Swagger solo en entorno Development.</li>
+    <li>Actualización de tours valida <code>PartnerId</code> del recurso.</li>
+  </ul>
+
+  <h3>6.2 Hallazgos y recomendaciones</h3>
+  <table>
+    <tr><th>Prioridad</th><th>Hallazgo</th><th>Recomendación</th></tr>
+    <tr><td class="risk">Alta</td><td>Header <code>X-Partner-Id</code> priorizado sin validar titularidad</td><td>Solo SuperAdmin puede enviar header; Admin/Vendedor usan JWT</td></tr>
+    <tr><td class="risk">Alta</td><td>JWT SecretKey por defecto en appsettings</td><td>Definir <code>JwtSettings__SecretKey</code> en Railway</td></tr>
+    <tr><td class="risk">Alta</td><td>Seed reescribe contraseña de cuentas sistema en cada deploy</td><td>Seed condicional en producción</td></tr>
+    <tr><td class="warn">Media</td><td>CORS AllowAnyOrigin</td><td>Restringir al dominio del Blazor</td></tr>
+    <tr><td class="warn">Media</td><td>Token en localStorage</td><td>Valorar cookies HttpOnly o sesiones más cortas</td></tr>
+    <tr><td class="warn">Baja</td><td>Sin guard de rutas Blazor</td><td>AuthorizeRouteView (UX; API ya protege)</td></tr>
+  </table>
+
+  <h2>7. Descargas y documentos</h2>
+  <table>
+    <tr><th>Documento</th><th>Formato</th><th>Acceso</th></tr>
+    <tr><td>Manifiesto de pasajeros</td><td>CSV (Excel) + PDF (impresión)</td><td>/manifiesto — Admin, Vendedor, SuperAdmin</td></tr>
+    <tr><td>Ranking por categoría</td><td>CSV</td><td>Super Admin → pestaña Ranking</td></tr>
+    <tr><td>Este informe</td><td>HTML + PDF</td><td>docs/Informe-Situacion-Actual-DestinoPeru-2026.*</td></tr>
+  </table>
+
+  <h2>8. Correcciones recientes (mayo 2026)</h2>
+  <ul>
+    <li><strong>Categoría no encontrada:</strong> resolución de ruta ignora <code>?tab=</code> en la URI.</li>
+    <li><strong>Pestañas Super Admin inactivas:</strong> corregido <code>Tab="mainTab"</code> (literal) → <code>@bind-Tab="mainTab"</code>.</li>
+    <li><strong>Dashboard Inicio:</strong> gráficos donut/barra y navegación a categorías con pestaña.</li>
+    <li><strong>Operaciones Admin:</strong> cajas compactas, asientos de bus (total/libres/vendidos).</li>
+    <li><strong>Descargas:</strong> manifiesto CSV/PDF y ranking CSV (commit 648994f).</li>
+  </ul>
+
+  <h2>9. Backlog recomendado</h2>
+  <h3>Prioridad alta</h3>
+  <ol>
+    <li>Corregir validación <code>X-Partner-Id</code> en API.</li>
+    <li>Secretos JWT y Cloudinary solo en variables Railway.</li>
+    <li>Seed sin reset de contraseñas en producción.</li>
+  </ol>
+  <h3>Prioridad media</h3>
+  <ol>
+    <li>Catálogos públicos Hoteles, Restaurantes, Cafés/Bar.</li>
+    <li>Modelos específicos por rubro (habitaciones, mesas, tazas).</li>
+    <li>Rate limiting en login/registro.</li>
+  </ol>
+
+  <h2>10. Despliegue y verificación</h2>
+  <ul>
+    <li><strong>GitHub:</strong> github.com/ANTHONY109823/destinoperu — rama <code>main</code></li>
+    <li><strong>Railway:</strong> redeploy API + Blazor tras cada push relevante.</li>
+    <li><strong>Prueba post-deploy:</strong> login Super Admin → Inicio → Administrar Tours → pestaña Socios; Manifiesto → Descargar CSV.</li>
+    <li><strong>Caché:</strong> Ctrl+F5 si la UI no refleja cambios.</li>
+  </ul>
+
+  <p class="footer-note">
+    Documento generado para Destino Perú — Informe técnico interno · Mayo 2026 · Commit de referencia 648994f
+  </p>
+
+</body>
+</html>
