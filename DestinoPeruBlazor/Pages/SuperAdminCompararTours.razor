@@ -1,0 +1,112 @@
+@page "/superadmin/comparar-tours"
+@using DestinoPeruBlazor.Models
+@using DestinoPeruBlazor.Services
+@inject ApiService Api
+@inject AuthStateService Auth
+@inject NavigationManager Nav
+
+<PageTitle>Comparar tours - Super Admin</PageTitle>
+
+<div class="container py-4 dashboard-page superadmin-page">
+    @if (!Auth.IsAuthenticated || Auth.Role != "SuperAdmin")
+    {
+        <div class="panel-access-denied alert alert-warning">
+            Acceso restringido. <a class="btn btn-primary btn-sm ms-2" href="/login">Ingresar</a>
+        </div>
+    }
+    else
+    {
+        <SuperAdminNav />
+        <header class="sa-header">
+            <div>
+                <h1 class="dashboard-title mb-1">Comparar tours por destino</h1>
+                <p class="text-muted mb-0">Solo lectura · Compara precios y oferta de distintas agencias en el mismo lugar</p>
+            </div>
+            <a class="btn btn-outline-secondary btn-sm" href="/superadmin/inicio">← Inicio</a>
+        </header>
+
+        <div class="dash-panel mb-3">
+            <label class="form-label">Filtrar por departamento o ciudad</label>
+            <div class="d-flex gap-2 flex-wrap">
+                <input class="form-control" style="max-width:280px" placeholder="Ej: Cusco, Lima, Ica" @bind="filter" @bind:event="oninput" />
+                <button type="button" class="btn btn-primary" @onclick="LoadAsync">Buscar</button>
+                <button type="button" class="btn btn-outline-secondary" @onclick="ClearFilter">Ver todos</button>
+            </div>
+        </div>
+
+        @if (loading)
+        {
+            <p class="text-muted">Cargando tours...</p>
+        }
+        else if (!groups.Any())
+        {
+            <p class="text-muted">No hay tours activos para este filtro.</p>
+        }
+        else
+        {
+            @foreach (var g in groups)
+            {
+                <section class="dash-panel mb-3">
+                    <h3 class="h5 mb-3">@g.Key <span class="text-muted small">(@g.Count() opciones)</span></h3>
+                    <div class="partner-table-wrap">
+                        <table class="partner-table">
+                            <thead>
+                                <tr>
+                                    <th>Tour</th>
+                                    <th>Agencia</th>
+                                    <th>Ubicación</th>
+                                    <th>Tipo</th>
+                                    <th>Precio</th>
+                                    <th>Fecha</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var t in g.OrderBy(x => x.Price))
+                                {
+                                    <tr>
+                                        <td>@t.Title</td>
+                                        <td>@t.PartnerName</td>
+                                        <td>@t.Location</td>
+                                        <td>@t.AdventureType</td>
+                                        <td><strong>S/ @t.Price.ToString("N2")</strong></td>
+                                        <td>@t.Date.ToString("dd/MM/yyyy")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            }
+        }
+    }
+</div>
+
+@code {
+    private List<TourCompareItemDto> items = [];
+    private IEnumerable<IGrouping<string, TourCompareItemDto>> groups = [];
+    private string filter = "";
+    private bool loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Auth.InitializeAsync();
+        if (Auth.Role != "SuperAdmin") { loading = false; return; }
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        loading = true;
+        var r = await Api.GetCompareToursAsync(string.IsNullOrWhiteSpace(filter) ? null : filter.Trim());
+        items = r.Success && r.Data is not null ? r.Data : [];
+        groups = items.GroupBy(t => $"{t.Department} · {t.Location}".Trim(' ', '·', ' '))
+            .OrderBy(g => g.Key);
+        loading = false;
+    }
+
+    private async Task ClearFilter()
+    {
+        filter = "";
+        await LoadAsync();
+    }
+}

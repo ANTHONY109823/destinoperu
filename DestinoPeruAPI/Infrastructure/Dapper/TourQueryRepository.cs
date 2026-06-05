@@ -12,10 +12,55 @@ public class TourQueryRepository(IDbConnectionFactory connectionFactory) : ITour
         SELECT t."Id", t."PartnerId", p."Name" AS "PartnerName", t."Slug", t."Title", t."Description",
                t."MetaTitle", t."MetaDescription", t."Price", t."Location", t."Department",
                t."AdventureType", t."Date", t."Capacity", t."AvailableCapacity",
-               t."ImageUrl", t."IsActive", t."CreatedAt"
+               t."ImageUrl", t."IsActive", t."CreatedAt",
+               t."PuntoPartida", t."PuntoRetorno", t."HoraSalida", t."DuracionAproximada",
+               t."ItinerarioJson", t."QueIncluyeJson", t."QueNoIncluyeJson", t."QueLlevarJson", t."GaleriaJson"
         FROM "Tours" t
         INNER JOIN "Partners" p ON p."Id" = t."PartnerId"
         """;
+
+    private sealed class TourRow
+    {
+        public int Id { get; set; }
+        public int PartnerId { get; set; }
+        public string PartnerName { get; set; } = "";
+        public string Slug { get; set; } = "";
+        public string Title { get; set; } = "";
+        public string Description { get; set; } = "";
+        public string MetaTitle { get; set; } = "";
+        public string MetaDescription { get; set; } = "";
+        public decimal Price { get; set; }
+        public string Location { get; set; } = "";
+        public string Department { get; set; } = "";
+        public string AdventureType { get; set; } = "";
+        public DateTime Date { get; set; }
+        public int Capacity { get; set; }
+        public int AvailableCapacity { get; set; }
+        public string? ImageUrl { get; set; }
+        public bool IsActive { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public string? PuntoPartida { get; set; }
+        public string? PuntoRetorno { get; set; }
+        public string? HoraSalida { get; set; }
+        public string? DuracionAproximada { get; set; }
+        public string? ItinerarioJson { get; set; }
+        public string? QueIncluyeJson { get; set; }
+        public string? QueNoIncluyeJson { get; set; }
+        public string? QueLlevarJson { get; set; }
+        public string? GaleriaJson { get; set; }
+    }
+
+    private static TourDto MapRow(TourRow r) => new(
+        r.Id, r.PartnerId, r.PartnerName, r.Slug, r.Title, r.Description,
+        r.MetaTitle, r.MetaDescription, r.Price, r.Location, r.Department,
+        r.AdventureType, r.Date, r.Capacity, r.AvailableCapacity,
+        r.ImageUrl, r.IsActive, r.CreatedAt,
+        r.PuntoPartida, r.PuntoRetorno, r.HoraSalida, r.DuracionAproximada,
+        TourContentMapper.DeserializeItinerary(r.ItinerarioJson),
+        TourContentMapper.DeserializeStrings(r.QueIncluyeJson),
+        TourContentMapper.DeserializeStrings(r.QueNoIncluyeJson),
+        TourContentMapper.DeserializeStrings(r.QueLlevarJson),
+        TourContentMapper.DeserializeStrings(r.GaleriaJson));
 
     public async Task<PagedResult<TourDto>> SearchPagedAsync(TourSearchQuery query)
     {
@@ -76,7 +121,8 @@ public class TourQueryRepository(IDbConnectionFactory connectionFactory) : ITour
             LIMIT @Limit OFFSET @Offset
             """;
 
-        var items = (await conn.QueryAsync<TourDto>(sql, parameters)).ToList();
+        var rows = (await conn.QueryAsync<TourRow>(sql, parameters)).ToList();
+        var items = rows.Select(MapRow).ToList();
         return new PagedResult<TourDto> { Items = items, TotalCount = total, Page = page, PageSize = pageSize };
     }
 
@@ -85,7 +131,8 @@ public class TourQueryRepository(IDbConnectionFactory connectionFactory) : ITour
         using var conn = connectionFactory.CreateConnection();
         conn.Open();
         var sql = $"""{TourSelect} WHERE t."Id" = @Id""";
-        return await conn.QueryFirstOrDefaultAsync<TourDto>(sql, new { Id = id });
+        var row = await conn.QueryFirstOrDefaultAsync<TourRow>(sql, new { Id = id });
+        return row is null ? null : MapRow(row);
     }
 
     public async Task<TourDto?> GetBySlugAsync(string slug)
@@ -93,6 +140,7 @@ public class TourQueryRepository(IDbConnectionFactory connectionFactory) : ITour
         using var conn = connectionFactory.CreateConnection();
         conn.Open();
         var sql = $"""{TourSelect} WHERE t."Slug" = @Slug""";
-        return await conn.QueryFirstOrDefaultAsync<TourDto>(sql, new { Slug = slug });
+        var row = await conn.QueryFirstOrDefaultAsync<TourRow>(sql, new { Slug = slug });
+        return row is null ? null : MapRow(row);
     }
 }

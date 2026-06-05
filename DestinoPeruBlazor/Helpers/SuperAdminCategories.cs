@@ -10,9 +10,9 @@ public static class SuperAdminCategories
     public static readonly IReadOnlyList<SuperAdminCategory> All =
     [
         new(Tours, "Tours", "🗺️", "/superadmin/tours", 0,
-            "Agencias de experiencias, paquetes y full days.",
-            "Gestiona agencias de tours, publicaciones y cupos.",
-            "Tours: crear experiencias, manifiestos y reservas por agencia."),
+            "Categoría pública del sitio: experiencias que publican las agencias.",
+            "Gestiona socios agencia (no crea tours aquí; cada agencia los publica en su panel).",
+            "Tours = categoría del catálogo. Agencias = operadores que crean tours."),
         new(Hoteles, "Hoteles", "🏨", "/superadmin/hoteles", 1,
             "Alojamiento y hospedaje.",
             "Socios hoteleros: habitaciones y tarifas (perfil hotel).",

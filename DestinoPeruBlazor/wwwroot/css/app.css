@@ -1511,6 +1511,55 @@ a:hover { color: var(--dp-primary-light); }
     .manifest-table { font-size: 11pt; }
 }
 
+.modal-backdrop-custom {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+.modal-panel-custom {
+    background: #fff;
+    border-radius: 12px;
+    padding: 1.25rem;
+    max-width: 440px;
+    width: 100%;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+}
+.tour-highlight-box {
+    background: var(--dp-secondary);
+    border-radius: 10px;
+    padding: 1rem;
+    margin: 1rem 0;
+}
+.tour-section-title {
+    font-size: 1.15rem;
+    color: var(--dp-primary);
+    margin-top: 1.25rem;
+}
+.tour-timeline {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    border-left: 3px solid var(--dp-primary-light);
+}
+.tour-timeline-item {
+    display: flex;
+    gap: 1rem;
+    padding: 0.75rem 0 0.75rem 1rem;
+    position: relative;
+}
+.tour-timeline-hour {
+    font-weight: 700;
+    color: var(--dp-primary);
+    min-width: 4.5rem;
+}
+.tour-check-list li::marker { content: "✓ "; color: var(--dp-primary); }
+.tour-cross-list li::marker { content: "✗ "; color: #c62828; }
+
 @media (max-width: 380px) {
     .home-hero { min-height: 400px; }
     .tour-gallery-main { height: 220px; }

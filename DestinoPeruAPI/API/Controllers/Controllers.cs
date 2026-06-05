@@ -38,7 +38,7 @@ public class ToursController(TourService tourService) : ControllerBase
         return r.Success ? Ok(r) : NotFound(r);
     }
 
-    [HttpPost][Authorize(Roles = "Admin,SuperAdmin")]
+    [HttpPost][Authorize(Roles = RoleNames.Admin)]
     public async Task<IActionResult> Create([FromBody] CreateTourRequest request)
     {
         var r = await tourService.CreateAsync(request, User.GetUserId());
@@ -92,13 +92,20 @@ public class PartnersController(PartnerService partnerService) : ControllerBase
 }
 
 [ApiController][Route("api/agencies")]
-public class AgenciesController(PartnerService partnerService) : ControllerBase
+public class AgenciesController(SuperAdminService superAdminService, PartnerService partnerService) : ControllerBase
 {
     [HttpPost][Authorize]
     public async Task<IActionResult> Create([FromBody] CreatePartnerRequest request)
     {
         var r = await partnerService.CreateAsync(request, User.GetUserId());
         return r.Success ? Created("", r) : BadRequest(r);
+    }
+
+    [HttpDelete("{id:int}")][Authorize(Roles = RoleNames.SuperAdmin)]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var r = await superAdminService.DeleteAgencyAsync(id);
+        return r.Success ? Ok(r) : BadRequest(r);
     }
 
     [HttpPut("approve/{id:int}")][Authorize(Roles = "SuperAdmin")]

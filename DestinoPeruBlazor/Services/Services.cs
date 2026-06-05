@@ -328,40 +328,83 @@ public class ApiService
         await GetJsonAsync<List<AgencyTourListItemDto>>($"{_baseUrl}/agency/tours", "Tours no disponibles.", showToast: false);
 
     public async Task<ApiResult<bool>> UpdateTourItemAsync(
-        int tourId, string? imageUrl = null, int? availableCapacity = null, int? busTotalSeats = null,
-        string? title = null, string? description = null, decimal? price = null,
-        string? department = null, string? adventureType = null, bool? isActive = null)
+        int tourId, string? imageUrl = null, int? availableCapacity = null, int? busTotalSeats = null)
     {
         try
         {
             PrepareRequest();
             var response = await _http.PutAsJsonAsync($"{_baseUrl}/agency/tours/{tourId}",
-                new
-                {
-                    ImageUrl = imageUrl,
-                    AvailableCapacity = availableCapacity,
-                    BusTotalSeats = busTotalSeats,
-                    Title = title,
-                    Description = description,
-                    Price = price,
-                    Department = department,
-                    AdventureType = adventureType,
-                    IsActive = isActive
-                });
+                new { ImageUrl = imageUrl, AvailableCapacity = availableCapacity, BusTotalSeats = busTotalSeats });
             return response.IsSuccessStatusCode ? ApiResult<bool>.Ok(true) : Fail<bool>("No se pudo actualizar.");
         }
         catch (Exception ex) { return Fail<bool>("Error al actualizar tour.", ex); }
     }
 
-    public async Task<ApiResult<bool>> DeactivateAgencyTourAsync(int tourId)
+    public async Task<ApiResult<bool>> UpdateTourDetailsAsync(int tourId, CreateTourRequest payload)
     {
         try
         {
             PrepareRequest();
-            var response = await _http.DeleteAsync($"{_baseUrl}/agency/tours/{tourId}");
-            return response.IsSuccessStatusCode ? ApiResult<bool>.Ok(true) : Fail<bool>("No se pudo desactivar el tour.");
+            var response = await _http.PutAsJsonAsync($"{_baseUrl}/agency/tours/{tourId}", new
+            {
+                payload.Title,
+                payload.Description,
+                payload.Price,
+                payload.Location,
+                Department = payload.Department,
+                payload.AdventureType,
+                payload.ImageUrl,
+                payload.PuntoPartida,
+                payload.PuntoRetorno,
+                payload.HoraSalida,
+                payload.DuracionAproximada,
+                payload.Itinerario,
+                payload.QueIncluye,
+                payload.QueNoIncluye,
+                payload.QueLlevar,
+                payload.Galeria
+            });
+            return response.IsSuccessStatusCode ? ApiResult<bool>.Ok(true) : Fail<bool>("No se pudo actualizar.");
         }
-        catch (Exception ex) { return Fail<bool>("Error al desactivar tour.", ex); }
+        catch (Exception ex) { return Fail<bool>("Error al actualizar tour.", ex); }
+    }
+
+    public async Task<ApiResult<bool>> DeleteTourAsync(int tourId)
+    {
+        try
+        {
+            PrepareRequest();
+            var response = await _http.DeleteAsync($"{_baseUrl}/tours/{tourId}");
+            if (!response.IsSuccessStatusCode)
+            {
+                var body = await response.Content.ReadAsStringAsync();
+                return Fail<bool>(string.IsNullOrWhiteSpace(body) ? "No se pudo eliminar el tour." : body, showToast: false);
+            }
+            return ApiResult<bool>.Ok(true);
+        }
+        catch (Exception ex) { return Fail<bool>("Error al eliminar tour.", ex); }
+    }
+
+    public async Task<ApiResult<bool>> DeleteAgencyPartnerAsync(int partnerId)
+    {
+        try
+        {
+            PrepareRequest();
+            var response = await _http.DeleteAsync($"{_baseUrl}/agencies/{partnerId}");
+            if (!response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<ApiResponse<bool>>(JsonOptions);
+                return Fail<bool>(result?.Message ?? "No se pudo eliminar la agencia.");
+            }
+            return ApiResult<bool>.Ok(true);
+        }
+        catch (Exception ex) { return Fail<bool>("Error al eliminar agencia.", ex); }
+    }
+
+    public async Task<ApiResult<List<TourCompareItemDto>>> GetCompareToursAsync(string? department = null)
+    {
+        var q = string.IsNullOrWhiteSpace(department) ? "" : $"?department={Uri.EscapeDataString(department)}";
+        return await GetJsonAsync<List<TourCompareItemDto>>($"{_baseUrl}/superadmin/tours/compare{q}", "Comparación no disponible.", showToast: false);
     }
 
     public async Task<ApiResult<bool>> UpdateTourCapacityAsync(int tourId, int available)

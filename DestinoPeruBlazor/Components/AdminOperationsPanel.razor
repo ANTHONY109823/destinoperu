@@ -188,7 +188,7 @@
         var up = await Api.UploadImageAsync(stream, file.Name, "tours");
         if (up.Success && up.Data is not null)
         {
-            var r = await Api.UpdateTourItemAsync(tourId, up.Data);
+            var r = await Api.UpdateTourItemAsync(tourId, imageUrl: up.Data);
             if (r.Success) { Toast.ShowSuccess("Foto actualizada."); await OnToursChanged.InvokeAsync(); }
         }
         else Toast.ShowError(up.ErrorMessage ?? "Error");

@@ -27,6 +27,13 @@ public class AuthResponse
     public bool Impersonating { get; set; }
 }
 
+public class TourItineraryStepDto
+{
+    public string Hora { get; set; } = "";
+    public string Titulo { get; set; } = "";
+    public string Descripcion { get; set; } = "";
+}
+
 public class TourDto
 {
     public int Id { get; set; }
@@ -47,6 +54,28 @@ public class TourDto
     public string? ImageUrl { get; set; }
     public bool IsActive { get; set; }
     public DateTime CreatedAt { get; set; }
+    public string? PuntoPartida { get; set; }
+    public string? PuntoRetorno { get; set; }
+    public string? HoraSalida { get; set; }
+    public string? DuracionAproximada { get; set; }
+    public List<TourItineraryStepDto> Itinerario { get; set; } = [];
+    public List<string> QueIncluye { get; set; } = [];
+    public List<string> QueNoIncluye { get; set; } = [];
+    public List<string> QueLlevar { get; set; } = [];
+    public List<string> Galeria { get; set; } = [];
+}
+
+public class TourCompareItemDto
+{
+    public int Id { get; set; }
+    public string Title { get; set; } = "";
+    public string PartnerName { get; set; } = "";
+    public string Department { get; set; } = "";
+    public string Location { get; set; } = "";
+    public decimal Price { get; set; }
+    public string AdventureType { get; set; } = "";
+    public bool IsActive { get; set; }
+    public DateTime Date { get; set; }
 }
 
 public class ReservationDto
@@ -226,6 +255,15 @@ public class CreateTourRequest
     public DateTime Date { get; set; }
     public int Capacity { get; set; }
     public string? ImageUrl { get; set; }
+    public string? PuntoPartida { get; set; }
+    public string? PuntoRetorno { get; set; }
+    public string? HoraSalida { get; set; }
+    public string? DuracionAproximada { get; set; }
+    public List<TourItineraryStepDto> Itinerario { get; set; } = [];
+    public List<string> QueIncluye { get; set; } = [];
+    public List<string> QueNoIncluye { get; set; } = [];
+    public List<string> QueLlevar { get; set; } = [];
+    public List<string> Galeria { get; set; } = [];
 }
 
 public class AgencyRankingDto

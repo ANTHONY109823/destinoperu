@@ -53,7 +53,7 @@ else
                 {
                     <article class="partner-card">
                         <div class="partner-card-top">
-                            <span class="partner-cat-badge">@Category.Icon @Category.Label</span>
+                            <span class="partner-cat-badge">@(Category?.Icon) @(Category?.Label)</span>
                             <span class="badge-status @(p.Status == "Approved" ? "ok" : "")">@p.Status</span>
                         </div>
                         <h3>@p.Name</h3>
@@ -76,6 +76,10 @@ else
                             else
                             {
                                 <button type="button" class="btn btn-outline-success btn-sm" @onclick="() => ClickReactivate(p)">Reactivar</button>
+                            }
+                            @if (Category?.Key == SuperAdminCategories.Tours)
+                            {
+                                <button type="button" class="btn btn-danger btn-sm" @onclick="() => ClickDelete(p)">Eliminar agencia</button>
                             }
                         </div>
                     </article>
@@ -143,6 +147,7 @@ else
     [Parameter] public EventCallback<PartnerListItemDto> OnEdit { get; set; }
     [Parameter] public EventCallback<PartnerListItemDto> OnSuspend { get; set; }
     [Parameter] public EventCallback<PartnerListItemDto> OnReactivate { get; set; }
+    [Parameter] public EventCallback<PartnerListItemDto> OnDelete { get; set; }
 
     private string ActiveTab => NormalizeTab(Tab);
 
@@ -164,6 +169,7 @@ else
     private async Task ClickEdit(PartnerListItemDto p) => await OnEdit.InvokeAsync(p);
     private async Task ClickSuspend(PartnerListItemDto p) => await OnSuspend.InvokeAsync(p);
     private async Task ClickReactivate(PartnerListItemDto p) => await OnReactivate.InvokeAsync(p);
+    private async Task ClickDelete(PartnerListItemDto p) => await OnDelete.InvokeAsync(p);
 
     private async Task DownloadRankingCsv()
     {

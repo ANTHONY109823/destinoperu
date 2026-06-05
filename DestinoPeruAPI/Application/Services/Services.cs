@@ -106,6 +106,7 @@ public class TourService(
             AvailableCapacity = request.Capacity,
             ImageUrl = imageUrl
         };
+        TourContentMapper.ApplyCreateDefaults(tour, request);
         await tourCommand.AddAsync(tour);
         var created = await tourQuery.GetByIdAsync(tour.Id);
         return new ApiResponse<TourDto>(true, "Tour creado.", created);
@@ -138,6 +139,7 @@ public class TourService(
             AvailableCapacity = request.Capacity,
             ImageUrl = imageUrl
         };
+        TourContentMapper.ApplyCreateDefaults(tour, request);
         await tourCommand.AddAsync(tour);
         var created = await tourQuery.GetByIdAsync(tour.Id);
         return new ApiResponse<TourDto>(true, "Tour creado.", created);
@@ -147,12 +149,14 @@ public class TourService(
     {
         var tour = await tourCommand.GetByIdAsync(id);
         if (tour == null) return new ApiResponse<bool>(false, "Tour no encontrado.", false);
-        if (role != "SuperAdmin")
+        if (role != RoleNames.SuperAdmin)
         {
             var partner = await partnerRepository.GetByUserIdAsync(userId);
             if (partner == null || tour.PartnerId != partner.Id)
                 return new ApiResponse<bool>(false, "Sin permiso.", false);
         }
+        if (await tourCommand.HasReservationsAsync(id))
+            return new ApiResponse<bool>(false, "No se puede eliminar: el tour tiene reservas asociadas.", false);
         await tourCommand.DeleteAsync(id);
         return new ApiResponse<bool>(true, "Tour eliminado.", true);
     }

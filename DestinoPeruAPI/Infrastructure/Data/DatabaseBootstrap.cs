@@ -27,6 +27,7 @@ public static class DatabaseBootstrap
         await DropPartnerFkIfExistsAsync(db);
         await RepairOrphanToursAsync(db, logger);
         await DbInitializer.SeedAsync(db, logger);
+        await AgencyCleanupMaintenance.RunOnceAsync(db, logger);
         await TryRestorePartnerFkAsync(db, logger);
     }
 

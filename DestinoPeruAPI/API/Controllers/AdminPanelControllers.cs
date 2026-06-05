@@ -33,10 +33,14 @@ public class SuperAdminController(SuperAdminService superAdminService) : Control
         return r.Success ? Ok(r) : BadRequest(r);
     }
 
-    [HttpPost("demo-agency")]
-    public async Task<IActionResult> CreateDemoAgency()
+    [HttpGet("tours/compare")]
+    public async Task<IActionResult> CompareTours([FromQuery] string? department) =>
+        Ok(await superAdminService.GetCompareToursAsync(department));
+
+    [HttpDelete("partners/{id:int}")]
+    public async Task<IActionResult> DeletePartner(int id)
     {
-        var r = await superAdminService.CreatePresentationDemoAgencyAsync();
+        var r = await superAdminService.DeleteAgencyAsync(id);
         return r.Success ? Ok(r) : BadRequest(r);
     }
 
@@ -68,12 +72,6 @@ public class SuperAdminController(SuperAdminService superAdminService) : Control
         }
     }
 
-    [HttpPost("partners/{partnerId:int}/tours")]
-    public async Task<IActionResult> CreateTourForPartner(int partnerId, [FromBody] CreateTourRequest request)
-    {
-        var r = await superAdminService.CreateTourForPartnerAsync(partnerId, request);
-        return r.Success ? Ok(r) : BadRequest(r);
-    }
 }
 
 [ApiController]
@@ -163,7 +161,7 @@ public class AgencyController(AgencyAdminService agencyService) : ControllerBase
     }
 
     [HttpPost("tours")]
-    [Authorize(Roles = $"{RoleNames.Admin},{RoleNames.SuperAdmin}")]
+    [Authorize(Roles = RoleNames.Admin)]
     public async Task<IActionResult> CreateTour([FromBody] CreateTourRequest request)
     {
         var partnerId = await ResolvePartnerIdAsync();
@@ -194,11 +192,11 @@ public class AgencyController(AgencyAdminService agencyService) : ControllerBase
 
     [HttpDelete("tours/{tourId:int}")]
     [Authorize(Roles = $"{RoleNames.Admin},{RoleNames.SuperAdmin}")]
-    public async Task<IActionResult> DeactivateTour(int tourId)
+    public async Task<IActionResult> DeleteTour(int tourId)
     {
         var partnerId = await ResolvePartnerIdAsync();
         if (!partnerId.HasValue) return Forbid();
-        var r = await agencyService.DeactivateTourAsync(tourId, partnerId.Value, Role);
+        var r = await agencyService.DeleteTourAsync(tourId, partnerId.Value, UserId, Role);
         return r.Success ? Ok(r) : BadRequest(r);
     }
 }

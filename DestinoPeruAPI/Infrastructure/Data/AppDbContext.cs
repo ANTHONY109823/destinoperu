@@ -14,10 +14,17 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<LoyaltyAccount> LoyaltyAccounts => Set<LoyaltyAccount>();
     public DbSet<PassengerManifest> PassengerManifests => Set<PassengerManifest>();
     public DbSet<PartnerStaff> PartnerStaff => Set<PartnerStaff>();
+    public DbSet<AppMaintenanceRun> AppMaintenanceRuns => Set<AppMaintenanceRun>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<AppMaintenanceRun>(e =>
+        {
+            e.ToTable("AppMaintenanceRuns");
+            e.HasKey(r => r.Key);
+        });
 
         modelBuilder.Entity<User>(e =>
         {

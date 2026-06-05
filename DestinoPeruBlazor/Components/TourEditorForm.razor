@@ -1,0 +1,146 @@
+@using DestinoPeruBlazor.Models
+
+<section class="dash-panel tour-editor-panel">
+    <h3>@(TourId.HasValue ? "Editar tour" : "Publicar tour nuevo")</h3>
+    <div class="admin-form-grid">
+        <input class="form-control" placeholder="Título *" @bind="Model.Title" />
+        <input class="form-control" placeholder="Ubicación" @bind="Model.Location" />
+        <input class="form-control" placeholder="Departamento" @bind="Model.Department" />
+        <select class="form-select" @bind="Model.AdventureType">
+            <option value="FullDay">Full Day</option>
+            <option value="Paquete2D1N">Paquete 2D/1N</option>
+            <option value="Cultural">Cultural</option>
+            <option value="Trekking">Trekking</option>
+            <option value="Aventura">Aventura</option>
+        </select>
+        <input type="number" class="form-control" placeholder="Precio S/" @bind="Model.Price" />
+        <input type="number" class="form-control" placeholder="Cupos bus" @bind="Model.Capacity" />
+        <input type="date" class="form-control" @bind="Model.Date" />
+        <input class="form-control" placeholder="Punto de partida" @bind="Model.PuntoPartida" />
+        <input class="form-control" placeholder="Punto de retorno" @bind="Model.PuntoRetorno" />
+        <input class="form-control" placeholder="Hora de salida" @bind="Model.HoraSalida" />
+        <input class="form-control" placeholder="Duración aprox." @bind="Model.DuracionAproximada" />
+        <input class="form-control" placeholder="Imagen principal (URL)" @bind="Model.ImageUrl" />
+    </div>
+    <textarea class="form-control mb-2" rows="3" placeholder="Descripción" @bind="Model.Description"></textarea>
+
+    <h5 class="mt-3">Itinerario por horas</h5>
+    @for (var i = 0; i < Itinerario.Count; i++)
+    {
+        var idx = i;
+        var step = Itinerario[idx];
+        <div class="itinerary-row admin-form-grid mb-2">
+            <input class="form-control" placeholder="Hora" @bind="step.Hora" />
+            <input class="form-control" placeholder="Actividad" @bind="step.Titulo" />
+            <input class="form-control" placeholder="Detalle" @bind="step.Descripcion" />
+            <button type="button" class="btn btn-outline-danger btn-sm" @onclick="() => RemoveItinerary(idx)">✕</button>
+        </div>
+    }
+    <button type="button" class="btn btn-outline-primary btn-sm mb-3" @onclick="AddItinerary">+ Paso itinerario</button>
+
+    <h5>Qué incluye</h5>
+    @for (var i = 0; i < Incluye.Count; i++)
+    {
+        var idx = i;
+        <div class="d-flex gap-2 mb-1">
+            <input class="form-control form-control-sm" @bind="Incluye[idx]" />
+            <button type="button" class="btn btn-outline-danger btn-sm" @onclick="() => Incluye.RemoveAt(idx)">✕</button>
+        </div>
+    }
+    <button type="button" class="btn btn-outline-primary btn-sm mb-2" @onclick="AddIncluye">+ Incluye</button>
+
+    <h5>Qué no incluye</h5>
+    @for (var i = 0; i < NoIncluye.Count; i++)
+    {
+        var idx = i;
+        <div class="d-flex gap-2 mb-1">
+            <input class="form-control form-control-sm" @bind="NoIncluye[idx]" />
+            <button type="button" class="btn btn-outline-danger btn-sm" @onclick="() => NoIncluye.RemoveAt(idx)">✕</button>
+        </div>
+    }
+    <button type="button" class="btn btn-outline-primary btn-sm mb-2" @onclick="AddNoIncluye">+ No incluye</button>
+
+    <h5>Qué llevar</h5>
+    @for (var i = 0; i < Llevar.Count; i++)
+    {
+        var idx = i;
+        <div class="d-flex gap-2 mb-1">
+            <input class="form-control form-control-sm" @bind="Llevar[idx]" />
+            <button type="button" class="btn btn-outline-danger btn-sm" @onclick="() => Llevar.RemoveAt(idx)">✕</button>
+        </div>
+    }
+    <button type="button" class="btn btn-outline-primary btn-sm mb-3" @onclick="AddLlevar">+ Qué llevar</button>
+
+    <h5 class="mt-3">Galería (URLs, máx. 8)</h5>
+    @for (var i = 0; i < Galeria.Count; i++)
+    {
+        var gi = i;
+        <div class="d-flex gap-2 mb-1">
+            <input class="form-control form-control-sm" @bind="Galeria[gi]" placeholder="URL foto" />
+            <button type="button" class="btn btn-outline-secondary btn-sm" title="Principal" @onclick="() => SetMainFromGallery(gi)">★</button>
+            <button type="button" class="btn btn-outline-danger btn-sm" @onclick="() => Galeria.RemoveAt(gi)">✕</button>
+        </div>
+    }
+    @if (Galeria.Count < 8)
+    {
+        <button type="button" class="btn btn-outline-primary btn-sm" @onclick="AddGaleriaUrl">+ Foto URL</button>
+    }
+
+    <div class="mt-3">
+        <button type="button" class="btn btn-primary" disabled="@Saving" @onclick="Submit">@(Saving ? "Guardando..." : (TourId.HasValue ? "Guardar cambios" : "+ Publicar tour"))</button>
+        @if (TourId.HasValue)
+        {
+            <button type="button" class="btn btn-link" @onclick="OnCancelEdit">Cancelar edición</button>
+        }
+    </div>
+</section>
+
+@code {
+    [Parameter] public int? TourId { get; set; }
+    [Parameter] public CreateTourRequest Model { get; set; } = new() { Date = DateTime.Today.AddDays(7), AdventureType = "FullDay", Capacity = 20 };
+    [Parameter] public bool Saving { get; set; }
+    [Parameter] public EventCallback<CreateTourRequest> OnSave { get; set; }
+    [Parameter] public EventCallback OnCancelEdit { get; set; }
+
+    private List<TourItineraryStepDto> Itinerario { get; set; } = [];
+    private List<string> Incluye { get; set; } = [];
+    private List<string> NoIncluye { get; set; } = [];
+    private List<string> Llevar { get; set; } = [];
+    private List<string> Galeria { get; set; } = [];
+
+    protected override void OnParametersSet()
+    {
+        Itinerario = Model.Itinerario?.Select(s => new TourItineraryStepDto
+        {
+            Hora = s.Hora, Titulo = s.Titulo, Descripcion = s.Descripcion
+        }).ToList() ?? [];
+        Incluye = Model.QueIncluye?.ToList() ?? [];
+        NoIncluye = Model.QueNoIncluye?.ToList() ?? [];
+        Llevar = Model.QueLlevar?.ToList() ?? [];
+        Galeria = Model.Galeria?.ToList() ?? (string.IsNullOrWhiteSpace(Model.ImageUrl) ? [] : [Model.ImageUrl]);
+    }
+
+    private void AddItinerary() => Itinerario.Add(new TourItineraryStepDto());
+    private void RemoveItinerary(int idx) => Itinerario.RemoveAt(idx);
+    private void AddIncluye() => Incluye.Add("");
+    private void AddNoIncluye() => NoIncluye.Add("");
+    private void AddLlevar() => Llevar.Add("");
+    private void AddGaleriaUrl() => Galeria.Add("");
+    private void SetMainFromGallery(int idx)
+    {
+        if (idx >= 0 && idx < Galeria.Count && !string.IsNullOrWhiteSpace(Galeria[idx]))
+            Model.ImageUrl = Galeria[idx];
+    }
+
+    private async Task Submit()
+    {
+        Model.Itinerario = Itinerario.Where(s => !string.IsNullOrWhiteSpace(s.Titulo) || !string.IsNullOrWhiteSpace(s.Hora)).ToList();
+        Model.QueIncluye = Incluye.Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
+        Model.QueNoIncluye = NoIncluye.Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
+        Model.QueLlevar = Llevar.Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
+        Model.Galeria = Galeria.Where(s => !string.IsNullOrWhiteSpace(s)).Take(8).ToList();
+        if (string.IsNullOrWhiteSpace(Model.ImageUrl) && Model.Galeria.Count > 0)
+            Model.ImageUrl = Model.Galeria[0];
+        await OnSave.InvokeAsync(Model);
+    }
+}

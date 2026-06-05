@@ -6,11 +6,27 @@ public record RegisterRequest(string Name, string Email, string Password, string
 public record LoginRequest(string Email, string Password);
 public record AuthResponse(string Token, string Name, string Email, string Role, int UserId, int? PartnerId = null, bool Impersonating = false);
 
+public record TourItineraryStepDto(string Hora, string Titulo, string Descripcion);
+
 public record TourDto(
     int Id, int PartnerId, string PartnerName, string Slug, string Title, string Description,
     string MetaTitle, string MetaDescription, decimal Price, string Location, string Department,
     string AdventureType, DateTime Date, int Capacity, int AvailableCapacity,
-    string? ImageUrl, bool IsActive, DateTime CreatedAt);
+    string? ImageUrl, bool IsActive, DateTime CreatedAt,
+    string? PuntoPartida = null, string? PuntoRetorno = null, string? HoraSalida = null, string? DuracionAproximada = null,
+    IReadOnlyList<TourItineraryStepDto>? Itinerario = null,
+    IReadOnlyList<string>? QueIncluye = null, IReadOnlyList<string>? QueNoIncluye = null, IReadOnlyList<string>? QueLlevar = null,
+    IReadOnlyList<string>? Galeria = null);
+
+public record TourCompareItemDto(
+    int Id, string Title, string PartnerName, string Department, string Location,
+    decimal Price, string AdventureType, bool IsActive, DateTime Date);
+
+public record TourContentInput(
+    string? PuntoPartida = null, string? PuntoRetorno = null, string? HoraSalida = null, string? DuracionAproximada = null,
+    IReadOnlyList<TourItineraryStepDto>? Itinerario = null,
+    IReadOnlyList<string>? QueIncluye = null, IReadOnlyList<string>? QueNoIncluye = null,
+    IReadOnlyList<string>? QueLlevar = null, IReadOnlyList<string>? Galeria = null);
 
 public record TourSearchQuery(
     string? Department = null, string? Location = null, string? AdventureType = null,
@@ -23,7 +39,11 @@ public record AgencyProfileDto(
 public record CreateTourRequest(
     string Title, string Description, decimal Price, string Location, string Department,
     string AdventureType, DateTime Date, int Capacity, string? ImageUrl,
-    string? MetaTitle = null, string? MetaDescription = null);
+    string? MetaTitle = null, string? MetaDescription = null,
+    string? PuntoPartida = null, string? PuntoRetorno = null, string? HoraSalida = null, string? DuracionAproximada = null,
+    IReadOnlyList<TourItineraryStepDto>? Itinerario = null,
+    IReadOnlyList<string>? QueIncluye = null, IReadOnlyList<string>? QueNoIncluye = null,
+    IReadOnlyList<string>? QueLlevar = null, IReadOnlyList<string>? Galeria = null);
 
 public record PartnerDto(
     int Id, int UserId, string UserName, string Name, string RUC, PartnerType PartnerType,
@@ -71,7 +91,11 @@ public record UpdateTourItemRequest(
     string? ImageUrl = null, int? AvailableCapacity = null, int? BusTotalSeats = null,
     string? Title = null, string? Description = null, decimal? Price = null,
     string? Location = null, string? Department = null, string? AdventureType = null,
-    bool? IsActive = null);
+    bool? IsActive = null,
+    string? PuntoPartida = null, string? PuntoRetorno = null, string? HoraSalida = null, string? DuracionAproximada = null,
+    IReadOnlyList<TourItineraryStepDto>? Itinerario = null,
+    IReadOnlyList<string>? QueIncluye = null, IReadOnlyList<string>? QueNoIncluye = null,
+    IReadOnlyList<string>? QueLlevar = null, IReadOnlyList<string>? Galeria = null);
 
 public record CreateDemoAgencyResponse(
     int PartnerId, string AgencyName, string AdminEmail, string AdminPassword, int ToursCreated);

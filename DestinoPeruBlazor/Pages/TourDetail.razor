@@ -49,10 +49,68 @@
                     <p class="text-muted">@tour.Location · @tour.Date.ToString("dddd, dd MMMM yyyy", new System.Globalization.CultureInfo("es-PE"))</p>
                     <p class="lead">@tour.Description</p>
                     <ul class="tour-meta-list">
-                        <li><strong>Operador:</strong> @tour.PartnerName</li>
+                        <li><strong>Agencia operadora:</strong> @tour.PartnerName</li>
                         <li><strong>Precio:</strong> S/ @tour.Price.ToString("N2") por persona</li>
                         <li><strong>Cupos:</strong> @tour.AvailableCapacity disponibles de @tour.Capacity</li>
+                        @if (!string.IsNullOrWhiteSpace(tour.DuracionAproximada))
+                        {
+                            <li><strong>Duración:</strong> @tour.DuracionAproximada</li>
+                        }
                     </ul>
+
+                    @if (!string.IsNullOrWhiteSpace(tour.PuntoPartida) || !string.IsNullOrWhiteSpace(tour.PuntoRetorno) || !string.IsNullOrWhiteSpace(tour.HoraSalida))
+                    {
+                        <div class="tour-highlight-box">
+                            @if (!string.IsNullOrWhiteSpace(tour.PuntoPartida))
+                            {
+                                <p><strong>📍 Punto de partida:</strong> @tour.PuntoPartida</p>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(tour.HoraSalida))
+                            {
+                                <p><strong>🕐 Hora de salida:</strong> @tour.HoraSalida</p>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(tour.PuntoRetorno))
+                            {
+                                <p><strong>↩ Punto de retorno:</strong> @tour.PuntoRetorno</p>
+                            }
+                        </div>
+                    }
+
+                    @if (tour.Itinerario.Count > 0)
+                    {
+                        <h3 class="tour-section-title">Itinerario</h3>
+                        <ol class="tour-timeline">
+                            @foreach (var step in tour.Itinerario)
+                            {
+                                <li class="tour-timeline-item">
+                                    <span class="tour-timeline-hour">@step.Hora</span>
+                                    <div>
+                                        <strong>@step.Titulo</strong>
+                                        @if (!string.IsNullOrWhiteSpace(step.Descripcion))
+                                        {
+                                            <p class="mb-0 text-muted small">@step.Descripcion</p>
+                                        }
+                                    </div>
+                                </li>
+                            }
+                        </ol>
+                    }
+
+                    @if (tour.QueIncluye.Count > 0)
+                    {
+                        <h3 class="tour-section-title">Incluye</h3>
+                        <ul class="tour-check-list">@foreach (var x in tour.QueIncluye) { <li>@x</li> }</ul>
+                    }
+                    @if (tour.QueNoIncluye.Count > 0)
+                    {
+                        <h3 class="tour-section-title">No incluye</h3>
+                        <ul class="tour-cross-list">@foreach (var x in tour.QueNoIncluye) { <li>@x</li> }</ul>
+                    }
+                    @if (tour.QueLlevar.Count > 0)
+                    {
+                        <h3 class="tour-section-title">Qué llevar</h3>
+                        <ul class="tour-check-list">@foreach (var x in tour.QueLlevar) { <li>@x</li> }</ul>
+                    }
                 </div>
                 <div class="col-lg-4">
                     <div class="booking-card booking-card-sticky">
@@ -82,7 +140,7 @@
                             {
                                 <button type="button" class="btn btn-outline-primary w-100 mt-2" @onclick="AddToCart">Agregar al carrito</button>
                             }
-                            <button type="button" class="btn btn-outline-secondary w-100 mt-2" @onclick="ToggleCompare">@(inCompare ? "Quitar de comparar" : "Comparar tour")</button>
+                            <button type="button" class="btn btn-outline-secondary w-100 mt-2" @onclick="ToggleCompare">@(inCompare ? "Quitar de comparar" : "Añadir a comparación")</button>
                         }
                     </div>
                 </div>
@@ -121,7 +179,7 @@
         if (response.Success && response.Data is not null)
         {
             tour = response.Data;
-            galleryUrls = TourGalleryHelper.GetGalleryUrls(tour.ImageUrl, tour.Slug).ToList();
+            galleryUrls = TourGalleryHelper.GetGalleryUrls(tour.ImageUrl, tour.Slug, tour.Galeria).ToList();
         }
         else error = response.ErrorMessage ?? "Tour no encontrado.";
         loading = false;

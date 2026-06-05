@@ -27,20 +27,10 @@
         <header class="sa-header d-flex flex-wrap justify-content-between align-items-start gap-2">
             <div>
                 <h1 class="dashboard-title mb-1">Vista Inicio — Panel de control global</h1>
-                <p class="text-muted mb-0">Gráficos consolidados · Cada categoría con su administración Super Admin</p>
+                <p class="text-muted mb-0">Métricas y socios · Las <strong>agencias</strong> publican tours; <strong>Tours</strong> es la categoría del sitio público</p>
             </div>
-            <button type="button" class="btn btn-warning btn-sm" disabled="@creatingDemo" @onclick="CreateDemoAgency">
-                @(creatingDemo ? "Creando..." : "⚡ Crear agencia demo")
-            </button>
+            <a class="btn btn-outline-primary btn-sm" href="/superadmin/comparar-tours">Comparar tours por destino</a>
         </header>
-
-        @if (lastDemo is not null)
-        {
-            <div class="alert alert-success">
-                <strong>@lastDemo.AgencyName</strong> lista para presentación.<br />
-                Admin: <code>@lastDemo.AdminEmail</code> / <code>@lastDemo.AdminPassword</code> · @lastDemo.ToursCreated tours creados.
-            </div>
-        }
 
         @if (!string.IsNullOrEmpty(apiWarning))
         {
@@ -125,8 +115,6 @@
     private List<PartnerListItemDto> partners = [];
     private bool loading = true;
     private string? apiWarning;
-    private bool creatingDemo;
-    private CreateDemoAgencyResponse? lastDemo;
 
     private double ReservationsPct => metrics is null || metrics.TotalTours == 0 ? 0 : Math.Min(100, metrics.TotalReservations * 10.0);
     private double PartnersActivePct => metrics is null || metrics.TotalUsers == 0 ? 0 : Math.Min(100, metrics.TotalPartners * 100.0 / Math.Max(metrics.TotalUsers, 1));
@@ -161,20 +149,6 @@
 
     private void GoPanel(SuperAdminCategory cat, string tab) =>
         Nav.NavigateTo($"{cat.Route}?tab={tab}");
-
-    private async Task CreateDemoAgency()
-    {
-        creatingDemo = true;
-        var r = await Api.CreateSuperAdminDemoAgencyAsync();
-        if (r.Success && r.Data is not null)
-        {
-            lastDemo = r.Data;
-            Toast.ShowSuccess("Agencia demo creada.");
-            await LoadAsync();
-        }
-        else Toast.ShowError(r.ErrorMessage ?? "Error");
-        creatingDemo = false;
-    }
 
     private static string BarColor(string key) => key switch
     {

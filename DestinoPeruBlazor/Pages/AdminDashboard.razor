@@ -32,7 +32,7 @@
     }
     else
     {
-        <AgencyBrandHeader Profile="profile" Subtitle="Administrador de agencia · Hasta 5 vendedores · Crear tours" />
+        <AgencyBrandHeader Profile="profile" Subtitle="Tu agencia publica tours en la categoría Tours del sitio · Hasta 5 vendedores" />
 
         @if (!string.IsNullOrEmpty(error))
         {
@@ -55,7 +55,7 @@
         <div class="panel-tabs">
             <button type="button" class="panel-tab @(tab == "team" ? "active" : "")" @onclick='() => tab = "team"'>+ Vendedores</button>
             <button type="button" class="panel-tab @(tab == "reservations" ? "active" : "")" @onclick='() => tab = "reservations"'>Reservas</button>
-            <button type="button" class="panel-tab @(tab == "tours" ? "active" : "")" @onclick='() => tab = "tours"'>Nuevo tour</button>
+            <button type="button" class="panel-tab @(tab == "tours" ? "active" : "")" @onclick='() => tab = "tours"'>Mis tours</button>
             <button type="button" class="panel-tab @(tab == "ops" ? "active" : "")" @onclick='() => tab = "ops"'>Operaciones</button>
             <button type="button" class="panel-tab @(tab == "brand" ? "active" : "")" @onclick='() => tab = "brand"'>Marca</button>
         </div>
@@ -121,31 +121,20 @@
         }
         else if (tab == "tours")
         {
-            <section class="dash-panel">
-                <h3>Publicar tour nuevo</h3>
-                <div class="admin-form-grid">
-                    <input class="form-control" placeholder="Título *" @bind="newTour.Title" />
-                    <input class="form-control" placeholder="Ubicación" @bind="newTour.Location" />
-                    <input class="form-control" placeholder="Departamento" @bind="newTour.Department" />
-                    <select class="form-select" @bind="newTour.AdventureType">
-                        <option value="FullDay">Full Days</option>
-                        <option value="Paquete2D1N">Paquete 2D/1N</option>
-                        <option value="Cultural">Cultural</option>
-                        <option value="CafeBar">Café / Bar</option>
-                    </select>
-                    <input type="number" class="form-control" placeholder="Precio S/" @bind="newTour.Price" />
-                    <input type="number" class="form-control" placeholder="Asientos bus" @bind="newTour.Capacity" />
-                    <input type="date" class="form-control" @bind="newTour.Date" />
-                </div>
-                <textarea class="form-control mb-2" rows="2" @bind="newTour.Description"></textarea>
-                <button class="btn btn-primary btn-sm" @onclick="CreateTour">+ Publicar tour</button>
-            </section>
+            @if (editingTourId is null)
+            {
+                <TourEditorForm Model="newTour" Saving="savingTour" OnSave="CreateTourFromEditor" />
+            }
+            else
+            {
+                <TourEditorForm TourId="editingTourId" Model="editTourModel" Saving="savingTour" OnSave="SaveEditTourFromEditor" OnCancelEdit="CancelEditTour" />
+            }
 
             <section class="dash-panel mt-3">
                 <h3>Mis tours (@agencyTours.Count)</h3>
                 @if (agencyTours.Count == 0)
                 {
-                    <p class="text-muted">Aún no tienes tours. Publica el primero arriba.</p>
+                    <p class="text-muted">Aún no tienes tours. Publica el primero con el formulario superior.</p>
                 }
                 else
                 {
@@ -153,34 +142,26 @@
                         @foreach (var t in agencyTours)
                         {
                             <article class="agency-tour-manage-card @(t.IsActive ? "" : "inactive")">
-                                @if (editingTourId == t.Id)
-                                {
-                                    <input class="form-control form-control-sm mb-1" @bind="editTitle" />
-                                    <input class="form-control form-control-sm mb-1" @bind="editDepartment" />
-                                    <input type="number" class="form-control form-control-sm mb-1" @bind="editPrice" />
-                                    <textarea class="form-control form-control-sm mb-1" rows="2" @bind="editDescription"></textarea>
-                                    <div class="d-flex gap-1 flex-wrap">
-                                        <button type="button" class="btn btn-primary btn-sm" @onclick="() => SaveEditTour(t.Id)">Guardar</button>
-                                        <button type="button" class="btn btn-link btn-sm" @onclick="CancelEditTour">Cancelar</button>
-                                    </div>
-                                }
-                                else
-                                {
-                                    <h6>@t.Title @if (!t.IsActive) { <span class="badge bg-secondary">Inactivo</span> }</h6>
-                                    <p class="small text-muted mb-1">@t.Department · S/ @t.Price.ToString("N0") · @t.AvailableCapacity/@t.Capacity cupos</p>
-                                    <div class="d-flex gap-1 flex-wrap">
-                                        <button type="button" class="btn btn-outline-primary btn-sm" @onclick="() => StartEditTour(t)">Editar</button>
-                                        @if (t.IsActive)
-                                        {
-                                            <button type="button" class="btn btn-outline-danger btn-sm" @onclick="() => DeactivateTour(t.Id)">Desactivar</button>
-                                        }
-                                    </div>
-                                }
+                                <h6>@t.Title @if (!t.IsActive) { <span class="badge bg-secondary">Inactivo</span> }</h6>
+                                <p class="small text-muted mb-1">@t.Department · S/ @t.Price.ToString("N0") · @t.AvailableCapacity/@t.Capacity cupos</p>
+                                <div class="d-flex gap-1 flex-wrap">
+                                    <button type="button" class="btn btn-outline-primary btn-sm" @onclick="() => StartEditTour(t)">Editar completo</button>
+                                    <button type="button" class="btn btn-outline-danger btn-sm" @onclick="() => RequestDeleteTour(t)">Eliminar tour</button>
+                                </div>
                             </article>
                         }
                     </div>
                 }
             </section>
+
+            <DoubleDeleteConfirm Visible="deleteTourId.HasValue"
+                                 Title="Eliminar tour"
+                                 Message="¿Estás seguro de eliminar este tour? Esta acción no se puede deshacer."
+                                 Step2Message="Confirmación final. Escribe ELIMINAR para confirmar el borrado."
+                                 ConfirmPlaceholder="ELIMINAR"
+                                 RequiredText="ELIMINAR"
+                                 OnConfirm="ConfirmDeleteTour"
+                                 OnCancel="CancelDeleteTour" />
         }
         else if (tab == "ops")
         {
@@ -225,10 +206,9 @@
     private bool loading = true;
     private string? error;
     private int? editingTourId;
-    private string editTitle = "";
-    private string editDescription = "";
-    private string editDepartment = "";
-    private decimal editPrice;
+    private int? deleteTourId;
+    private bool savingTour;
+    private CreateTourRequest editTourModel = new() { Date = DateTime.Today.AddDays(7), AdventureType = "FullDay", Capacity = 20 };
 
     private List<ReservationDto> PendingReservations => reservations.Where(x => x.Status == "Pending").ToList();
     private bool CanAccess => Auth.IsAuthenticated && Auth.Role is "Admin" or "Agencia";
@@ -288,13 +268,21 @@
         else Toast.ShowError(res.ErrorMessage ?? "Error");
     }
 
-    private async Task CreateTour()
+    private async Task CreateTourFromEditor(CreateTourRequest model)
     {
-        if (string.IsNullOrWhiteSpace(newTour.Title)) { Toast.ShowWarning("Título obligatorio."); return; }
-        if (string.IsNullOrWhiteSpace(newTour.Description)) newTour.Description = newTour.Title;
+        if (string.IsNullOrWhiteSpace(model.Title)) { Toast.ShowWarning("Título obligatorio."); return; }
+        if (string.IsNullOrWhiteSpace(model.Description)) model.Description = model.Title;
+        savingTour = true;
+        newTour = model;
         var res = await Api.CreateAgencyTourAsync(newTour);
-        if (res.Success) { Toast.ShowSuccess("Tour publicado."); await Load(); }
+        if (res.Success)
+        {
+            Toast.ShowSuccess("Tour publicado.");
+            newTour = new() { Date = DateTime.Today.AddDays(7), AdventureType = "FullDay", Capacity = 20 };
+            await Load();
+        }
         else Toast.ShowError(res.ErrorMessage ?? "Error");
+        savingTour = false;
     }
 
     private async Task SaveProfile()
@@ -304,30 +292,77 @@
         else Toast.ShowError(r.ErrorMessage ?? "Error");
     }
 
-    private void StartEditTour(AgencyTourListItemDto t)
+    private async Task StartEditTour(AgencyTourListItemDto t)
     {
         editingTourId = t.Id;
-        editTitle = t.Title;
-        editDescription = t.Title;
-        editDepartment = t.Department;
-        editPrice = t.Price;
+        var full = await Api.GetTourAsync(t.Id);
+        if (full.Success && full.Data is not null)
+        {
+            var d = full.Data;
+            editTourModel = new CreateTourRequest
+            {
+                Title = d.Title,
+                Description = d.Description,
+                Price = d.Price,
+                Location = d.Location,
+                Department = d.Department,
+                AdventureType = d.AdventureType,
+                Date = d.Date,
+                Capacity = d.Capacity,
+                ImageUrl = d.ImageUrl,
+                PuntoPartida = d.PuntoPartida,
+                PuntoRetorno = d.PuntoRetorno,
+                HoraSalida = d.HoraSalida,
+                DuracionAproximada = d.DuracionAproximada,
+                Itinerario = d.Itinerario,
+                QueIncluye = d.QueIncluye,
+                QueNoIncluye = d.QueNoIncluye,
+                QueLlevar = d.QueLlevar,
+                Galeria = d.Galeria
+            };
+        }
+        else
+        {
+            editTourModel = new CreateTourRequest
+            {
+                Title = t.Title,
+                Description = t.Title,
+                Department = t.Department,
+                Price = t.Price,
+                AdventureType = t.AdventureType,
+                ImageUrl = t.ImageUrl
+            };
+        }
     }
 
     private void CancelEditTour() => editingTourId = null;
 
-    private async Task SaveEditTour(int id)
+    private async Task SaveEditTourFromEditor(CreateTourRequest model)
     {
-        var r = await Api.UpdateTourItemAsync(id, title: editTitle, description: editDescription,
-            department: editDepartment, price: editPrice);
+        if (!editingTourId.HasValue) return;
+        savingTour = true;
+        var r = await Api.UpdateTourDetailsAsync(editingTourId.Value, model);
         if (r.Success) { Toast.ShowSuccess("Tour actualizado."); editingTourId = null; await Load(); }
         else Toast.ShowError(r.ErrorMessage ?? "Error");
+        savingTour = false;
     }
 
-    private async Task DeactivateTour(int id)
+    private void RequestDeleteTour(AgencyTourListItemDto t) => deleteTourId = t.Id;
+    private void CancelDeleteTour() => deleteTourId = null;
+
+    private async Task ConfirmDeleteTour()
     {
-        var r = await Api.DeactivateAgencyTourAsync(id);
-        if (r.Success) { Toast.ShowSuccess("Tour desactivado."); await Load(); }
-        else Toast.ShowError(r.ErrorMessage ?? "Error");
+        if (!deleteTourId.HasValue) return;
+        var id = deleteTourId.Value;
+        var r = await Api.DeleteTourAsync(id);
+        if (r.Success)
+        {
+            Toast.ShowSuccess("Tour eliminado.");
+            deleteTourId = null;
+            if (editingTourId == id) editingTourId = null;
+            await Load();
+        }
+        else Toast.ShowError(r.ErrorMessage ?? "No se pudo eliminar.");
     }
 
     private async Task ExitImpersonation()

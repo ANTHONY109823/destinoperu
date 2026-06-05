@@ -22,6 +22,11 @@ public class PartnerRepository(AppDbContext context) : IPartnerRepository
     public async Task<IEnumerable<Partner>> GetAllAsync() => await context.Partners.Include(p => p.User).ToListAsync();
     public async Task<Partner> AddAsync(Partner entity) { await context.Partners.AddAsync(entity); await context.SaveChangesAsync(); return entity; }
     public async Task UpdateAsync(Partner entity) { context.Partners.Update(entity); await context.SaveChangesAsync(); }
+    public async Task DeleteAsync(int partnerId)
+    {
+        var e = await context.Partners.FindAsync(partnerId);
+        if (e is not null) { context.Partners.Remove(e); await context.SaveChangesAsync(); }
+    }
     public async Task<PartnerDocument> AddDocumentAsync(PartnerDocument doc) { await context.PartnerDocuments.AddAsync(doc); await context.SaveChangesAsync(); return doc; }
     public async Task<PartnerDocument?> GetDocumentAsync(int id) => await context.PartnerDocuments.FindAsync(id);
     public async Task UpdateDocumentAsync(PartnerDocument doc) { context.PartnerDocuments.Update(doc); await context.SaveChangesAsync(); }
@@ -50,6 +55,8 @@ public class TourRepository(AppDbContext context) : ITourRepository
     public async Task<Tour> AddAsync(Tour entity) { await context.Tours.AddAsync(entity); await context.SaveChangesAsync(); return entity; }
     public async Task UpdateAsync(Tour entity) { context.Tours.Update(entity); await context.SaveChangesAsync(); }
     public async Task DeleteAsync(int id) { var e = await GetByIdAsync(id); if (e != null) { context.Tours.Remove(e); await context.SaveChangesAsync(); } }
+    public async Task<bool> HasReservationsAsync(int tourId) =>
+        await context.Reservations.AnyAsync(r => r.TourId == tourId);
 
     public async Task<bool> TryReserveCapacityAsync(int tourId, int quantity)
     {

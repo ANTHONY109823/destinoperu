@@ -179,8 +179,59 @@ public class SuperAdminService(
             new AuthResponse(token, target.Name, target.Email, target.Role, target.Id, partnerId, true));
     }
 
-    public async Task<ApiResponse<TourDto>> CreateTourForPartnerAsync(int partnerId, CreateTourRequest request) =>
-        await tourService.CreateForPartnerAsync(request, partnerId);
+    public async Task<IReadOnlyList<TourCompareItemDto>> GetCompareToursAsync(string? department)
+    {
+        var q = appDb.Tours.AsNoTracking()
+            .Include(t => t.Partner)
+            .Where(t => t.IsActive);
+        if (!string.IsNullOrWhiteSpace(department))
+            q = q.Where(t => EF.Functions.ILike(t.Department, $"%{department.Trim()}%")
+                || EF.Functions.ILike(t.Location, $"%{department.Trim()}%"));
+
+        return await q
+            .OrderBy(t => t.Department).ThenBy(t => t.Location).ThenBy(t => t.Price)
+            .Select(t => new TourCompareItemDto(
+                t.Id, t.Title, t.Partner.Name, t.Department, t.Location,
+                t.Price, t.AdventureType, t.IsActive, t.Date))
+            .ToListAsync();
+    }
+
+    public async Task<ApiResponse<bool>> DeleteAgencyAsync(int partnerId)
+    {
+        var partner = await partnerRepository.GetByIdAsync(partnerId);
+        if (partner is null)
+            return new ApiResponse<bool>(false, "Agencia no encontrada.", false);
+        if (partner.PartnerType != PartnerType.Agencia)
+            return new ApiResponse<bool>(false, "Solo se pueden eliminar socios tipo agencia de tours.", false);
+        if (PartnerNameNormalizer.IsTerrunito(partner.Name))
+            return new ApiResponse<bool>(false, "No se puede eliminar la agencia Terruñito.", false);
+
+        var tourIds = await appDb.Tours.Where(t => t.PartnerId == partnerId).Select(t => t.Id).ToListAsync();
+        var withReservations = await appDb.Reservations
+            .Where(r => tourIds.Contains(r.TourId))
+            .Select(r => r.TourId)
+            .Distinct()
+            .ToListAsync();
+
+        var deletable = tourIds.Except(withReservations).ToList();
+        if (deletable.Count > 0)
+        {
+            var tours = await appDb.Tours.Where(t => deletable.Contains(t.Id)).ToListAsync();
+            appDb.Tours.RemoveRange(tours);
+            await appDb.SaveChangesAsync();
+        }
+
+        if (await appDb.Tours.AnyAsync(t => t.PartnerId == partnerId))
+            return new ApiResponse<bool>(false,
+                "La agencia tiene tours con reservas; no se puede eliminar por integridad de datos.", false);
+
+        var docs = await appDb.PartnerDocuments.Where(d => d.PartnerId == partnerId).ToListAsync();
+        if (docs.Count > 0) appDb.PartnerDocuments.RemoveRange(docs);
+        var staff = await appDb.PartnerStaff.Where(s => s.PartnerId == partnerId).ToListAsync();
+        if (staff.Count > 0) appDb.PartnerStaff.RemoveRange(staff);
+        await partnerRepository.DeleteAsync(partnerId);
+        return new ApiResponse<bool>(true, "Agencia y tours eliminados.", true);
+    }
 
     public async Task<ApiResponse<CreateDemoAgencyResponse>> CreatePresentationDemoAgencyAsync()
     {
@@ -358,18 +409,15 @@ public class AgencyAdminService(
 
     public async Task<ApiResponse<TourDto>> CreateTourAsync(CreateTourRequest request, int userId, string role, int? partnerId)
     {
-        if (role is not (RoleNames.Admin or RoleNames.SuperAdmin))
+        if (role is not RoleNames.Admin)
             return new ApiResponse<TourDto>(false, "Solo el administrador de agencia puede crear tours.", null);
 
         if (!partnerId.HasValue)
             return new ApiResponse<TourDto>(false, "Agencia no identificada.", null);
 
-        if (role == RoleNames.Admin)
-        {
-            var owned = await partnerRepository.GetByUserIdAsync(userId);
-            if (owned is null || owned.Id != partnerId.Value)
-                return new ApiResponse<TourDto>(false, "Sin permiso para esta agencia.", null);
-        }
+        var owned = await partnerRepository.GetByUserIdAsync(userId);
+        if (owned is null || owned.Id != partnerId.Value)
+            return new ApiResponse<TourDto>(false, "Sin permiso para esta agencia.", null);
 
         return await tourService.CreateForPartnerAsync(request, partnerId.Value);
     }
@@ -408,26 +456,37 @@ public class AgencyAdminService(
         if (request.Description is not null) tour.Description = request.Description;
         if (request.Price.HasValue) tour.Price = request.Price.Value;
         if (request.Location is not null) tour.Location = request.Location;
-        if (request.Department is not null) tour.Department = request.Department;
+        if (!string.IsNullOrWhiteSpace(request.Department)) tour.Department = request.Department;
         if (request.AdventureType is not null) tour.AdventureType = request.AdventureType;
         if (request.IsActive.HasValue) tour.IsActive = request.IsActive.Value;
+
+        TourContentMapper.ApplyContent(tour, new TourContentInput(
+            request.PuntoPartida, request.PuntoRetorno, request.HoraSalida, request.DuracionAproximada,
+            request.Itinerario, request.QueIncluye, request.QueNoIncluye, request.QueLlevar, request.Galeria));
+        if (request.Galeria is { Count: > 0 })
+            tour.ImageUrl = request.ImageUrl ?? request.Galeria[0];
 
         await tourRepository.UpdateAsync(tour);
         return new ApiResponse<bool>(true, "Tour actualizado.", true);
     }
 
-    public async Task<ApiResponse<bool>> DeactivateTourAsync(int tourId, int partnerId, string role)
+    public async Task<ApiResponse<bool>> DeleteTourAsync(int tourId, int partnerId, int userId, string role)
     {
         if (role is not (RoleNames.Admin or RoleNames.SuperAdmin))
-            return new ApiResponse<bool>(false, "Solo el administrador puede desactivar tours.", false);
+            return new ApiResponse<bool>(false, "Sin permiso para eliminar tours.", false);
 
         var tour = await tourRepository.GetByIdAsync(tourId);
         if (tour is null || tour.PartnerId != partnerId)
             return new ApiResponse<bool>(false, "Tour no encontrado.", false);
 
-        tour.IsActive = false;
-        await tourRepository.UpdateAsync(tour);
-        return new ApiResponse<bool>(true, "Tour desactivado (ya no aparece en el catálogo público).", true);
+        if (role == RoleNames.Admin)
+        {
+            var owned = await partnerRepository.GetByUserIdAsync(userId);
+            if (owned is null || owned.Id != partnerId)
+                return new ApiResponse<bool>(false, "Sin permiso.", false);
+        }
+
+        return await tourService.DeleteAsync(tourId, userId, role);
     }
 
     public async Task<ApiResponse<ManifestDto>> GetManifestAsync(int partnerId, int? tourId)

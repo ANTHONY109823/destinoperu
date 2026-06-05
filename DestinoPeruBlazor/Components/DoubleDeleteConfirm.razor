@@ -1,0 +1,67 @@
+@if (Visible)
+{
+    <div class="modal-backdrop-custom" @onclick="Cancel">
+        <div class="modal-panel-custom" @onclick:stopPropagation="true">
+            @if (Step == 1)
+            {
+                <h4>@Title</h4>
+                <p class="text-muted">@Message</p>
+                <div class="d-flex gap-2 justify-content-end mt-3">
+                    <button type="button" class="btn btn-outline-secondary" @onclick="Cancel">Cancelar</button>
+                    <button type="button" class="btn btn-danger" @onclick="GoStep2">Continuar</button>
+                </div>
+            }
+            else
+            {
+                <h4>Confirmación final</h4>
+                <p class="text-muted">@Step2Message</p>
+                <input class="form-control" @bind="typed" placeholder="@ConfirmPlaceholder" />
+                <div class="d-flex gap-2 justify-content-end mt-3">
+                    <button type="button" class="btn btn-outline-secondary" @onclick="Cancel">Cancelar</button>
+                    <button type="button" class="btn btn-danger" disabled="@(!CanConfirm)" @onclick="Confirm">Eliminar definitivamente</button>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool Visible { get; set; }
+    [Parameter] public string Title { get; set; } = "Confirmar eliminación";
+    [Parameter] public string Message { get; set; } = "";
+    [Parameter] public string Step2Message { get; set; } = "";
+    [Parameter] public string ConfirmPlaceholder { get; set; } = "";
+    [Parameter] public string RequiredText { get; set; } = "";
+    [Parameter] public bool CaseInsensitive { get; set; } = true;
+    [Parameter] public EventCallback OnConfirm { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private int Step = 1;
+    private string typed = "";
+
+    private bool CanConfirm => CaseInsensitive
+        ? string.Equals(typed.Trim(), RequiredText.Trim(), StringComparison.OrdinalIgnoreCase)
+        : typed.Trim() == RequiredText.Trim();
+
+    protected override void OnParametersSet()
+    {
+        if (!Visible) { Step = 1; typed = ""; }
+    }
+
+    private void GoStep2() => Step = 2;
+
+    private async Task Confirm()
+    {
+        if (!CanConfirm) return;
+        await OnConfirm.InvokeAsync();
+        Step = 1;
+        typed = "";
+    }
+
+    private async Task Cancel()
+    {
+        Step = 1;
+        typed = "";
+        await OnCancel.InvokeAsync();
+    }
+}

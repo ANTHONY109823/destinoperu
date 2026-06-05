@@ -48,7 +48,8 @@
                                OnShowStaff="@ShowStaff"
                                OnEdit="@EditPartner"
                                OnSuspend="@Suspend"
-                               OnReactivate="@Reactivate">
+                               OnReactivate="@Reactivate"
+                               OnDelete="@RequestDeletePartner">
             <CreateForm>
                 <div class="admin-form-grid">
                     <input class="form-control" placeholder="Nombre comercial *" @bind="newAgency.AgencyName" />
@@ -97,6 +98,15 @@
                 }
             </ChildContent>
         </SuperAdminCategoryPanel>
+
+        <DoubleDeleteConfirm Visible="deletePartner is not null"
+                             Title="Eliminar agencia"
+                             Message="@($"¿Estás seguro de eliminar la agencia {deletePartner?.Name}? Esta acción no se puede deshacer.")"
+                             Step2Message="Confirmación final. Escribe el nombre de la agencia para confirmar el borrado."
+                             ConfirmPlaceholder="Nombre exacto de la agencia"
+                             RequiredText="@(deletePartner?.Name ?? "")"
+                             OnConfirm="ConfirmDeletePartner"
+                             OnCancel="CancelDeletePartner" />
     }
 </div>
 
@@ -115,6 +125,7 @@
     private bool loading = true;
     private bool saving;
     private string? apiWarning;
+    private PartnerListItemDto? deletePartner;
 
     private IEnumerable<PartnerListItemDto> FilteredPartners =>
         _category is null ? [] : partners.Where(p => p.PartnerType == _category.PartnerType);
@@ -263,6 +274,23 @@
     {
         var r = await Api.SuspendPartnerAsync(p.Id, false);
         if (r.Success) { Toast.ShowSuccess("Reactivado."); await LoadAsync(); }
+    }
+
+    private void RequestDeletePartner(PartnerListItemDto p) => deletePartner = p;
+
+    private void CancelDeletePartner() => deletePartner = null;
+
+    private async Task ConfirmDeletePartner()
+    {
+        if (deletePartner is null) return;
+        var r = await Api.DeleteAgencyPartnerAsync(deletePartner.Id);
+        if (r.Success)
+        {
+            Toast.ShowSuccess("Agencia eliminada.");
+            deletePartner = null;
+            await LoadAsync();
+        }
+        else Toast.ShowError(r.ErrorMessage ?? "No se pudo eliminar.");
     }
 
     public void Dispose() => Nav.LocationChanged -= OnLocationChanged;

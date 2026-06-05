@@ -17,6 +17,15 @@ public class Tour
     public int Capacity { get; set; }
     public int AvailableCapacity { get; set; }
     public string? ImageUrl { get; set; }
+    public string? PuntoPartida { get; set; }
+    public string? PuntoRetorno { get; set; }
+    public string? HoraSalida { get; set; }
+    public string? DuracionAproximada { get; set; }
+    public string? ItinerarioJson { get; set; }
+    public string? QueIncluyeJson { get; set; }
+    public string? QueNoIncluyeJson { get; set; }
+    public string? QueLlevarJson { get; set; }
+    public string? GaleriaJson { get; set; }
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public uint RowVersion { get; set; }

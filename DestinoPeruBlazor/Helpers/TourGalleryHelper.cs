@@ -3,8 +3,11 @@ namespace DestinoPeruBlazor.Helpers;
 /// <summary>URLs de galería por tour — reemplazar cuando haya fotos reales en Cloudinary.</summary>
 public static class TourGalleryHelper
 {
-    public static IReadOnlyList<string> GetGalleryUrls(string? mainImageUrl, string slug)
+    public static IReadOnlyList<string> GetGalleryUrls(string? mainImageUrl, string slug, IReadOnlyList<string>? galeria = null)
     {
+        if (galeria is { Count: > 0 })
+            return galeria.Where(u => !string.IsNullOrWhiteSpace(u)).Take(8).ToList();
+
         if (GalleryBySlug.TryGetValue(slug, out var urls))
             return urls;
 

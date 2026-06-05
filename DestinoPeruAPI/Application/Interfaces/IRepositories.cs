@@ -19,6 +19,7 @@ public interface IPartnerRepository
     Task<IEnumerable<Partner>> GetAllAsync();
     Task<Partner> AddAsync(Partner entity);
     Task UpdateAsync(Partner entity);
+    Task DeleteAsync(int partnerId);
     Task<PartnerDocument> AddDocumentAsync(PartnerDocument doc);
     Task<PartnerDocument?> GetDocumentAsync(int id);
     Task UpdateDocumentAsync(PartnerDocument doc);
@@ -35,6 +36,7 @@ public interface ITourRepository
     Task<Tour> AddAsync(Tour entity);
     Task UpdateAsync(Tour entity);
     Task DeleteAsync(int id);
+    Task<bool> HasReservationsAsync(int tourId);
     Task<bool> TryReserveCapacityAsync(int tourId, int quantity);
 }
 
