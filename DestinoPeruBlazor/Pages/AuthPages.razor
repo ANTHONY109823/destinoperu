@@ -16,10 +16,6 @@
     <div class="auth-card">
         <h2>@(IsRegister ? "Crear cuenta" : "Iniciar sesión")</h2>
 
-        <div class="auth-tabs">
-            <NavLink class="auth-tab-link" href="/login" Match="NavLinkMatch.Prefix">Ingresar</NavLink>
-            <NavLink class="auth-tab-link" href="/register">Crear cuenta viajero</NavLink>
-        </div>
         @if (!IsRegister)
         {
             <p class="auth-hint small text-muted">Agencias, vendedores y administradores: usa tus credenciales en esta pantalla.</p>
@@ -64,6 +60,7 @@
                 </div>
                 <button type="submit" class="btn btn-primary w-100" disabled="@loading">@(loading ? "Registrando..." : "Crear cuenta")</button>
             </EditForm>
+            <p class="auth-switch">¿Ya tienes cuenta? <a href="/login">Inicia sesión</a></p>
         }
         else
         {
@@ -78,6 +75,7 @@
                 </div>
                 <button type="submit" class="btn btn-primary w-100" disabled="@loading">@(loading ? "Ingresando..." : "Ingresar")</button>
             </EditForm>
+            <p class="auth-switch">¿No tienes cuenta? <a href="/register">Crea tu cuenta de viajero</a></p>
         }
     </div>
 </div>

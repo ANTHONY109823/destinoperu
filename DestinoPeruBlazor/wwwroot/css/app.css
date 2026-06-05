@@ -463,6 +463,18 @@ a:hover { color: var(--dp-primary-light); }
     background: var(--dp-secondary);
     border-radius: 8px;
 }
+.auth-switch {
+    margin: 1rem 0 0;
+    text-align: center;
+    font-size: 0.92rem;
+    color: var(--dp-muted);
+}
+.auth-switch a {
+    color: var(--dp-primary);
+    font-weight: 600;
+    text-decoration: none;
+}
+.auth-switch a:hover { text-decoration: underline; }
 .dp-link-ingresar {
     background: var(--dp-offer) !important;
     color: var(--dp-primary-dark) !important;
@@ -663,7 +675,7 @@ a:hover { color: var(--dp-primary-light); }
 .home-hero-overlay {
     position: absolute;
     inset: 0;
-    background: linear-gradient(180deg, rgba(0, 40, 33, 0.82) 0%, rgba(0, 77, 64, 0.88) 100%);
+    background: linear-gradient(180deg, rgba(0, 40, 33, 0.55) 0%, rgba(0, 77, 64, 0.72) 100%);
     pointer-events: none;
 }
 .home-hero-stack {
