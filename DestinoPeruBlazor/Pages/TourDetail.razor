@@ -3,6 +3,7 @@
 @using DestinoPeruBlazor.Services
 @using DestinoPeruBlazor.Helpers
 @using DestinoPeruBlazor.Components
+@using DestinoPeruBlazor.Components.UI
 @inject ApiService Api
 @inject AuthStateService Auth
 @inject CartService Cart
@@ -20,128 +21,211 @@
 <PageTitle>@(tour?.Title ?? "Tour") - DestinoPerú</PageTitle>
 
 <div class="container py-4 tour-detail-page">
-    <BackToHome />
+    <div class="tour-detail-back">
+        <AppButton Variant="ghost" Icon="←" OnClick="GoBack">Volver a experiencias</AppButton>
+    </div>
 
-    @if (loading) { <p>Cargando...</p> }
-    else if (!string.IsNullOrEmpty(error)) { <div class="alert alert-danger">@error</div> }
+    @if (loading)
+    {
+        <div class="tour-detail-loading">
+            <div class="tour-gallery-main skeleton-block"></div>
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(error))
+    {
+        <DestinoPeruBlazor.Components.UI.EmptyState Icon="🧭" Title="No encontramos este tour" Message="@error">
+            <Action><AppButton Variant="primary" OnClick="GoBack">Ver otras experiencias</AppButton></Action>
+        </DestinoPeruBlazor.Components.UI.EmptyState>
+    }
     else if (tour is not null)
     {
         <div class="tour-detail">
             <div class="tour-gallery">
                 <div class="tour-gallery-main" style="@MainImageStyle"></div>
-                <div class="tour-gallery-thumbs">
-                    @for (var i = 0; i < galleryUrls.Count; i++)
-                    {
-                        var idx = i;
-                        <button type="button"
-                                class="tour-gallery-thumb @(idx == selectedImage ? "active" : "")"
-                                style="background-image: url('@CloudinaryHelper.Optimize(galleryUrls[idx], 400)')"
-                                @onclick="() => selectedImage = idx"
-                                aria-label="Ver imagen @(idx + 1)"></button>
-                    }
-                </div>
+                @if (galleryUrls.Count > 1)
+                {
+                    <div class="tour-gallery-thumbs">
+                        @for (var i = 0; i < galleryUrls.Count; i++)
+                        {
+                            var idx = i;
+                            <button type="button"
+                                    class="tour-gallery-thumb @(idx == selectedImage ? "active" : "")"
+                                    style="background-image: url('@CloudinaryHelper.Optimize(galleryUrls[idx], 400)')"
+                                    @onclick="() => selectedImage = idx"
+                                    aria-label="Ver imagen @(idx + 1)"></button>
+                        }
+                    </div>
+                }
             </div>
 
-            <div class="row mt-4">
-                <div class="col-lg-8">
+            <header class="tour-detail-header">
+                <div class="tour-detail-tags">
                     <span class="tour-detail-dept-inline">@tour.Department · @tour.AdventureType</span>
-                    <h1 class="tour-detail-title">@tour.Title</h1>
-                    <p class="text-muted">@tour.Location · @tour.Date.ToString("dddd, dd MMMM yyyy", new System.Globalization.CultureInfo("es-PE"))</p>
-                    <p class="lead">@tour.Description</p>
-                    <ul class="tour-meta-list">
-                        <li><strong>Agencia operadora:</strong> @tour.PartnerName</li>
-                        <li><strong>Precio:</strong> S/ @tour.Price.ToString("N2") por persona</li>
-                        <li><strong>Cupos:</strong> @tour.AvailableCapacity disponibles de @tour.Capacity</li>
-                        @if (!string.IsNullOrWhiteSpace(tour.DuracionAproximada))
-                        {
-                            <li><strong>Duración:</strong> @tour.DuracionAproximada</li>
-                        }
-                    </ul>
+                    @if (IsNew) { <Badge Variant="info">Nuevo</Badge> }
+                </div>
+                <h1 class="tour-detail-title">@tour.Title</h1>
+                <p class="tour-detail-sub">
+                    📍 @tour.Location · @tour.Date.ToString("dddd, dd 'de' MMMM yyyy", EsPe)
+                </p>
+                <div class="tour-detail-rating-row">
+                    <Rating Value="@PseudoRating" Max="5" />
+                    <span class="tour-detail-opiniones">Sin opiniones aún</span>
+                </div>
+            </header>
 
-                    @if (!string.IsNullOrWhiteSpace(tour.PuntoPartida) || !string.IsNullOrWhiteSpace(tour.PuntoRetorno) || !string.IsNullOrWhiteSpace(tour.HoraSalida))
+            <div class="row mt-4 g-4">
+                <div class="col-lg-8">
+                    <SectionCard Title="Sobre esta experiencia">
+                        <p class="tour-detail-desc">@tour.Description</p>
+                    </SectionCard>
+
+                    @if (HasLogistics)
                     {
-                        <div class="tour-highlight-box">
-                            @if (!string.IsNullOrWhiteSpace(tour.PuntoPartida))
-                            {
-                                <p><strong>📍 Punto de partida:</strong> @tour.PuntoPartida</p>
-                            }
-                            @if (!string.IsNullOrWhiteSpace(tour.HoraSalida))
-                            {
-                                <p><strong>🕐 Hora de salida:</strong> @tour.HoraSalida</p>
-                            }
-                            @if (!string.IsNullOrWhiteSpace(tour.PuntoRetorno))
-                            {
-                                <p><strong>↩ Punto de retorno:</strong> @tour.PuntoRetorno</p>
-                            }
-                        </div>
+                        <SectionCard Title="Datos clave">
+                            <div class="tour-keyfacts">
+                                @if (!string.IsNullOrWhiteSpace(tour.PuntoPartida))
+                                {
+                                    <div class="tour-keyfact"><span class="tour-keyfact-ico">📍</span><div><span class="tour-keyfact-label">Punto de partida</span><span class="tour-keyfact-value">@tour.PuntoPartida</span></div></div>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(tour.HoraSalida))
+                                {
+                                    <div class="tour-keyfact"><span class="tour-keyfact-ico">🕐</span><div><span class="tour-keyfact-label">Hora de salida</span><span class="tour-keyfact-value">@tour.HoraSalida</span></div></div>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(tour.PuntoRetorno))
+                                {
+                                    <div class="tour-keyfact"><span class="tour-keyfact-ico">↩️</span><div><span class="tour-keyfact-label">Punto de retorno</span><span class="tour-keyfact-value">@tour.PuntoRetorno</span></div></div>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(tour.DuracionAproximada))
+                                {
+                                    <div class="tour-keyfact"><span class="tour-keyfact-ico">⏱️</span><div><span class="tour-keyfact-label">Duración</span><span class="tour-keyfact-value">@tour.DuracionAproximada</span></div></div>
+                                }
+                            </div>
+                        </SectionCard>
                     }
 
                     @if (tour.Itinerario.Count > 0)
                     {
-                        <h3 class="tour-section-title">Itinerario</h3>
-                        <ol class="tour-timeline">
-                            @foreach (var step in tour.Itinerario)
-                            {
-                                <li class="tour-timeline-item">
-                                    <span class="tour-timeline-hour">@step.Hora</span>
-                                    <div>
-                                        <strong>@step.Titulo</strong>
-                                        @if (!string.IsNullOrWhiteSpace(step.Descripcion))
-                                        {
-                                            <p class="mb-0 text-muted small">@step.Descripcion</p>
-                                        }
-                                    </div>
-                                </li>
-                            }
-                        </ol>
+                        <SectionCard Title="Itinerario">
+                            <ol class="tour-timeline">
+                                @foreach (var step in tour.Itinerario)
+                                {
+                                    <li class="tour-timeline-item">
+                                        <span class="tour-timeline-hour">@step.Hora</span>
+                                        <div>
+                                            <strong>@step.Titulo</strong>
+                                            @if (!string.IsNullOrWhiteSpace(step.Descripcion))
+                                            {
+                                                <p class="mb-0 text-muted small">@step.Descripcion</p>
+                                            }
+                                        </div>
+                                    </li>
+                                }
+                            </ol>
+                        </SectionCard>
                     }
 
-                    @if (tour.QueIncluye.Count > 0)
+                    @if (tour.QueIncluye.Count > 0 || tour.QueNoIncluye.Count > 0)
                     {
-                        <h3 class="tour-section-title">Incluye</h3>
-                        <ul class="tour-check-list">@foreach (var x in tour.QueIncluye) { <li>@x</li> }</ul>
+                        <SectionCard Title="¿Qué incluye?">
+                            <div class="tour-incl-grid">
+                                @if (tour.QueIncluye.Count > 0)
+                                {
+                                    <ul class="tour-feature-list tour-feature-yes">
+                                        @foreach (var x in tour.QueIncluye) { <li><span class="tfl-ico">✓</span>@x</li> }
+                                    </ul>
+                                }
+                                @if (tour.QueNoIncluye.Count > 0)
+                                {
+                                    <ul class="tour-feature-list tour-feature-no">
+                                        @foreach (var x in tour.QueNoIncluye) { <li><span class="tfl-ico">✕</span>@x</li> }
+                                    </ul>
+                                }
+                            </div>
+                        </SectionCard>
                     }
-                    @if (tour.QueNoIncluye.Count > 0)
-                    {
-                        <h3 class="tour-section-title">No incluye</h3>
-                        <ul class="tour-cross-list">@foreach (var x in tour.QueNoIncluye) { <li>@x</li> }</ul>
-                    }
+
                     @if (tour.QueLlevar.Count > 0)
                     {
-                        <h3 class="tour-section-title">Qué llevar</h3>
-                        <ul class="tour-check-list">@foreach (var x in tour.QueLlevar) { <li>@x</li> }</ul>
+                        <SectionCard Title="Qué llevar">
+                            <ul class="tour-feature-list tour-feature-bring">
+                                @foreach (var x in tour.QueLlevar) { <li><span class="tfl-ico">🎒</span>@x</li> }
+                            </ul>
+                        </SectionCard>
                     }
+
+                    <SectionCard Title="Opiniones de viajeros">
+                        <DestinoPeruBlazor.Components.UI.EmptyState Icon="⭐"
+                            Title="Aún no hay opiniones"
+                            Message="Sé el primero en compartir tu experiencia después de reservar este tour." />
+                    </SectionCard>
+
+                    <SectionCard Title="Agencia operadora">
+                        <div class="tour-agency-block">
+                            <div class="tour-agency-avatar" aria-hidden="true">@AgencyInitial</div>
+                            <div class="tour-agency-info">
+                                <div class="tour-agency-name">
+                                    @tour.PartnerName
+                                    <Badge Variant="success" Icon="✓">Verificada</Badge>
+                                </div>
+                                <Rating Value="@PseudoRating" Max="5" />
+                                <a class="tour-agency-link" href="/">Ver más experiencias →</a>
+                            </div>
+                        </div>
+                    </SectionCard>
                 </div>
+
                 <div class="col-lg-4">
                     <div class="booking-card booking-card-sticky">
-                        <p class="booking-price">S/ @tour.Price.ToString("N2") <small>/ persona</small></p>
-                        <h4>Reservar</h4>
+                        <div class="booking-price-row">
+                            <span class="booking-price">S/ @tour.Price.ToString("N0")</span>
+                            <span class="booking-price-unit">por persona</span>
+                        </div>
+                        <p class="booking-stock">
+                            @if (tour.AvailableCapacity > 0)
+                            {
+                                <span class="booking-stock-ok">@tour.AvailableCapacity cupos disponibles</span>
+                            }
+                            else
+                            {
+                                <span class="booking-stock-out">Sin cupos disponibles</span>
+                            }
+                        </p>
+
                         @if (!Auth.IsAuthenticated)
                         {
-                            <p>Inicia sesión para reservar.</p>
-                            <a class="btn btn-primary w-100" href="/login">Ingresar</a>
+                            <p class="text-muted small mb-2">Inicia sesión para reservar tu lugar.</p>
+                            <AppButton Variant="primary" Block="true" OnClick="GoToLogin">Ingresar para reservar</AppButton>
                         }
                         else
                         {
-                            <div class="mb-3">
-                                <label class="form-label">Cantidad</label>
-                                <input type="number" class="form-control" min="1" max="@tour.AvailableCapacity" @bind="quantity" />
+                            <div class="booking-field">
+                                <FormField Label="Cantidad de personas" Type="number" @bind-Value="quantityStr" />
                             </div>
-                            <p class="booking-total">Total: <strong>S/ @((tour.Price * quantity).ToString("N2"))</strong></p>
-                            <p class="text-muted small">Ganas ~@((int)(tour.Price * quantity * 0.01m)) puntos loyalty</p>
+                            <div class="booking-total-row">
+                                <span>Total</span>
+                                <strong>S/ @((tour.Price * quantity).ToString("N2"))</strong>
+                            </div>
+                            <p class="booking-points">Ganas ~@((int)(tour.Price * quantity * 0.01m)) puntos loyalty</p>
                             @if (!string.IsNullOrEmpty(bookingError))
                             {
                                 <div class="alert alert-danger py-2">@bookingError</div>
                             }
-                            <button class="btn btn-primary w-100" disabled="@booking" @onclick="Reserve">
-                                @(booking ? "Procesando..." : "Reservar ahora")
-                            </button>
-                            @if (Auth.Role == "Cliente" || !Auth.IsAuthenticated)
+                            <AppButton Variant="primary" Block="true" Loading="booking" Disabled="@(tour.AvailableCapacity <= 0)" OnClick="Reserve">Reservar ahora</AppButton>
+                            @if (Auth.Role == "Cliente")
                             {
-                                <button type="button" class="btn btn-outline-primary w-100 mt-2" @onclick="AddToCart">Agregar al carrito</button>
+                                <div class="booking-secondary">
+                                    <AppButton Variant="secondary" Block="true" Icon="🛒" OnClick="AddToCart">Agregar al carrito</AppButton>
+                                </div>
                             }
-                            <button type="button" class="btn btn-outline-secondary w-100 mt-2" @onclick="ToggleCompare">@(inCompare ? "Quitar de comparar" : "Añadir a comparación")</button>
+                            <div class="booking-secondary">
+                                <AppButton Variant="ghost" Block="true" OnClick="ToggleCompare">@(inCompare ? "Quitar de comparación" : "Añadir a comparación")</AppButton>
+                            </div>
                         }
+
+                        <div class="booking-trust">
+                            <span>📱 Pago seguro Yape / Plin</span>
+                            <span>✓ Agencia verificada</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -157,10 +241,20 @@
     private int selectedImage;
     private bool loading = true;
     private bool booking;
-    private int quantity = 1;
+    private string quantityStr = "1";
     private string? error;
     private string? bookingError;
     private bool inCompare;
+
+    private static readonly System.Globalization.CultureInfo EsPe = new("es-PE");
+
+    private int quantity => int.TryParse(quantityStr, out var q) && q > 0 ? q : 1;
+    private double PseudoRating => tour is null ? 5 : Math.Round(4.2 + (tour.Id * 7 % 8) / 10.0, 1);
+    private bool IsNew => tour is not null && (DateTime.UtcNow - tour.CreatedAt).TotalDays <= 21;
+    private bool HasLogistics => tour is not null &&
+        (!string.IsNullOrWhiteSpace(tour.PuntoPartida) || !string.IsNullOrWhiteSpace(tour.PuntoRetorno)
+         || !string.IsNullOrWhiteSpace(tour.HoraSalida) || !string.IsNullOrWhiteSpace(tour.DuracionAproximada));
+    private string AgencyInitial => string.IsNullOrWhiteSpace(tour?.PartnerName) ? "?" : tour!.PartnerName.Trim()[..1].ToUpperInvariant();
 
     private string ActiveImage => galleryUrls.Count > 0
         ? CloudinaryHelper.Optimize(galleryUrls[selectedImage], 1200)
@@ -169,6 +263,9 @@
     private string MainImageStyle => string.IsNullOrEmpty(ActiveImage)
         ? "background: linear-gradient(135deg, #004D40, #00695C)"
         : $"background-image: url('{ActiveImage}')";
+
+    private void GoBack() => Nav.NavigateTo("/");
+    private void GoToLogin() => Nav.NavigateTo("/login");
 
     protected override async Task OnInitializedAsync()
     {

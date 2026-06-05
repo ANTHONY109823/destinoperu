@@ -1596,16 +1596,88 @@ a:hover { color: var(--dp-primary-light); }
     padding: 0.75rem 0 0.75rem 1rem;
     position: relative;
 }
+.tour-timeline-item::before {
+    content: "";
+    position: absolute;
+    left: -8px;
+    top: 1.1rem;
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: var(--dp-primary);
+    border: 2px solid #fff;
+}
 .tour-timeline-hour {
     font-weight: 700;
     color: var(--dp-primary);
     min-width: 4.5rem;
 }
-.tour-check-list li::marker { content: "✓ "; color: var(--dp-primary); }
-.tour-cross-list li::marker { content: "✗ "; color: #c62828; }
+
+/* Detalle de tour — rediseño */
+.tour-detail-back { margin-bottom: 0.75rem; }
+.tour-detail .ds-section-card { margin-bottom: 1.25rem; }
+.tour-gallery-main { height: 420px; box-shadow: var(--dp-shadow); }
+.tour-detail-header { margin-top: 1.25rem; }
+.tour-detail-tags { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.4rem; }
+.tour-detail-title { color: var(--dp-primary-dark); font-weight: 800; font-size: clamp(1.5rem, 3.5vw, 2.1rem); margin: 0 0 0.4rem; }
+.tour-detail-sub { color: var(--dp-muted); font-size: 0.95rem; margin: 0 0 0.5rem; }
+.tour-detail-rating-row { display: flex; align-items: center; gap: 0.6rem; }
+.tour-detail-opiniones { color: var(--dp-muted); font-size: 0.85rem; }
+.tour-detail-desc { color: var(--dp-text); line-height: 1.65; margin: 0; white-space: pre-line; }
+
+.tour-keyfacts {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.9rem;
+}
+@media (min-width: 560px) { .tour-keyfacts { grid-template-columns: 1fr 1fr; } }
+.tour-keyfact { display: flex; gap: 0.65rem; align-items: flex-start; }
+.tour-keyfact-ico { font-size: 1.3rem; flex-shrink: 0; }
+.tour-keyfact-label { display: block; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--dp-muted); font-weight: 700; }
+.tour-keyfact-value { display: block; color: var(--dp-primary-dark); font-weight: 600; }
+
+.tour-incl-grid { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+@media (min-width: 560px) { .tour-incl-grid { grid-template-columns: 1fr 1fr; } }
+.tour-feature-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+.tour-feature-list li { display: flex; align-items: flex-start; gap: 0.5rem; font-size: 0.92rem; color: var(--dp-text); }
+.tfl-ico { flex-shrink: 0; font-weight: 800; line-height: 1.4; }
+.tour-feature-yes .tfl-ico { color: var(--dp-primary); }
+.tour-feature-no .tfl-ico { color: var(--dp-muted); }
+.tour-feature-no li { color: var(--dp-muted); }
+
+.tour-agency-block { display: flex; gap: 1rem; align-items: center; }
+.tour-agency-avatar {
+    width: 56px; height: 56px; border-radius: 50%;
+    background: var(--dp-primary); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.5rem; font-weight: 800; flex-shrink: 0;
+}
+.tour-agency-name { display: flex; align-items: center; gap: 0.5rem; font-weight: 700; color: var(--dp-primary-dark); margin-bottom: 0.2rem; }
+.tour-agency-link { display: inline-block; margin-top: 0.35rem; color: var(--dp-primary); font-weight: 600; font-size: 0.88rem; text-decoration: none; }
+.tour-agency-link:hover { text-decoration: underline; }
+
+/* Caja de reserva */
+.booking-price-row { display: flex; align-items: baseline; gap: 0.4rem; }
+.booking-price { font-size: 1.7rem; font-weight: 800; color: var(--dp-primary); }
+.booking-price-unit { color: var(--dp-muted); font-size: 0.85rem; }
+.booking-stock { margin: 0.35rem 0 1rem; font-size: 0.88rem; }
+.booking-stock-ok { color: var(--dp-primary); font-weight: 600; }
+.booking-stock-out { color: var(--dp-danger, #DC2626); font-weight: 600; }
+.booking-field { margin-bottom: 0.5rem; }
+.booking-total-row { display: flex; justify-content: space-between; align-items: baseline; padding-top: 0.5rem; border-top: 1px dashed #d0e8e4; font-size: 1.05rem; }
+.booking-total-row strong { color: var(--dp-primary-dark); font-size: 1.2rem; }
+.booking-points { color: var(--dp-muted); font-size: 0.78rem; margin: 0.25rem 0 0.85rem; }
+.booking-secondary { margin-top: 0.6rem; }
+.booking-trust { margin-top: 1rem; padding-top: 0.85rem; border-top: 1px solid #e8f0ee; display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.8rem; color: var(--dp-muted); }
+
+.skeleton-block { background: linear-gradient(90deg, #eef4f2 25%, #e2ece9 50%, #eef4f2 75%); background-size: 200% 100%; animation: dp-shimmer 1.3s infinite; }
+@keyframes dp-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
 @media (max-width: 380px) {
     .home-hero { min-height: 400px; }
     .tour-gallery-main { height: 220px; }
     .tour-gallery-thumb { width: 56px; height: 56px; }
+}
+@media (max-width: 991px) {
+    .tour-gallery-main { height: 300px; }
 }
