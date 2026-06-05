@@ -75,10 +75,22 @@
 <section class="container tours-section">
     <div class="tours-section-head">
         <h2 class="section-title mb-0">Experiencias disponibles</h2>
-        @if (!loading && loadSuccess && tours.Count > 0)
-        {
-            <span class="tours-count">@totalCount experiencia@(totalCount == 1 ? "" : "s") · página @currentPage de @totalPages</span>
-        }
+        <div class="tours-head-right">
+            @if (!loading && loadSuccess && tours.Count > 0)
+            {
+                <span class="tours-count">@totalCount experiencia@(totalCount == 1 ? "" : "s")</span>
+            }
+            <div class="tours-sort">
+                <label class="tours-sort-label" for="tours-sort-select">Ordenar:</label>
+                <select id="tours-sort-select" class="ds-select tours-sort-select" @bind="sortBy" @bind:after="OnSortChanged">
+                    <option value="recent">Más próximos</option>
+                    <option value="rating">Mejor valorados</option>
+                    <option value="popular">Más reservados</option>
+                    <option value="price_asc">Precio: menor a mayor</option>
+                    <option value="price_desc">Precio: mayor a menor</option>
+                </select>
+            </div>
+        </div>
     </div>
 
     @if (loading)
@@ -144,6 +156,7 @@
     private string? fromDateStr;
     private string? toDateStr;
     private string? maxPriceStr;
+    private string sortBy = "recent";
     private int currentPage = 1;
     private int totalCount;
     private int totalPages = 1;
@@ -207,6 +220,8 @@
         await LoadTours();
     }
 
+    private async Task OnSortChanged() { currentPage = 1; await LoadTours(); }
+
     private async Task Search() { currentPage = 1; await LoadTours(); }
     private async Task PrevPage() { if (currentPage > 1) { currentPage--; await LoadTours(); } }
     private async Task NextPage() { if (currentPage < totalPages) { currentPage++; await LoadTours(); } }
@@ -228,7 +243,7 @@
         DateTime? toDate = DateTime.TryParse(toDateStr, out var t) ? t : null;
         decimal? maxPrice = decimal.TryParse(maxPriceStr, out var p) && p > 0 ? p : null;
 
-        var result = await Api.SearchToursAsync(department, location, adventureType, fromDate, toDate, currentPage, maxPrice);
+        var result = await Api.SearchToursAsync(department, location, adventureType, fromDate, toDate, currentPage, maxPrice, sortBy);
         if (result.Success && result.Data is not null)
         {
             tours = result.Data.Items;

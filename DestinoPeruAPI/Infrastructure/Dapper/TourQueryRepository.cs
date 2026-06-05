@@ -14,10 +14,22 @@ public class TourQueryRepository(IDbConnectionFactory connectionFactory) : ITour
                t."AdventureType", t."Date", t."Capacity", t."AvailableCapacity",
                t."ImageUrl", t."IsActive", t."CreatedAt",
                t."PuntoPartida", t."PuntoRetorno", t."HoraSalida", t."DuracionAproximada",
-               t."ItinerarioJson", t."QueIncluyeJson", t."QueNoIncluyeJson", t."QueLlevarJson", t."GaleriaJson"
+               t."ItinerarioJson", t."QueIncluyeJson", t."QueNoIncluyeJson", t."QueLlevarJson", t."GaleriaJson",
+               COALESCE(rv.avg, 0) AS "AverageRating", COALESCE(rv.cnt, 0) AS "ReviewCount"
         FROM "Tours" t
         INNER JOIN "Partners" p ON p."Id" = t."PartnerId"
+        LEFT JOIN (SELECT "TourId", AVG("Rating")::float8 AS avg, COUNT(*) AS cnt FROM "Reviews" GROUP BY "TourId") rv ON rv."TourId" = t."Id"
+        LEFT JOIN (SELECT "TourId", COUNT(*) AS cnt FROM "Reservations" GROUP BY "TourId") rs ON rs."TourId" = t."Id"
         """;
+
+    private static string OrderByClause(string? sortBy) => sortBy switch
+    {
+        "price_asc" => """ ORDER BY t."Price" ASC, t."Date" ASC """,
+        "price_desc" => """ ORDER BY t."Price" DESC, t."Date" ASC """,
+        "rating" => """ ORDER BY COALESCE(rv.avg, 0) DESC, COALESCE(rv.cnt, 0) DESC, t."Date" ASC """,
+        "popular" => """ ORDER BY COALESCE(rs.cnt, 0) DESC, t."Date" ASC """,
+        _ => """ ORDER BY t."Date" ASC """
+    };
 
     private sealed class TourRow
     {
@@ -49,6 +61,8 @@ public class TourQueryRepository(IDbConnectionFactory connectionFactory) : ITour
         public string? QueNoIncluyeJson { get; set; }
         public string? QueLlevarJson { get; set; }
         public string? GaleriaJson { get; set; }
+        public double AverageRating { get; set; }
+        public int ReviewCount { get; set; }
     }
 
     private static TourDto MapRow(TourRow r) => new(
@@ -62,7 +76,8 @@ public class TourQueryRepository(IDbConnectionFactory connectionFactory) : ITour
         TourContentMapper.DeserializeStrings(r.QueNoIncluyeJson),
         TourContentMapper.DeserializeStrings(r.QueLlevarJson),
         TourContentMapper.DeserializeStrings(r.GaleriaJson),
-        r.PartnerSlug);
+        r.PartnerSlug,
+        Math.Round(r.AverageRating, 1), r.ReviewCount);
 
     public async Task<PagedResult<TourDto>> SearchPagedAsync(TourSearchQuery query)
     {
@@ -119,7 +134,7 @@ public class TourQueryRepository(IDbConnectionFactory connectionFactory) : ITour
         var sql = $"""
             {TourSelect}
             {where}
-            ORDER BY t."Date" ASC
+            {OrderByClause(query.SortBy)}
             LIMIT @Limit OFFSET @Offset
             """;
 

@@ -17,7 +17,16 @@ public record TourDto(
     IReadOnlyList<TourItineraryStepDto>? Itinerario = null,
     IReadOnlyList<string>? QueIncluye = null, IReadOnlyList<string>? QueNoIncluye = null, IReadOnlyList<string>? QueLlevar = null,
     IReadOnlyList<string>? Galeria = null,
-    string? PartnerSlug = null);
+    string? PartnerSlug = null,
+    double AverageRating = 0, int ReviewCount = 0);
+
+public record ReviewDto(int Id, int TourId, string UserName, int Rating, string Comment, DateTime CreatedAt);
+
+public record CreateReviewRequest(int TourId, int Rating, string Comment);
+
+public record TourReviewsDto(
+    double Average, int Count, bool CanReview, bool AlreadyReviewed,
+    IReadOnlyList<ReviewDto> Items);
 
 public record TourCompareItemDto(
     int Id, string Title, string PartnerName, string Department, string Location,
@@ -31,7 +40,8 @@ public record TourContentInput(
 
 public record TourSearchQuery(
     string? Department = null, string? Location = null, string? AdventureType = null,
-    DateTime? FromDate = null, DateTime? ToDate = null, decimal? MaxPrice = null, int Page = 1, int PageSize = 12);
+    DateTime? FromDate = null, DateTime? ToDate = null, decimal? MaxPrice = null, int Page = 1, int PageSize = 12,
+    string? SortBy = null);
 
 public record AgencyProfileDto(
     int PartnerId, string Name, string RUC, string? LogoUrl, string? OperatingDepartment,
@@ -145,7 +155,8 @@ public record AgencyPublicProfileDto(
     int PartnerId, string Slug, string Name, string? LogoUrl, string? OperatingDepartment,
     string Status, bool IsVerified, string? ContactPhone, string? ContactEmail,
     int TourCount, DateTime MemberSince,
-    IReadOnlyList<AgencyTourListItemDto> Tours);
+    IReadOnlyList<AgencyTourListItemDto> Tours,
+    double AverageRating = 0, int ReviewCount = 0);
 
 public record PopularDestinationDto(
     int Id, string Name, string ImageUrl, string Department, int DisplayOrder, bool IsActive);

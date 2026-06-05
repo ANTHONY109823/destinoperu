@@ -64,6 +64,34 @@ public class TourDto
     public List<string> QueNoIncluye { get; set; } = [];
     public List<string> QueLlevar { get; set; } = [];
     public List<string> Galeria { get; set; } = [];
+    public double AverageRating { get; set; }
+    public int ReviewCount { get; set; }
+}
+
+public class ReviewDto
+{
+    public int Id { get; set; }
+    public int TourId { get; set; }
+    public string UserName { get; set; } = "";
+    public int Rating { get; set; }
+    public string Comment { get; set; } = "";
+    public DateTime CreatedAt { get; set; }
+}
+
+public class CreateReviewRequest
+{
+    public int TourId { get; set; }
+    public int Rating { get; set; }
+    public string Comment { get; set; } = "";
+}
+
+public class TourReviewsDto
+{
+    public double Average { get; set; }
+    public int Count { get; set; }
+    public bool CanReview { get; set; }
+    public bool AlreadyReviewed { get; set; }
+    public List<ReviewDto> Items { get; set; } = [];
 }
 
 public class TourCompareItemDto
@@ -265,6 +293,8 @@ public class AgencyPublicProfileDto
     public int TourCount { get; set; }
     public DateTime MemberSince { get; set; }
     public List<AgencyTourListItemDto> Tours { get; set; } = [];
+    public double AverageRating { get; set; }
+    public int ReviewCount { get; set; }
 }
 
 public class AgencyProfileDto

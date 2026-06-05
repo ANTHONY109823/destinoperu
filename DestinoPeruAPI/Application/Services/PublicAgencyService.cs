@@ -28,11 +28,17 @@ public class PublicAgencyService(AppDbContext db)
                 t.AvailableCapacity, t.Capacity, t.IsActive, t.ImageUrl, t.AdventureType))
             .ToListAsync();
 
+        var ratings = await db.Reviews
+            .Where(r => r.PartnerId == partner.Id)
+            .Select(r => r.Rating)
+            .ToListAsync();
+        var avg = ratings.Count > 0 ? Math.Round(ratings.Average(), 1) : 0;
+
         var dto = new AgencyPublicProfileDto(
             partner.Id, partner.Slug!, partner.Name, partner.LogoUrl, partner.OperatingDepartment,
             partner.Status, string.Equals(partner.VerificationStatus, "Verified", StringComparison.OrdinalIgnoreCase),
             partner.ContactPhone, partner.ContactEmail,
-            tours.Count, partner.CreatedAt, tours);
+            tours.Count, partner.CreatedAt, tours, avg, ratings.Count);
 
         return new ApiResponse<AgencyPublicProfileDto>(true, null, dto);
     }

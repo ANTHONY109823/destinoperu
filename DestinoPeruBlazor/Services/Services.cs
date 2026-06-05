@@ -141,7 +141,8 @@ public class ApiService
 
     public async Task<ApiResult<PagedResult<TourDto>>> SearchToursAsync(
         string? department = null, string? location = null, string? adventureType = null,
-        DateTime? fromDate = null, DateTime? toDate = null, int page = 1, decimal? maxPrice = null)
+        DateTime? fromDate = null, DateTime? toDate = null, int page = 1, decimal? maxPrice = null,
+        string? sortBy = null)
     {
         try
         {
@@ -153,6 +154,7 @@ public class ApiService
             if (fromDate.HasValue) q.Add($"fromDate={fromDate.Value:O}");
             if (toDate.HasValue) q.Add($"toDate={toDate.Value:O}");
             if (maxPrice.HasValue) q.Add($"maxPrice={maxPrice.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)}");
+            if (!string.IsNullOrWhiteSpace(sortBy)) q.Add($"sortBy={Uri.EscapeDataString(sortBy)}");
             var response = await _http.GetAsync($"{_baseUrl}/tours?{string.Join("&", q)}");
             if (!response.IsSuccessStatusCode)
                 return Fail<PagedResult<TourDto>>($"Error al cargar tours ({(int)response.StatusCode}).");
@@ -173,6 +175,33 @@ public class ApiService
             return wrapper?.Data is not null ? ApiResult<TourDto>.Ok(wrapper.Data) : Fail<TourDto>(wrapper?.Message ?? "No encontrado");
         }
         catch (Exception ex) { return Fail<TourDto>("Error al cargar tour.", ex); }
+    }
+
+    public async Task<ApiResult<TourReviewsDto>> GetTourReviewsAsync(int tourId)
+    {
+        try
+        {
+            PrepareRequest();
+            var response = await _http.GetAsync($"{_baseUrl}/reviews/tour/{tourId}");
+            if (!response.IsSuccessStatusCode) return Fail<TourReviewsDto>("No se pudieron cargar las reseñas.", showToast: false);
+            var data = await response.Content.ReadFromJsonAsync<TourReviewsDto>(JsonOptions);
+            return data is not null ? ApiResult<TourReviewsDto>.Ok(data) : Fail<TourReviewsDto>("Sin datos.", showToast: false);
+        }
+        catch (Exception ex) { return Fail<TourReviewsDto>("Error al cargar reseñas.", ex, showToast: false); }
+    }
+
+    public async Task<ApiResult<ReviewDto>> CreateReviewAsync(CreateReviewRequest request)
+    {
+        try
+        {
+            PrepareRequest();
+            var response = await _http.PostAsJsonAsync($"{_baseUrl}/reviews", request);
+            var result = await response.Content.ReadFromJsonAsync<ApiResponse<ReviewDto>>(JsonOptions);
+            if (response.IsSuccessStatusCode && result?.Success == true && result.Data is not null)
+                return ApiResult<ReviewDto>.Ok(result.Data);
+            return Fail<ReviewDto>(result?.Message ?? "No se pudo publicar la reseña.");
+        }
+        catch (Exception ex) { return Fail<ReviewDto>("Error al publicar reseña.", ex); }
     }
 
     public async Task<ApiResult<AgencyPublicProfileDto>> GetAgencyBySlugAsync(string slug)

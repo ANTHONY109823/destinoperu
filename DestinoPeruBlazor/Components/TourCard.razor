@@ -1,6 +1,9 @@
 ﻿@using DestinoPeruBlazor.Models
 @using DestinoPeruBlazor.Helpers
 @using DestinoPeruBlazor.Components.UI
+@using DestinoPeruBlazor.Services
+@inject FavoritesService Favorites
+@implements IDisposable
 
 <a class="tour-card tour-card-link" href="@TourHref">
     <div class="tour-card-image" style="@ImageStyle">
@@ -10,6 +13,13 @@
                 <Badge Variant="@BadgeVariant">@BadgeText</Badge>
             </span>
         }
+        <button type="button"
+                class="tour-card-fav @(isFav ? "active" : "")"
+                title="@(isFav ? "Quitar de favoritos" : "Guardar en favoritos")"
+                aria-label="@(isFav ? "Quitar de favoritos" : "Guardar en favoritos")"
+                @onclick="ToggleFav" @onclick:preventDefault="true" @onclick:stopPropagation="true">
+            @(isFav ? "♥" : "♡")
+        </button>
     </div>
     <div class="tour-card-body">
         <div class="tour-card-loc">@Tour.Department@(string.IsNullOrWhiteSpace(Tour.Location) ? "" : $" · {Tour.Location}")</div>
@@ -18,7 +28,15 @@
             <span class="agency-dot"></span>@Tour.PartnerName · @Tour.AdventureType
         </p>
         <div class="tour-card-rating">
-            <Rating Value="@PseudoRating" Max="5" />
+            @if (Tour.ReviewCount > 0)
+            {
+                <Rating Value="@Tour.AverageRating" Max="5" />
+                <span class="tour-card-rating-count">@Tour.AverageRating.ToString("0.0") · @Tour.ReviewCount opinión@(Tour.ReviewCount == 1 ? "" : "es")</span>
+            }
+            else
+            {
+                <span class="tour-card-rating-new">Nuevo · sé el primero en opinar</span>
+            }
         </div>
         <div class="tour-card-footer">
             <div class="tour-card-price-block">
@@ -33,16 +51,37 @@
 @code {
     [Parameter, EditorRequired] public TourDto Tour { get; set; } = default!;
 
-    private string TourHref => $"/tour/{(string.IsNullOrEmpty(Tour.Slug) ? Tour.Id.ToString() : Tour.Slug)}";
+    private bool isFav;
+
+    private string Key => string.IsNullOrEmpty(Tour.Slug) ? Tour.Id.ToString() : Tour.Slug;
+    private string TourHref => $"/tour/{Key}";
 
     private string ImageStyle => string.IsNullOrEmpty(Tour.ImageUrl)
         ? "background-image: linear-gradient(135deg, var(--dp-primary), var(--dp-primary-light))"
         : $"background-image: url('{CloudinaryHelper.Optimize(Tour.ImageUrl, 600)}')";
 
-    private double PseudoRating => Math.Round(4.2 + (Tour.Id * 7 % 8) / 10.0, 1);
-
     private bool IsNew => (DateTime.UtcNow - Tour.CreatedAt).TotalDays <= 21;
 
     private string? BadgeText => IsNew ? "Nuevo" : null;
     private string BadgeVariant => "info";
+
+    protected override async Task OnInitializedAsync()
+    {
+        Favorites.OnChange += HandleChange;
+        await Favorites.InitializeAsync();
+        isFav = Favorites.IsFavorite(Key);
+    }
+
+    private async Task ToggleFav()
+    {
+        isFav = await Favorites.ToggleAsync(Key);
+    }
+
+    private void HandleChange()
+    {
+        var current = Favorites.IsFavorite(Key);
+        if (current != isFav) { isFav = current; InvokeAsync(StateHasChanged); }
+    }
+
+    public void Dispose() => Favorites.OnChange -= HandleChange;
 }

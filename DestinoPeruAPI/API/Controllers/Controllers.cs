@@ -60,6 +60,51 @@ public class DestinationsController(PopularDestinationService destinationService
     public async Task<IActionResult> GetPublic() => Ok(await destinationService.GetPublicAsync());
 }
 
+[ApiController]
+public class SitemapController(DestinoPeruAPI.Infrastructure.Data.AppDbContext db, IConfiguration config) : ControllerBase
+{
+    [HttpGet("/sitemap.xml")][AllowAnonymous]
+    public async Task<IActionResult> Sitemap()
+    {
+        var baseUrl = (config["PublicSiteUrl"] ?? $"{Request.Scheme}://{Request.Host}").TrimEnd('/');
+
+        var tours = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ToListAsync(
+            db.Tours.Where(t => t.IsActive).Select(t => new { t.Slug, t.CreatedAt }));
+        var agencies = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ToListAsync(
+            db.Partners.Where(p => p.Slug != null && p.Status != "Suspended").Select(p => p.Slug));
+
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("""<?xml version="1.0" encoding="UTF-8"?>""");
+        sb.AppendLine("""<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">""");
+        void Url(string loc) { sb.Append("<url><loc>").Append(System.Security.SecurityElement.Escape(loc)).AppendLine("</loc></url>"); }
+        Url($"{baseUrl}/");
+        foreach (var t in tours) Url($"{baseUrl}/tour/{t.Slug}");
+        foreach (var slug in agencies) Url($"{baseUrl}/agencia/{slug}");
+        sb.AppendLine("</urlset>");
+
+        return Content(sb.ToString(), "application/xml");
+    }
+}
+
+[ApiController][Route("api/reviews")]
+public class ReviewsController(ReviewService reviewService) : ControllerBase
+{
+    [HttpGet("tour/{tourId:int}")][AllowAnonymous]
+    public async Task<IActionResult> ByTour(int tourId)
+    {
+        int? userId = User.Identity?.IsAuthenticated == true ? User.GetUserId() : null;
+        return Ok(await reviewService.GetByTourAsync(tourId, userId));
+    }
+
+    [HttpPost][Authorize]
+    public async Task<IActionResult> Create([FromBody] CreateReviewRequest request)
+    {
+        var name = User.GetClaim(ClaimTypes.Name) ?? "Cliente";
+        var r = await reviewService.CreateAsync(request, User.GetUserId(), name);
+        return r.Success ? Ok(r) : BadRequest(r);
+    }
+}
+
 [ApiController][Route("api/partners")]
 public class PartnersController(PartnerService partnerService) : ControllerBase
 {

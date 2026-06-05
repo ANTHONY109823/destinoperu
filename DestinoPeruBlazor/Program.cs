@@ -15,5 +15,6 @@ builder.Services.AddScoped<AuthStateService>();
 builder.Services.AddScoped<ApiService>();
 builder.Services.AddScoped<CartService>();
 builder.Services.AddScoped<CompareService>();
+builder.Services.AddScoped<FavoritesService>();
 
 await builder.Build().RunAsync();

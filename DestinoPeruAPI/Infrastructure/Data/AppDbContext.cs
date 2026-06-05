@@ -16,6 +16,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<PartnerStaff> PartnerStaff => Set<PartnerStaff>();
     public DbSet<AppMaintenanceRun> AppMaintenanceRuns => Set<AppMaintenanceRun>();
     public DbSet<PopularDestination> PopularDestinations => Set<PopularDestination>();
+    public DbSet<Review> Reviews => Set<Review>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -33,6 +34,16 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasKey(d => d.Id);
             e.Property(d => d.Name).IsRequired();
             e.HasIndex(d => new { d.IsActive, d.DisplayOrder });
+        });
+
+        modelBuilder.Entity<Review>(e =>
+        {
+            e.ToTable("Reviews");
+            e.HasKey(r => r.Id);
+            e.HasIndex(r => new { r.TourId, r.UserId }).IsUnique();
+            e.HasIndex(r => r.PartnerId);
+            e.HasOne(r => r.Tour).WithMany().HasForeignKey(r => r.TourId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(r => r.User).WithMany().HasForeignKey(r => r.UserId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<User>(e =>

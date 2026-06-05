@@ -1,0 +1,53 @@
+@page "/favoritos"
+@using DestinoPeruBlazor.Models
+@using DestinoPeruBlazor.Services
+@using DestinoPeruBlazor.Components
+@using DestinoPeruBlazor.Components.UI
+@inject ApiService Api
+@inject FavoritesService Favorites
+@inject NavigationManager Nav
+
+<PageTitle>Mis favoritos - DestinoPerú</PageTitle>
+
+<div class="container py-4">
+    <PageHeader Title="Mis favoritos" Subtitle="Las experiencias que guardaste para decidir después." />
+
+    @if (loading)
+    {
+        <div class="tours-grid" aria-busy="true">
+            @for (var i = 0; i < 3; i++) { <TourCardSkeleton /> }
+        </div>
+    }
+    else if (tours.Count == 0)
+    {
+        <DestinoPeruBlazor.Components.UI.EmptyState Icon="♥" Title="Aún no guardas experiencias"
+            Message="Toca el corazón en cualquier tour para guardarlo aquí y compararlo con calma.">
+            <Action><AppButton Variant="primary" OnClick="@(() => Nav.NavigateTo("/"))">Explorar experiencias</AppButton></Action>
+        </DestinoPeruBlazor.Components.UI.EmptyState>
+    }
+    else
+    {
+        <div class="tours-grid">
+            @foreach (var t in tours) { <TourCard Tour="t" /> }
+        </div>
+    }
+</div>
+
+@code {
+    private List<TourDto> tours = [];
+    private bool loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Favorites.InitializeAsync();
+        var slugs = Favorites.Slugs.ToList();
+        var loaded = new List<TourDto>();
+        foreach (var slug in slugs)
+        {
+            var r = await Api.GetTourBySlugAsync(slug);
+            if (r.Success && r.Data is not null) loaded.Add(r.Data);
+        }
+        tours = loaded;
+        loading = false;
+    }
+}

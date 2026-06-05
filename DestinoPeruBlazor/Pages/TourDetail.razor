@@ -10,6 +10,7 @@
 @inject CompareService Compare
 @inject ToastService Toast
 @inject NavigationManager Nav
+@inject FavoritesService Favorites
 
 @if (tour is not null)
 {
@@ -68,8 +69,15 @@
                     📍 @tour.Location · @tour.Date.ToString("dddd, dd 'de' MMMM yyyy", EsPe)
                 </p>
                 <div class="tour-detail-rating-row">
-                    <Rating Value="@PseudoRating" Max="5" />
-                    <span class="tour-detail-opiniones">Sin opiniones aún</span>
+                    @if (ReviewCount > 0)
+                    {
+                        <Rating Value="@ReviewAverage" Max="5" />
+                        <span class="tour-detail-opiniones">@ReviewAverage.ToString("0.0") · @ReviewCount opinión@(ReviewCount == 1 ? "" : "es")</span>
+                    }
+                    else
+                    {
+                        <span class="tour-detail-opiniones">Aún sin opiniones</span>
+                    }
                 </div>
             </header>
 
@@ -153,10 +161,61 @@
                         </SectionCard>
                     }
 
-                    <SectionCard Title="Opiniones de viajeros">
-                        <DestinoPeruBlazor.Components.UI.EmptyState Icon="⭐"
-                            Title="Aún no hay opiniones"
-                            Message="Sé el primero en compartir tu experiencia después de reservar este tour." />
+                    <SectionCard Title="@($"Opiniones de viajeros{(ReviewCount > 0 ? $" ({ReviewCount})" : "")}")">
+                        @if (reviews?.CanReview == true)
+                        {
+                            <div class="review-form">
+                                <h4 class="review-form-title">Cuéntanos tu experiencia</h4>
+                                <div class="review-stars-pick" role="radiogroup" aria-label="Calificación">
+                                    @for (var s = 1; s <= 5; s++)
+                                    {
+                                        var star = s;
+                                        <button type="button" class="review-star-btn @(star <= reviewRating ? "on" : "")"
+                                                @onclick="() => reviewRating = star" aria-label="@star estrellas">★</button>
+                                    }
+                                </div>
+                                <FormField Type="textarea" Placeholder="¿Qué tal estuvo el tour, el guía, la puntualidad?" @bind-Value="reviewComment" Rows="3" />
+                                @if (!string.IsNullOrEmpty(reviewError)) { <div class="alert alert-danger py-2">@reviewError</div> }
+                                <AppButton Variant="primary" Loading="submittingReview" OnClick="SubmitReview">Publicar reseña</AppButton>
+                            </div>
+                        }
+                        else if (reviews?.AlreadyReviewed == true)
+                        {
+                            <p class="text-muted">✓ Ya compartiste tu opinión sobre este tour. ¡Gracias!</p>
+                        }
+                        else if (!Auth.IsAuthenticated)
+                        {
+                            <p class="text-muted">Inicia sesión y reserva este tour para dejar tu opinión.</p>
+                        }
+
+                        @if (reviews is { Items.Count: > 0 })
+                        {
+                            <ul class="review-list">
+                                @foreach (var rv in reviews.Items)
+                                {
+                                    <li class="review-item">
+                                        <div class="review-item-head">
+                                            <span class="review-item-avatar">@(string.IsNullOrWhiteSpace(rv.UserName) ? "?" : rv.UserName.Trim()[..1].ToUpperInvariant())</span>
+                                            <div>
+                                                <strong>@rv.UserName</strong>
+                                                <span class="review-item-stars">@(new string('★', rv.Rating))<span class="review-item-stars-off">@(new string('★', 5 - rv.Rating))</span></span>
+                                            </div>
+                                            <span class="review-item-date">@rv.CreatedAt.ToString("dd MMM yyyy", EsPe)</span>
+                                        </div>
+                                        @if (!string.IsNullOrWhiteSpace(rv.Comment))
+                                        {
+                                            <p class="review-item-comment">@rv.Comment</p>
+                                        }
+                                    </li>
+                                }
+                            </ul>
+                        }
+                        else if (reviews?.CanReview != true && reviews?.AlreadyReviewed != true)
+                        {
+                            <DestinoPeruBlazor.Components.UI.EmptyState Icon="⭐"
+                                Title="Aún no hay opiniones"
+                                Message="Sé el primero en compartir tu experiencia después de reservar este tour." />
+                        }
                     </SectionCard>
 
                     <SectionCard Title="Agencia operadora">
@@ -174,7 +233,10 @@
                                     }
                                     <Badge Variant="success" Icon="✓">Verificada</Badge>
                                 </div>
-                                <Rating Value="@PseudoRating" Max="5" />
+                                @if (ReviewCount > 0)
+                                {
+                                    <Rating Value="@ReviewAverage" Max="5" />
+                                }
                                 <div class="tour-agency-links">
                                     @if (HasAgencyProfile)
                                     {
@@ -234,6 +296,9 @@
                                 <AppButton Variant="ghost" Block="true" OnClick="ToggleCompare">@(inCompare ? "Quitar de comparación" : "Añadir a comparación")</AppButton>
                             </div>
                         }
+                        <div class="booking-secondary">
+                            <AppButton Variant="ghost" Block="true" Icon="@(isFav ? "♥" : "♡")" OnClick="ToggleFavorite">@(isFav ? "Guardado en favoritos" : "Guardar en favoritos")</AppButton>
+                        </div>
 
                         <div class="booking-trust">
                             <span>📱 Pago seguro Yape / Plin</span>
@@ -258,11 +323,19 @@
     private string? error;
     private string? bookingError;
     private bool inCompare;
+    private bool isFav;
+
+    private TourReviewsDto? reviews;
+    private int reviewRating = 5;
+    private string reviewComment = "";
+    private bool submittingReview;
+    private string? reviewError;
 
     private static readonly System.Globalization.CultureInfo EsPe = new("es-PE");
 
     private int quantity => int.TryParse(quantityStr, out var q) && q > 0 ? q : 1;
-    private double PseudoRating => tour is null ? 5 : Math.Round(4.2 + (tour.Id * 7 % 8) / 10.0, 1);
+    private double ReviewAverage => reviews?.Average ?? 0;
+    private int ReviewCount => reviews?.Count ?? 0;
     private bool IsNew => tour is not null && (DateTime.UtcNow - tour.CreatedAt).TotalDays <= 21;
     private bool HasLogistics => tour is not null &&
         (!string.IsNullOrWhiteSpace(tour.PuntoPartida) || !string.IsNullOrWhiteSpace(tour.PuntoRetorno)
@@ -292,14 +365,52 @@
         await Auth.InitializeAsync();
         await Compare.InitializeAsync();
         inCompare = Compare.Slugs.Contains(Slug);
+        await Favorites.InitializeAsync();
         var response = await Api.GetTourBySlugAsync(Slug);
         if (response.Success && response.Data is not null)
         {
             tour = response.Data;
             galleryUrls = TourGalleryHelper.GetGalleryUrls(tour.ImageUrl, tour.Slug, tour.Galeria).ToList();
+            isFav = Favorites.IsFavorite(string.IsNullOrEmpty(tour.Slug) ? tour.Id.ToString() : tour.Slug);
+            await LoadReviews();
         }
         else error = response.ErrorMessage ?? "Tour no encontrado.";
         loading = false;
+    }
+
+    private async Task LoadReviews()
+    {
+        if (tour is null) return;
+        var r = await Api.GetTourReviewsAsync(tour.Id);
+        if (r.Success && r.Data is not null) reviews = r.Data;
+    }
+
+    private async Task SubmitReview()
+    {
+        if (tour is null) return;
+        reviewError = null;
+        if (reviewRating is < 1 or > 5) { reviewError = "Elige de 1 a 5 estrellas."; return; }
+        submittingReview = true;
+        var result = await Api.CreateReviewAsync(new CreateReviewRequest
+        {
+            TourId = tour.Id, Rating = reviewRating, Comment = reviewComment
+        });
+        submittingReview = false;
+        if (result.Success)
+        {
+            Toast.ShowSuccess("¡Gracias por tu reseña!");
+            reviewComment = "";
+            await LoadReviews();
+        }
+        else reviewError = result.ErrorMessage;
+    }
+
+    private async Task ToggleFavorite()
+    {
+        if (tour is null) return;
+        var key = string.IsNullOrEmpty(tour.Slug) ? tour.Id.ToString() : tour.Slug;
+        isFav = await Favorites.ToggleAsync(key);
+        Toast.ShowSuccess(isFav ? "Guardado en favoritos." : "Quitado de favoritos.");
     }
 
     private async Task Reserve()

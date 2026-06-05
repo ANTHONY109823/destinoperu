@@ -137,6 +137,7 @@ builder.Services.AddScoped<AgencyAdminService>();
 builder.Services.AddScoped<UserAccountService>();
 builder.Services.AddScoped<PopularDestinationService>();
 builder.Services.AddScoped<PublicAgencyService>();
+builder.Services.AddScoped<ReviewService>();
 
 builder.Services.AddScoped<IJwtService, JwtService>();
 

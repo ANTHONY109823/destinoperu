@@ -43,6 +43,13 @@
                         <Badge Variant="success" Icon="✓">Verificada</Badge>
                     }
                 </div>
+                @if (agency.ReviewCount > 0)
+                {
+                    <div class="agency-hero-rating">
+                        <span class="stars">@(new string('★', (int)Math.Round(agency.AverageRating)))</span>
+                        <span>@agency.AverageRating.ToString("0.0") · @agency.ReviewCount opinión@(agency.ReviewCount == 1 ? "" : "es")</span>
+                    </div>
+                }
                 <div class="agency-hero-meta">
                     @if (!string.IsNullOrWhiteSpace(agency.OperatingDepartment))
                     {
