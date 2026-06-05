@@ -1,0 +1,31 @@
+@namespace DestinoPeruBlazor.Components.UI
+
+@*
+    EmptyState (UI): estado vacío para listas/tablas sin datos.
+    Nota: vive en el namespace DestinoPeruBlazor.Components.UI para no chocar
+    con el EmptyState existente en DestinoPeruBlazor.Components.
+    Uso:
+      <EmptyState Icon="🗺️" Title="Sin tours" Message="Publica el primero.">
+          <Action><AppButton Variant="primary">Crear</AppButton></Action>
+      </EmptyState>
+*@
+
+<div class="ds-empty">
+    <div class="ds-empty-icon" aria-hidden="true">@Icon</div>
+    <h3 class="ds-empty-title">@Title</h3>
+    @if (!string.IsNullOrWhiteSpace(Message))
+    {
+        <p class="ds-empty-msg">@Message</p>
+    }
+    @if (Action is not null)
+    {
+        <div>@Action</div>
+    }
+</div>
+
+@code {
+    [Parameter] public string Icon { get; set; } = "📭";
+    [Parameter] public string Title { get; set; } = "Sin datos";
+    [Parameter] public string? Message { get; set; }
+    [Parameter] public RenderFragment? Action { get; set; }
+}

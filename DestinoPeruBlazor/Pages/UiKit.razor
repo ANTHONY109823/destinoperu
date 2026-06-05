@@ -1,0 +1,131 @@
+@page "/ui-kit"
+@using DestinoPeruBlazor.Components.UI
+
+<PageTitle>UI Kit - DestinoPerú</PageTitle>
+
+@*
+    Página de demostración del sistema de diseño (rediseño 1/5).
+    NO enlazada en el menú. Ruta: /ui-kit
+*@
+
+<div class="container py-4">
+    <PageHeader Title="UI Kit DestinoPerú"
+                Subtitle="Sistema de diseño base · componentes reutilizables"
+                ShowBack="true" OnBack="GoHome">
+        <Actions>
+            <AppButton Variant="secondary" Icon="↻">Acción secundaria</AppButton>
+            <AppButton Variant="primary" Icon="➕">Acción primaria</AppButton>
+        </Actions>
+    </PageHeader>
+
+    <SectionCard Title="Botones (AppButton)" Subtitle="Variantes: primary, secondary, danger, ghost">
+        <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
+            <AppButton Variant="primary" Icon="✓">Primario</AppButton>
+            <AppButton Variant="secondary">Secundario</AppButton>
+            <AppButton Variant="danger" Icon="🗑">Eliminar</AppButton>
+            <AppButton Variant="ghost">Ghost</AppButton>
+            <AppButton Variant="primary" Loading="true">Cargando</AppButton>
+            <AppButton Variant="primary" Disabled="true">Deshabilitado</AppButton>
+        </div>
+        <div style="margin-top:12px; max-width:280px;">
+            <AppButton Variant="primary" Block="true" Icon="🔍">Botón de ancho completo</AppButton>
+        </div>
+    </SectionCard>
+
+    <div style="height:24px;"></div>
+
+    <SectionCard Title="Campos de formulario (FormField)" Subtitle="Label siempre visible arriba">
+        <div style="max-width:520px;">
+            <FormField Label="Nombre" Placeholder="Ej. Tour Machu Picchu" Required="true"
+                       HelpText="Aparecerá como título del tour" @bind-Value="text" />
+            <FormField Label="Email" Type="email" Placeholder="correo@ejemplo.com" @bind-Value="email" />
+            <FormField Label="Precio (S/)" Type="number" Placeholder="0.00" @bind-Value="number" />
+            <FormField Label="Fecha de salida" Type="date" @bind-Value="date" />
+            <FormField Label="Categoría" Type="select" @bind-Value="select">
+                <option value="">Selecciona...</option>
+                <option value="fullday">Full Day</option>
+                <option value="cultural">Cultural</option>
+                <option value="trekking">Trekking</option>
+            </FormField>
+            <FormField Label="Descripción" Type="textarea" Placeholder="Describe la experiencia..." @bind-Value="textarea" />
+            <FormField Label="Con error" Placeholder="Campo inválido" Required="true"
+                       Error="Este campo es obligatorio." @bind-Value="withError" />
+        </div>
+        <p class="text-muted" style="font-size:14px;">Valor nombre: <code>@text</code></p>
+    </SectionCard>
+
+    <div style="height:24px;"></div>
+
+    <SectionCard Title="Badges, Rating y EmptyState">
+        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px;">
+            <Badge Variant="success" Icon="✓">Aprobado</Badge>
+            <Badge Variant="warning">Próximamente</Badge>
+            <Badge Variant="info">Nuevo</Badge>
+            <Badge Variant="neutral">Borrador</Badge>
+        </div>
+        <div style="display:flex; gap:24px; flex-wrap:wrap; margin-bottom:16px; align-items:center;">
+            <Rating Value="4.5" Max="5" />
+            <Rating Value="8" Max="10" />
+            <Rating Value="3" Max="5" ShowNumber="false" />
+            <Rating Value="9.2" Max="10" ShowStars="false" />
+        </div>
+        <AppCard>
+            <DestinoPeruBlazor.Components.UI.EmptyState Icon="🗺️" Title="No hay tours aún" Message="Cuando publiques un tour aparecerá aquí.">
+                <Action><AppButton Variant="primary" Icon="➕">Crear tour</AppButton></Action>
+            </DestinoPeruBlazor.Components.UI.EmptyState>
+        </AppCard>
+    </SectionCard>
+
+    <div style="height:24px;"></div>
+
+    <SectionCard Title="Métricas (MetricCard)">
+        <div class="ds-grid">
+            <MetricCard Value="128" Label="Reservas" Icon="📈" Trend="up" TrendText="+12% mes" />
+            <MetricCard Value="S/ 24,500" Label="Recaudado" Icon="💰" Trend="up" TrendText="+8%" />
+            <MetricCard Value="6" Label="Agencias activas" Icon="🏢" Trend="flat" TrendText="igual" />
+            <MetricCard Value="3" Label="Pendientes" Icon="⏳" Trend="down" TrendText="-2" />
+        </div>
+    </SectionCard>
+
+    <div style="height:24px;"></div>
+
+    <SectionCard Title="Navegación por pestañas (TabBar)">
+        <TabBar Tabs="tabs" Active="activeTab" OnTabChange="@(t => activeTab = t)" />
+        <p>Pestaña activa: <strong>@activeTab</strong></p>
+    </SectionCard>
+
+    <div style="height:24px;"></div>
+
+    <div class="ds-grid" style="grid-template-columns:repeat(auto-fill,minmax(260px,1fr));">
+        <AppCard>
+            <h3 style="margin-top:0;">AppCard simple</h3>
+            <p class="text-muted" style="font-size:14px;">Contenedor con sombra suave, radio y padding consistentes.</p>
+        </AppCard>
+        <AppCard>
+            <h3 style="margin-top:0;">Otra AppCard</h3>
+            <p class="text-muted" style="font-size:14px;">Reutilizable en todas las páginas.</p>
+        </AppCard>
+    </div>
+</div>
+
+@code {
+    private string? text;
+    private string? email;
+    private string? number;
+    private string? date;
+    private string? select;
+    private string? textarea;
+    private string? withError;
+    private string activeTab = "tours";
+
+    private readonly List<TabBar.TabItem> tabs =
+    [
+        new("tours", "Tours", 12, "🗺️"),
+        new("reservas", "Reservas", 5),
+        new("equipo", "Equipo"),
+        new("config", "Configuración", null, "⚙️")
+    ];
+
+    [Inject] private NavigationManager Nav { get; set; } = default!;
+    private void GoHome() => Nav.NavigateTo("/");
+}

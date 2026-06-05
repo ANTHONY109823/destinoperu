@@ -1,0 +1,40 @@
+@namespace DestinoPeruBlazor.Components.UI
+
+@*
+    PageHeader: encabezado de página con título, subtítulo, botón volver y acciones.
+    Uso:
+      <PageHeader Title="Panel" Subtitle="Resumen" ShowBack="true" OnBack="Volver">
+          <Actions>
+              <AppButton Variant="primary">Nuevo</AppButton>
+          </Actions>
+      </PageHeader>
+*@
+
+<header class="ds-page-header">
+    <div>
+        @if (ShowBack)
+        {
+            <button type="button" class="ds-page-header-back" @onclick="OnBack">
+                <span aria-hidden="true">←</span> @BackText
+            </button>
+        }
+        <h1 class="ds-page-header-title">@Title</h1>
+        @if (!string.IsNullOrWhiteSpace(Subtitle))
+        {
+            <p class="ds-page-header-subtitle">@Subtitle</p>
+        }
+    </div>
+    @if (Actions is not null)
+    {
+        <div class="ds-page-header-actions">@Actions</div>
+    }
+</header>
+
+@code {
+    [Parameter] public string Title { get; set; } = "";
+    [Parameter] public string? Subtitle { get; set; }
+    [Parameter] public bool ShowBack { get; set; }
+    [Parameter] public string BackText { get; set; } = "Volver";
+    [Parameter] public EventCallback OnBack { get; set; }
+    [Parameter] public RenderFragment? Actions { get; set; }
+}

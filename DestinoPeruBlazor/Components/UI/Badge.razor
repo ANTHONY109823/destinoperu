@@ -1,0 +1,26 @@
+@namespace DestinoPeruBlazor.Components.UI
+
+@*
+    Badge: etiqueta de estado pequeña.
+    Variant: "success" | "warning" | "info" | "neutral".
+    Uso: <Badge Variant="success">Aprobado</Badge>
+*@
+
+<span class="ds-badge @VariantClass">
+    @if (!string.IsNullOrWhiteSpace(Icon)) { <span aria-hidden="true">@Icon</span> }
+    @ChildContent
+</span>
+
+@code {
+    [Parameter] public string Variant { get; set; } = "neutral";
+    [Parameter] public string? Icon { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private string VariantClass => Variant switch
+    {
+        "success" => "ds-badge-success",
+        "warning" => "ds-badge-warning",
+        "info" => "ds-badge-info",
+        _ => "ds-badge-neutral"
+    };
+}

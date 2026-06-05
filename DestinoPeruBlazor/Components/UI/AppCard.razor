@@ -1,0 +1,17 @@
+@namespace DestinoPeruBlazor.Components.UI
+
+@*
+    AppCard: contenedor blanco con sombra suave y padding consistente.
+    Uso:
+      <AppCard>contenido</AppCard>
+      <AppCard Class="mb-3">...</AppCard>
+*@
+
+<div class="ds-card @Class">
+    @ChildContent
+</div>
+
+@code {
+    [Parameter] public string? Class { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

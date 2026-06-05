@@ -1,0 +1,71 @@
+@namespace DestinoPeruBlazor.Components.UI
+
+@*
+    FormField: campo de formulario con label SIEMPRE visible arriba.
+    Uso:
+      <FormField Label="Email" Type="email" Required="true"
+                 HelpText="Te enviaremos la confirmación"
+                 @bind-Value="model.Email" Placeholder="tucorreo@..." />
+      <FormField Label="Categoría" Type="select" @bind-Value="model.Cat">
+          <option value="a">A</option>
+      </FormField>
+*@
+
+<div class="ds-field @(string.IsNullOrEmpty(Error) ? "" : "ds-field-invalid")">
+    @if (!string.IsNullOrWhiteSpace(Label))
+    {
+        <label class="ds-field-label" for="@_id">
+            @Label
+            @if (Required) { <span class="ds-required" aria-hidden="true">*</span> }
+        </label>
+    }
+
+    @if (Type == "textarea")
+    {
+        <textarea id="@_id" class="ds-textarea" placeholder="@Placeholder" rows="@Rows"
+                  disabled="@Disabled" value="@Value"
+                  @oninput="OnInput"></textarea>
+    }
+    else if (Type == "select")
+    {
+        <select id="@_id" class="ds-select" disabled="@Disabled" value="@Value" @onchange="OnInput">
+            @ChildContent
+        </select>
+    }
+    else
+    {
+        <input id="@_id" class="ds-input" type="@Type" placeholder="@Placeholder"
+               disabled="@Disabled" value="@Value" @oninput="OnInput" />
+    }
+
+    @if (!string.IsNullOrWhiteSpace(Error))
+    {
+        <span class="ds-field-error">@Error</span>
+    }
+    else if (!string.IsNullOrWhiteSpace(HelpText))
+    {
+        <span class="ds-field-help">@HelpText</span>
+    }
+</div>
+
+@code {
+    [Parameter] public string? Label { get; set; }
+    [Parameter] public string? Placeholder { get; set; }
+    [Parameter] public string? HelpText { get; set; }
+    [Parameter] public string? Error { get; set; }
+    [Parameter] public string Type { get; set; } = "text";
+    [Parameter] public bool Required { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public int Rows { get; set; } = 4;
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public EventCallback<string?> ValueChanged { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private readonly string _id = $"ff-{Guid.NewGuid():N}";
+
+    private async Task OnInput(ChangeEventArgs e)
+    {
+        Value = e.Value?.ToString();
+        await ValueChanged.InvokeAsync(Value);
+    }
+}

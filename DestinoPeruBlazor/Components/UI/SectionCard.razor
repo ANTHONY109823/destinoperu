@@ -1,0 +1,42 @@
+@namespace DestinoPeruBlazor.Components.UI
+
+@*
+    SectionCard: tarjeta de sección con cabecera (título/subtítulo + acción) y cuerpo.
+    Uso:
+      <SectionCard Title="Mis tours" Subtitle="Gestiona tus publicaciones">
+          <HeaderAction><AppButton Variant="secondary">+ Nuevo</AppButton></HeaderAction>
+          <ChildContent>contenido</ChildContent>
+      </SectionCard>
+*@
+
+<section class="ds-section-card @Class">
+    @if (!string.IsNullOrWhiteSpace(Title) || HeaderAction is not null)
+    {
+        <div class="ds-section-card-head">
+            <div class="ds-page-header" style="margin:0;align-items:center;">
+                <div>
+                    <h2 class="ds-section-card-title">@Title</h2>
+                    @if (!string.IsNullOrWhiteSpace(Subtitle))
+                    {
+                        <p class="ds-section-card-subtitle">@Subtitle</p>
+                    }
+                </div>
+                @if (HeaderAction is not null)
+                {
+                    <div class="ds-page-header-actions">@HeaderAction</div>
+                }
+            </div>
+        </div>
+    }
+    <div class="ds-section-card-body">
+        @ChildContent
+    </div>
+</section>
+
+@code {
+    [Parameter] public string? Title { get; set; }
+    [Parameter] public string? Subtitle { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter] public RenderFragment? HeaderAction { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

@@ -1,0 +1,46 @@
+@namespace DestinoPeruBlazor.Components.UI
+
+@*
+    Rating: muestra estrellas y/o puntaje X/Max.
+    Uso:
+      <Rating Value="4.5" Max="5" ShowNumber="true" />
+      <Rating Value="8" Max="10" ShowStars="false" ShowNumber="true" />
+*@
+
+<span class="ds-rating" title="@($"{FormatNumber(Value)}/{Max}")">
+    @if (ShowStars)
+    {
+        <span class="ds-rating-stars" aria-hidden="true">
+            @for (var i = 1; i <= StarCount; i++)
+            {
+                <span class="@(i <= FilledStars ? "" : "ds-rating-star-empty")">@(i <= FilledStars ? "★" : "☆")</span>
+            }
+        </span>
+    }
+    @if (ShowNumber)
+    {
+        <span class="ds-rating-number">@FormatNumber(Value)/@Max</span>
+    }
+</span>
+
+@code {
+    [Parameter] public double Value { get; set; }
+    [Parameter] public int Max { get; set; } = 5;
+    [Parameter] public bool ShowNumber { get; set; } = true;
+    [Parameter] public bool ShowStars { get; set; } = true;
+
+    private const int StarCount = 5;
+
+    private int FilledStars
+    {
+        get
+        {
+            if (Max <= 0) return 0;
+            var normalized = Value / Max * StarCount;
+            return Math.Clamp((int)Math.Round(normalized, MidpointRounding.AwayFromZero), 0, StarCount);
+        }
+    }
+
+    private static string FormatNumber(double v) =>
+        v % 1 == 0 ? v.ToString("0") : v.ToString("0.0");
+}

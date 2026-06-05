@@ -1,0 +1,37 @@
+@namespace DestinoPeruBlazor.Components.UI
+
+@*
+    TabBar: navegación por pestañas (no botones de acción).
+    Uso:
+      <TabBar Tabs="tabs" Active="active" OnTabChange="@(t => active = t)" />
+      donde tabs = new List<TabBar.TabItem> { new("tours","Tours", 12), new("res","Reservas") };
+*@
+
+<nav class="ds-tabbar" role="tablist">
+    @foreach (var tab in Tabs)
+    {
+        <button type="button"
+                role="tab"
+                class="ds-tab @(tab.Key == Active ? "ds-tab-active" : "")"
+                aria-selected="@(tab.Key == Active)"
+                @onclick="() => Select(tab.Key)">
+            @if (!string.IsNullOrWhiteSpace(tab.Icon)) { <span aria-hidden="true">@tab.Icon</span> }
+            @tab.Label
+            @if (tab.Count is int c) { <span class="ds-tab-count">@c</span> }
+        </button>
+    }
+</nav>
+
+@code {
+    [Parameter] public IReadOnlyList<TabItem> Tabs { get; set; } = [];
+    [Parameter] public string? Active { get; set; }
+    [Parameter] public EventCallback<string> OnTabChange { get; set; }
+
+    private async Task Select(string key)
+    {
+        if (key == Active) return;
+        await OnTabChange.InvokeAsync(key);
+    }
+
+    public record TabItem(string Key, string Label, int? Count = null, string? Icon = null);
+}

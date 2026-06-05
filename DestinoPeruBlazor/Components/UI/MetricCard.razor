@@ -1,0 +1,45 @@
+@namespace DestinoPeruBlazor.Components.UI
+
+@*
+    MetricCard: tarjeta de métrica con número grande, etiqueta y tendencia opcional.
+    Trend: "up" | "down" | "flat" (opcional).
+    Uso:
+      <MetricCard Value="128" Label="Reservas" Icon="📈" Trend="up" TrendText="+12%" />
+*@
+
+<div class="ds-metric">
+    <div class="ds-metric-top">
+        <span class="ds-metric-value">@Value</span>
+        @if (!string.IsNullOrWhiteSpace(Icon))
+        {
+            <span class="ds-metric-icon" aria-hidden="true">@Icon</span>
+        }
+    </div>
+    <span class="ds-metric-label">@Label</span>
+    @if (!string.IsNullOrWhiteSpace(TrendText))
+    {
+        <span class="ds-metric-trend @TrendClass">@TrendArrow @TrendText</span>
+    }
+</div>
+
+@code {
+    [Parameter] public string Value { get; set; } = "0";
+    [Parameter] public string Label { get; set; } = "";
+    [Parameter] public string? Icon { get; set; }
+    [Parameter] public string? Trend { get; set; }
+    [Parameter] public string? TrendText { get; set; }
+
+    private string TrendClass => Trend switch
+    {
+        "up" => "ds-metric-trend-up",
+        "down" => "ds-metric-trend-down",
+        _ => "ds-metric-trend-flat"
+    };
+
+    private string TrendArrow => Trend switch
+    {
+        "up" => "▲",
+        "down" => "▼",
+        _ => "■"
+    };
+}

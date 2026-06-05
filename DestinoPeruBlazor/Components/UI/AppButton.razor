@@ -1,0 +1,49 @@
+@namespace DestinoPeruBlazor.Components.UI
+
+@*
+    AppButton: botón consistente con variantes.
+    Variant: "primary" | "secondary" | "danger" | "ghost".
+    Uso:
+      <AppButton Variant="primary" Icon="➕" OnClick="Guardar">Guardar</AppButton>
+      <AppButton Variant="danger" Loading="borrando" OnClick="Eliminar">Eliminar</AppButton>
+*@
+
+<button type="@Type"
+        class="ds-btn @VariantClass @(Block ? "ds-btn-block" : "")"
+        disabled="@(Disabled || Loading)"
+        @onclick="HandleClick">
+    @if (Loading)
+    {
+        <span class="ds-btn-spinner" aria-hidden="true"></span>
+    }
+    else if (!string.IsNullOrWhiteSpace(Icon))
+    {
+        <span aria-hidden="true">@Icon</span>
+    }
+    <span>@ChildContent</span>
+</button>
+
+@code {
+    [Parameter] public string Variant { get; set; } = "primary";
+    [Parameter] public string? Icon { get; set; }
+    [Parameter] public bool Loading { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public bool Block { get; set; }
+    [Parameter] public string Type { get; set; } = "button";
+    [Parameter] public EventCallback OnClick { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private string VariantClass => Variant switch
+    {
+        "secondary" => "ds-btn-secondary",
+        "danger" => "ds-btn-danger",
+        "ghost" => "ds-btn-ghost",
+        _ => "ds-btn-primary"
+    };
+
+    private async Task HandleClick()
+    {
+        if (Disabled || Loading) return;
+        await OnClick.InvokeAsync();
+    }
+}
