@@ -1,99 +1,125 @@
 @using DestinoPeruBlazor.Models
+@using DestinoPeruBlazor.Helpers
+@using DestinoPeruBlazor.Components.UI
+@using Microsoft.AspNetCore.Components.Forms
+@inject ApiService Api
+@inject ToastService Toast
 
-<section class="dash-panel tour-editor-panel">
-    <h3>@(TourId.HasValue ? "Editar tour" : "Publicar tour nuevo")</h3>
-    <div class="admin-form-grid">
-        <input class="form-control" placeholder="Título *" @bind="Model.Title" />
-        <input class="form-control" placeholder="Ubicación" @bind="Model.Location" />
-        <input class="form-control" placeholder="Departamento" @bind="Model.Department" />
-        <select class="form-select" @bind="Model.AdventureType">
-            <option value="FullDay">Full Day</option>
-            <option value="Paquete2D1N">Paquete 2D/1N</option>
-            <option value="Cultural">Cultural</option>
-            <option value="Trekking">Trekking</option>
-            <option value="Aventura">Aventura</option>
-        </select>
-        <input type="number" class="form-control" placeholder="Precio S/" @bind="Model.Price" />
-        <input type="number" class="form-control" placeholder="Cupos bus" @bind="Model.Capacity" />
-        <input type="date" class="form-control" @bind="Model.Date" />
-        <input class="form-control" placeholder="Punto de partida" @bind="Model.PuntoPartida" />
-        <input class="form-control" placeholder="Punto de retorno" @bind="Model.PuntoRetorno" />
-        <input class="form-control" placeholder="Hora de salida" @bind="Model.HoraSalida" />
-        <input class="form-control" placeholder="Duración aprox." @bind="Model.DuracionAproximada" />
-        <input class="form-control" placeholder="Imagen principal (URL)" @bind="Model.ImageUrl" />
+<div class="tour-editor">
+    <div class="tour-editor-bar">
+        <div class="tour-editor-bar-title">
+            <span class="tour-editor-eyebrow">@(TourId.HasValue ? "Editando" : "Nuevo tour")</span>
+            <h2>@(string.IsNullOrWhiteSpace(titleStr) ? (TourId.HasValue ? "Tour sin título" : "Publicar tour nuevo") : titleStr)</h2>
+        </div>
+        <div class="tour-editor-bar-actions">
+            <AppButton Variant="ghost" OnClick="OnCancelEdit">Cancelar</AppButton>
+            <AppButton Variant="primary" Icon="💾" Loading="Saving" OnClick="Submit">@(TourId.HasValue ? "Guardar cambios" : "Publicar tour")</AppButton>
+        </div>
     </div>
-    <textarea class="form-control mb-2" rows="3" placeholder="Descripción" @bind="Model.Description"></textarea>
 
-    <h5 class="mt-3">Itinerario por horas</h5>
-    @for (var i = 0; i < Itinerario.Count; i++)
-    {
-        var idx = i;
-        var step = Itinerario[idx];
-        <div class="itinerary-row admin-form-grid mb-2">
-            <input class="form-control" placeholder="Hora" @bind="step.Hora" />
-            <input class="form-control" placeholder="Actividad" @bind="step.Titulo" />
-            <input class="form-control" placeholder="Detalle" @bind="step.Descripcion" />
-            <button type="button" class="btn btn-outline-danger btn-sm" @onclick="() => RemoveItinerary(idx)">✕</button>
+    <SectionCard Title="Información general">
+        <div class="ds-form-grid">
+            <FormField Label="Título del tour" Required="true" Placeholder="Ej: Full Day Laguna Humantay" @bind-Value="titleStr" />
+            <FormField Label="Tipo de experiencia" Type="select" @bind-Value="typeStr">
+                <option value="FullDay">Full Day</option>
+                <option value="Paquete2D1N">Paquete 2D/1N</option>
+                <option value="Cultural">Cultural</option>
+                <option value="Trekking">Trekking</option>
+                <option value="Aventura">Aventura</option>
+            </FormField>
         </div>
-    }
-    <button type="button" class="btn btn-outline-primary btn-sm mb-3" @onclick="AddItinerary">+ Paso itinerario</button>
+        <FormField Label="Descripción" Type="textarea" Rows="4"
+                   HelpText="Describe la experiencia: qué verán, por qué es especial."
+                   Placeholder="Vive un día inolvidable rumbo a..." @bind-Value="descStr" />
+    </SectionCard>
 
-    <h5>Qué incluye</h5>
-    @for (var i = 0; i < Incluye.Count; i++)
-    {
-        var idx = i;
-        <div class="d-flex gap-2 mb-1">
-            <input class="form-control form-control-sm" @bind="Incluye[idx]" />
-            <button type="button" class="btn btn-outline-danger btn-sm" @onclick="() => Incluye.RemoveAt(idx)">✕</button>
+    <SectionCard Title="Ubicación">
+        <div class="ds-form-grid">
+            <FormField Label="Departamento" Placeholder="Cusco" @bind-Value="deptStr" />
+            <FormField Label="Ciudad / destino" Placeholder="Soraypampa" @bind-Value="locStr" />
+            <FormField Label="Punto de partida" Placeholder="Plaza de Armas de Cusco" @bind-Value="partidaStr" />
+            <FormField Label="Punto de retorno" Placeholder="Plaza de Armas de Cusco" @bind-Value="retornoStr" />
         </div>
-    }
-    <button type="button" class="btn btn-outline-primary btn-sm mb-2" @onclick="AddIncluye">+ Incluye</button>
+    </SectionCard>
 
-    <h5>Qué no incluye</h5>
-    @for (var i = 0; i < NoIncluye.Count; i++)
-    {
-        var idx = i;
-        <div class="d-flex gap-2 mb-1">
-            <input class="form-control form-control-sm" @bind="NoIncluye[idx]" />
-            <button type="button" class="btn btn-outline-danger btn-sm" @onclick="() => NoIncluye.RemoveAt(idx)">✕</button>
+    <SectionCard Title="Detalles del servicio">
+        <div class="ds-form-grid">
+            <FormField Label="Precio por persona (S/)" Type="number" Placeholder="120" @bind-Value="priceStr" />
+            <FormField Label="Cupos / asientos del bus" Type="number" Placeholder="20" @bind-Value="capStr" />
+            <FormField Label="Fecha de salida" Type="date" @bind-Value="dateStr" />
+            <FormField Label="Hora de salida" Placeholder="05:30 AM" @bind-Value="horaSalidaStr" />
+            <FormField Label="Duración aproximada" Placeholder="12 horas" @bind-Value="duracionStr" />
         </div>
-    }
-    <button type="button" class="btn btn-outline-primary btn-sm mb-2" @onclick="AddNoIncluye">+ No incluye</button>
+    </SectionCard>
 
-    <h5>Qué llevar</h5>
-    @for (var i = 0; i < Llevar.Count; i++)
-    {
-        var idx = i;
-        <div class="d-flex gap-2 mb-1">
-            <input class="form-control form-control-sm" @bind="Llevar[idx]" />
-            <button type="button" class="btn btn-outline-danger btn-sm" @onclick="() => Llevar.RemoveAt(idx)">✕</button>
+    <SectionCard Title="Itinerario">
+        <FormField Label="Pasos del itinerario" Type="textarea" Rows="6"
+                   HelpText="Una parada por línea. Formato: HH:MM - Actividad - Detalle (el detalle es opcional)."
+                   Placeholder="05:30 - Recojo del hotel - Te esperamos en recepción&#10;07:00 - Desayuno en Mollepata&#10;09:00 - Caminata a la laguna"
+                   @bind-Value="itinerarioText" />
+    </SectionCard>
+
+    <SectionCard Title="Qué incluye / qué no incluye">
+        <div class="ds-form-grid">
+            <FormField Label="Qué incluye" Type="textarea" Rows="5"
+                       HelpText="Un ítem por línea."
+                       Placeholder="Transporte turístico&#10;Desayuno y almuerzo&#10;Guía profesional"
+                       @bind-Value="incluyeText" />
+            <FormField Label="Qué NO incluye" Type="textarea" Rows="5"
+                       HelpText="Un ítem por línea."
+                       Placeholder="Entradas a la reserva&#10;Propinas&#10;Gastos personales"
+                       @bind-Value="noIncluyeText" />
         </div>
-    }
-    <button type="button" class="btn btn-outline-primary btn-sm mb-3" @onclick="AddLlevar">+ Qué llevar</button>
+        <FormField Label="Qué llevar" Type="textarea" Rows="4"
+                   HelpText="Un ítem por línea."
+                   Placeholder="Ropa abrigadora&#10;Bloqueador solar&#10;Agua y snacks"
+                   @bind-Value="llevarText" />
+    </SectionCard>
 
-    <h5 class="mt-3">Galería (URLs, máx. 8)</h5>
-    @for (var i = 0; i < Galeria.Count; i++)
-    {
-        var gi = i;
-        <div class="d-flex gap-2 mb-1">
-            <input class="form-control form-control-sm" @bind="Galeria[gi]" placeholder="URL foto" />
-            <button type="button" class="btn btn-outline-secondary btn-sm" title="Principal" @onclick="() => SetMainFromGallery(gi)">★</button>
-            <button type="button" class="btn btn-outline-danger btn-sm" @onclick="() => Galeria.RemoveAt(gi)">✕</button>
-        </div>
-    }
-    @if (Galeria.Count < 8)
-    {
-        <button type="button" class="btn btn-outline-primary btn-sm" @onclick="AddGaleriaUrl">+ Foto URL</button>
-    }
+    <SectionCard Title="Galería de fotos">
+        <FormField Label="URLs de imágenes" Type="textarea" Rows="4"
+                   HelpText="Pega una URL por línea (máx. 8). La foto marcada con ★ será la principal."
+                   Placeholder="https://...foto1.jpg&#10;https://...foto2.jpg"
+                   @bind-Value="galeriaText" />
 
-    <div class="mt-3">
-        <button type="button" class="btn btn-primary" disabled="@Saving" @onclick="Submit">@(Saving ? "Guardando..." : (TourId.HasValue ? "Guardar cambios" : "+ Publicar tour"))</button>
-        @if (TourId.HasValue)
+        @if (CloudinaryEnabled)
         {
-            <button type="button" class="btn btn-link" @onclick="OnCancelEdit">Cancelar edición</button>
+            <div class="tour-editor-upload">
+                <label class="ds-btn ds-btn-secondary">
+                    📷 Subir foto
+                    <InputFile OnChange="OnUploadPhoto" accept="image/*" class="ds-file-hidden" />
+                </label>
+                @if (uploading) { <span class="text-muted small">Subiendo...</span> }
+            </div>
         }
+
+        @{
+            var urls = ParseLines(galeriaText).Take(8).ToList();
+        }
+        @if (urls.Count > 0)
+        {
+            <div class="tour-editor-gallery">
+                @foreach (var url in urls)
+                {
+                    var u = url;
+                    <div class="tour-editor-thumb @(u == imageUrlStr ? "is-main" : "")">
+                        <div class="tour-editor-thumb-img" style="background-image:url('@CloudinaryHelper.Optimize(u, 200)')"></div>
+                        @if (u == imageUrlStr) { <span class="tour-editor-thumb-main">★ Principal</span> }
+                        <div class="tour-editor-thumb-actions">
+                            <button type="button" title="Marcar principal" @onclick="() => imageUrlStr = u">★</button>
+                            <button type="button" title="Eliminar" @onclick="() => RemoveGalleryUrl(u)">✕</button>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </SectionCard>
+
+    <div class="tour-editor-footer">
+        <AppButton Variant="ghost" OnClick="OnCancelEdit">Cancelar</AppButton>
+        <AppButton Variant="primary" Icon="💾" Loading="Saving" OnClick="Submit">@(TourId.HasValue ? "Guardar cambios" : "Publicar tour")</AppButton>
     </div>
-</section>
+</div>
 
 @code {
     [Parameter] public int? TourId { get; set; }
@@ -102,45 +128,148 @@
     [Parameter] public EventCallback<CreateTourRequest> OnSave { get; set; }
     [Parameter] public EventCallback OnCancelEdit { get; set; }
 
-    private List<TourItineraryStepDto> Itinerario { get; set; } = [];
-    private List<string> Incluye { get; set; } = [];
-    private List<string> NoIncluye { get; set; } = [];
-    private List<string> Llevar { get; set; } = [];
-    private List<string> Galeria { get; set; } = [];
+    private string titleStr = "";
+    private string descStr = "";
+    private string typeStr = "FullDay";
+    private string deptStr = "";
+    private string locStr = "";
+    private string partidaStr = "";
+    private string retornoStr = "";
+    private string priceStr = "";
+    private string capStr = "";
+    private string dateStr = "";
+    private string horaSalidaStr = "";
+    private string duracionStr = "";
+    private string imageUrlStr = "";
+    private string itinerarioText = "";
+    private string incluyeText = "";
+    private string noIncluyeText = "";
+    private string llevarText = "";
+    private string galeriaText = "";
+
+    private bool uploading;
+    private int _loadedFor = -2;
+
+    private bool CloudinaryEnabled => true;
 
     protected override void OnParametersSet()
     {
-        Itinerario = Model.Itinerario?.Select(s => new TourItineraryStepDto
-        {
-            Hora = s.Hora, Titulo = s.Titulo, Descripcion = s.Descripcion
-        }).ToList() ?? [];
-        Incluye = Model.QueIncluye?.ToList() ?? [];
-        NoIncluye = Model.QueNoIncluye?.ToList() ?? [];
-        Llevar = Model.QueLlevar?.ToList() ?? [];
-        Galeria = Model.Galeria?.ToList() ?? (string.IsNullOrWhiteSpace(Model.ImageUrl) ? [] : [Model.ImageUrl]);
+        var key = TourId ?? -1;
+        if (_loadedFor == key) return;
+        _loadedFor = key;
+
+        titleStr = Model.Title;
+        descStr = Model.Description;
+        typeStr = string.IsNullOrWhiteSpace(Model.AdventureType) ? "FullDay" : Model.AdventureType;
+        deptStr = Model.Department;
+        locStr = Model.Location;
+        partidaStr = Model.PuntoPartida ?? "";
+        retornoStr = Model.PuntoRetorno ?? "";
+        priceStr = Model.Price > 0 ? Model.Price.ToString(System.Globalization.CultureInfo.InvariantCulture) : "";
+        capStr = Model.Capacity > 0 ? Model.Capacity.ToString() : "";
+        dateStr = (Model.Date == default ? DateTime.Today.AddDays(7) : Model.Date).ToString("yyyy-MM-dd");
+        horaSalidaStr = Model.HoraSalida ?? "";
+        duracionStr = Model.DuracionAproximada ?? "";
+
+        var galeria = Model.Galeria?.ToList() ?? [];
+        if (galeria.Count == 0 && !string.IsNullOrWhiteSpace(Model.ImageUrl)) galeria.Add(Model.ImageUrl);
+        galeriaText = string.Join("\n", galeria);
+        imageUrlStr = string.IsNullOrWhiteSpace(Model.ImageUrl) ? (galeria.FirstOrDefault() ?? "") : Model.ImageUrl;
+
+        itinerarioText = string.Join("\n", (Model.Itinerario ?? []).Select(FormatStep));
+        incluyeText = string.Join("\n", Model.QueIncluye ?? []);
+        noIncluyeText = string.Join("\n", Model.QueNoIncluye ?? []);
+        llevarText = string.Join("\n", Model.QueLlevar ?? []);
     }
 
-    private void AddItinerary() => Itinerario.Add(new TourItineraryStepDto());
-    private void RemoveItinerary(int idx) => Itinerario.RemoveAt(idx);
-    private void AddIncluye() => Incluye.Add("");
-    private void AddNoIncluye() => NoIncluye.Add("");
-    private void AddLlevar() => Llevar.Add("");
-    private void AddGaleriaUrl() => Galeria.Add("");
-    private void SetMainFromGallery(int idx)
+    private static string FormatStep(TourItineraryStepDto s)
     {
-        if (idx >= 0 && idx < Galeria.Count && !string.IsNullOrWhiteSpace(Galeria[idx]))
-            Model.ImageUrl = Galeria[idx];
+        var parts = new List<string>();
+        if (!string.IsNullOrWhiteSpace(s.Hora)) parts.Add(s.Hora.Trim());
+        if (!string.IsNullOrWhiteSpace(s.Titulo)) parts.Add(s.Titulo.Trim());
+        if (!string.IsNullOrWhiteSpace(s.Descripcion)) parts.Add(s.Descripcion.Trim());
+        return string.Join(" - ", parts);
+    }
+
+    private static List<string> ParseLines(string? text) =>
+        (text ?? "")
+            .Replace("\r\n", "\n").Replace('\r', '\n')
+            .Split('\n')
+            .Select(l => l.Trim())
+            .Where(l => l.Length > 0)
+            .ToList();
+
+    private static List<TourItineraryStepDto> ParseItinerary(string? text) =>
+        ParseLines(text).Select(line =>
+        {
+            var parts = line.Split(" - ", 3, StringSplitOptions.None);
+            if (parts.Length == 1)
+                return new TourItineraryStepDto { Titulo = parts[0].Trim() };
+            return new TourItineraryStepDto
+            {
+                Hora = parts[0].Trim(),
+                Titulo = parts.Length > 1 ? parts[1].Trim() : "",
+                Descripcion = parts.Length > 2 ? parts[2].Trim() : ""
+            };
+        }).ToList();
+
+    private void RemoveGalleryUrl(string url)
+    {
+        var urls = ParseLines(galeriaText).Where(u => u != url).ToList();
+        galeriaText = string.Join("\n", urls);
+        if (imageUrlStr == url) imageUrlStr = urls.FirstOrDefault() ?? "";
+    }
+
+    private async Task OnUploadPhoto(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file is null) return;
+        var urls = ParseLines(galeriaText);
+        if (urls.Count >= 8) { Toast.ShowWarning("Máximo 8 fotos."); return; }
+        uploading = true;
+        try
+        {
+            await using var stream = file.OpenReadStream(5_000_000);
+            var up = await Api.UploadImageAsync(stream, file.Name, "tours");
+            if (up.Success && up.Data is not null)
+            {
+                urls.Add(up.Data);
+                galeriaText = string.Join("\n", urls);
+                if (string.IsNullOrWhiteSpace(imageUrlStr)) imageUrlStr = up.Data;
+                Toast.ShowSuccess("Foto subida.");
+            }
+            else Toast.ShowError(up.ErrorMessage ?? "No se pudo subir la foto.");
+        }
+        finally { uploading = false; }
     }
 
     private async Task Submit()
     {
-        Model.Itinerario = Itinerario.Where(s => !string.IsNullOrWhiteSpace(s.Titulo) || !string.IsNullOrWhiteSpace(s.Hora)).ToList();
-        Model.QueIncluye = Incluye.Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
-        Model.QueNoIncluye = NoIncluye.Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
-        Model.QueLlevar = Llevar.Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
-        Model.Galeria = Galeria.Where(s => !string.IsNullOrWhiteSpace(s)).Take(8).ToList();
-        if (string.IsNullOrWhiteSpace(Model.ImageUrl) && Model.Galeria.Count > 0)
-            Model.ImageUrl = Model.Galeria[0];
+        Model.Title = titleStr.Trim();
+        Model.Description = descStr.Trim();
+        Model.AdventureType = typeStr;
+        Model.Department = deptStr.Trim();
+        Model.Location = locStr.Trim();
+        Model.PuntoPartida = string.IsNullOrWhiteSpace(partidaStr) ? null : partidaStr.Trim();
+        Model.PuntoRetorno = string.IsNullOrWhiteSpace(retornoStr) ? null : retornoStr.Trim();
+        Model.HoraSalida = string.IsNullOrWhiteSpace(horaSalidaStr) ? null : horaSalidaStr.Trim();
+        Model.DuracionAproximada = string.IsNullOrWhiteSpace(duracionStr) ? null : duracionStr.Trim();
+
+        Model.Price = decimal.TryParse(priceStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var p) ? p : 0;
+        Model.Capacity = int.TryParse(capStr, out var c) && c > 0 ? c : 1;
+        Model.Date = DateTime.TryParse(dateStr, out var dt) ? dt : DateTime.Today.AddDays(7);
+
+        Model.Itinerario = ParseItinerary(itinerarioText);
+        Model.QueIncluye = ParseLines(incluyeText);
+        Model.QueNoIncluye = ParseLines(noIncluyeText);
+        Model.QueLlevar = ParseLines(llevarText);
+
+        var galeria = ParseLines(galeriaText).Take(8).ToList();
+        Model.Galeria = galeria;
+        Model.ImageUrl = !string.IsNullOrWhiteSpace(imageUrlStr) && galeria.Contains(imageUrlStr)
+            ? imageUrlStr
+            : galeria.FirstOrDefault();
+
         await OnSave.InvokeAsync(Model);
     }
 }

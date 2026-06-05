@@ -1681,3 +1681,77 @@ a:hover { color: var(--dp-primary-light); }
 @media (max-width: 991px) {
     .tour-gallery-main { height: 300px; }
 }
+
+/* ===== Panel de agencia (rediseño 4/5) ===== */
+.ds-form-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.85rem;
+    margin-bottom: 0.5rem;
+}
+@media (min-width: 640px) { .ds-form-grid { grid-template-columns: 1fr 1fr; } }
+.ds-file-hidden, .ops-file-hidden { display: none; }
+.ds-card-flush { padding: 0 !important; overflow: hidden; }
+
+.ds-metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.85rem;
+    margin: 1rem 0 1.25rem;
+}
+@media (min-width: 768px) { .ds-metrics-grid { grid-template-columns: repeat(4, 1fr); } }
+
+.agency-brand-name-row { display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap; margin-bottom: 0.15rem; }
+.agency-brand-name-row .agency-brand-name { margin: 0; }
+.dash-quick-links { display: flex; flex-wrap: wrap; gap: 0.65rem; margin-top: 0.5rem; }
+
+/* Editor de tour */
+.tour-editor { display: flex; flex-direction: column; gap: 1.25rem; }
+.tour-editor-bar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    background: var(--dp-surface);
+    border: 1px solid rgba(0,77,64,0.1);
+    border-radius: var(--dp-radius);
+    box-shadow: var(--dp-shadow);
+    padding: 0.85rem 1.1rem;
+}
+.tour-editor-eyebrow { display: block; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; color: var(--dp-primary-light); }
+.tour-editor-bar-title h2 { margin: 0; font-size: 1.2rem; color: var(--dp-primary-dark); font-weight: 800; }
+.tour-editor-bar-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.tour-editor-footer { display: flex; justify-content: flex-end; gap: 0.5rem; flex-wrap: wrap; }
+.tour-editor-upload { margin: 0.75rem 0; display: flex; align-items: center; gap: 0.75rem; }
+.tour-editor-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 0.65rem; margin-top: 0.85rem; }
+.tour-editor-thumb { position: relative; border-radius: 10px; overflow: hidden; border: 2px solid transparent; box-shadow: var(--dp-shadow); }
+.tour-editor-thumb.is-main { border-color: var(--dp-primary); }
+.tour-editor-thumb-img { height: 90px; background-size: cover; background-position: center; }
+.tour-editor-thumb-main { position: absolute; top: 6px; left: 6px; background: var(--dp-primary); color: #fff; font-size: 0.65rem; font-weight: 700; padding: 0.15rem 0.4rem; border-radius: 6px; }
+.tour-editor-thumb-actions { position: absolute; bottom: 0; left: 0; right: 0; display: flex; }
+.tour-editor-thumb-actions button {
+    flex: 1; border: none; background: rgba(0,0,0,0.55); color: #fff;
+    font-size: 0.85rem; padding: 0.25rem 0; cursor: pointer;
+}
+.tour-editor-thumb-actions button:hover { background: rgba(0,0,0,0.78); }
+
+/* Lista Mis tours */
+.ds-tours-manage-grid { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+@media (min-width: 600px) { .ds-tours-manage-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 992px) { .ds-tours-manage-grid { grid-template-columns: repeat(3, 1fr); } }
+.manage-tour-card { display: flex; flex-direction: column; }
+.manage-tour-img { height: 130px; background-size: cover; background-position: center; position: relative; }
+.manage-tour-flag { position: absolute; top: 8px; left: 8px; background: var(--dp-muted); color: #fff; font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 6px; }
+.manage-tour-body { padding: 0.9rem 1rem 1rem; display: flex; flex-direction: column; gap: 0.3rem; }
+.manage-tour-body h4 { margin: 0; font-size: 1rem; font-weight: 700; color: var(--dp-primary-dark); }
+.manage-tour-meta { margin: 0; font-size: 0.78rem; color: var(--dp-primary-light); font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; }
+.manage-tour-stats { display: flex; justify-content: space-between; gap: 0.5rem; font-size: 0.85rem; color: var(--dp-muted); margin: 0.25rem 0 0.6rem; }
+.manage-tour-stats strong { color: var(--dp-primary); }
+.manage-tour-actions { display: flex; gap: 0.5rem; margin-top: auto; }
+.manage-tour-actions .ds-btn { flex: 1; }
+
+.ops-add-photo-row { display: flex; align-items: center; gap: 0.75rem; margin: 0.5rem 0 0.85rem; }

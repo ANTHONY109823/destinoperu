@@ -1,6 +1,7 @@
 @using DestinoPeruBlazor.Helpers
 @using DestinoPeruBlazor.Models
 @using DestinoPeruBlazor.Services
+@using DestinoPeruBlazor.Components.UI
 @using Microsoft.AspNetCore.Components.Forms
 @inject ApiService Api
 @inject ToastService Toast
@@ -38,22 +39,26 @@
 
     @if (showAddTour && CanManageTours)
     {
-        <div class="dash-panel ops-add-tour-box">
-            <h4>Agregar tour / salida</h4>
-            <div class="admin-form-grid">
-                <input class="form-control" placeholder="Título *" @bind="quickTour.Title" />
-                <input class="form-control" placeholder="Departamento" @bind="quickTour.Department" />
-                <input type="number" class="form-control" placeholder="Precio S/" @bind="quickTour.Price" />
-                <input type="number" class="form-control" placeholder="Asientos bus" @bind="quickTour.Capacity" title="Total asientos del bus" />
-            </div>
-            <div class="d-flex gap-2 align-items-center flex-wrap">
-                <InputFile OnChange="OnQuickTourPhoto" accept="image/*" class="form-control form-control-sm" style="max-width:200px" />
-                @if (!string.IsNullOrEmpty(quickTour.ImageUrl))
-                {
-                    <img src="@CloudinaryHelper.Optimize(quickTour.ImageUrl, 80)" class="ops-thumb-preview" alt="" />
-                }
-            </div>
-            <button type="button" class="btn btn-primary btn-sm" disabled="@addingTour" @onclick="PublishQuickTour">Publicar tour</button>
+        <div class="ops-add-tour-box">
+            <SectionCard Title="Agregar salida rápida" Subtitle="Crea una salida con lo esencial; complétala luego en «Mis tours».">
+                <div class="ds-form-grid">
+                    <FormField Label="Título" Required="true" Placeholder="Full Day Laguna Humantay" @bind-Value="quickTour.Title" />
+                    <FormField Label="Departamento" Placeholder="Cusco" @bind-Value="quickTour.Department" />
+                    <FormField Label="Precio por persona (S/)" Type="number" Placeholder="99" @bind-Value="qtPriceStr" />
+                    <FormField Label="Asientos del bus" Type="number" Placeholder="28" @bind-Value="qtCapStr" />
+                </div>
+                <div class="ops-add-photo-row">
+                    <label class="ds-btn ds-btn-secondary">
+                        📷 Subir foto
+                        <InputFile OnChange="OnQuickTourPhoto" accept="image/*" class="ops-file-hidden" />
+                    </label>
+                    @if (!string.IsNullOrEmpty(quickTour.ImageUrl))
+                    {
+                        <img src="@CloudinaryHelper.Optimize(quickTour.ImageUrl, 80)" class="ops-thumb-preview" alt="" />
+                    }
+                </div>
+                <AppButton Variant="primary" Icon="➕" Loading="addingTour" OnClick="PublishQuickTour">Publicar salida</AppButton>
+            </SectionCard>
         </div>
     }
 
@@ -69,7 +74,7 @@
             {
                 <div class="ops-payment-card">
                     <div><strong>@r.TourTitle</strong><p class="mb-0 text-muted small">@r.UserName · S/ @r.Total.ToString("N2")</p></div>
-                    <button type="button" class="btn btn-primary btn-sm" @onclick="() => OnApprove.InvokeAsync(r.Id)">Verificar</button>
+                    <AppButton Variant="primary" OnClick="@(() => OnApprove.InvokeAsync(r.Id))">Verificar</AppButton>
                 </div>
             }
         }
@@ -142,6 +147,8 @@
     private bool showAddTour;
     private bool addingTour;
     private CreateTourRequest quickTour = new() { Date = DateTime.Today.AddDays(14), AdventureType = "FullDay", Capacity = 28, Price = 99 };
+    private string qtPriceStr = "99";
+    private string qtCapStr = "28";
     private int PendingCount => PendingReservations.Count;
 
     private int GetCap(int id) => CapacityEdits.TryGetValue(id, out var v) ? v : 0;
@@ -207,12 +214,15 @@
     {
         if (string.IsNullOrWhiteSpace(quickTour.Title)) { Toast.ShowWarning("Título obligatorio."); return; }
         if (string.IsNullOrWhiteSpace(quickTour.Description)) quickTour.Description = quickTour.Title;
+        quickTour.Price = decimal.TryParse(qtPriceStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var p) && p > 0 ? p : 99;
+        quickTour.Capacity = int.TryParse(qtCapStr, out var c) && c > 0 ? c : 28;
         addingTour = true;
         var r = await Api.CreateAgencyTourAsync(quickTour);
         if (r.Success)
         {
             Toast.ShowSuccess("Tour publicado.");
             quickTour = new() { Date = DateTime.Today.AddDays(14), AdventureType = "FullDay", Capacity = 28, Price = 99 };
+            qtPriceStr = "99"; qtCapStr = "28";
             showAddTour = false;
             await OnToursChanged.InvokeAsync();
         }

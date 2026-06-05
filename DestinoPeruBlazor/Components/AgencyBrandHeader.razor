@@ -1,13 +1,17 @@
 @using DestinoPeruBlazor.Models
+@using DestinoPeruBlazor.Components.UI
 
 @if (Profile is not null)
 {
     <div class="agency-brand-header">
         <div class="agency-brand-logo" style="@LogoStyle"></div>
         <div class="agency-brand-info">
-            <h1 class="agency-brand-name">@Profile.Name</h1>
+            <div class="agency-brand-name-row">
+                <h1 class="agency-brand-name">@Profile.Name</h1>
+                <Badge Variant="@StatusVariant">@StatusLabel</Badge>
+            </div>
             <p class="agency-brand-meta">
-                RUC @Profile.RUC · @Profile.OperatingDepartment · <span class="badge-status">@Profile.Status</span>
+                RUC @Profile.RUC · @Profile.OperatingDepartment
             </p>
             @if (Subtitle is not null)
             {
@@ -20,6 +24,23 @@
 @code {
     [Parameter] public AgencyProfileDto? Profile { get; set; }
     [Parameter] public string? Subtitle { get; set; }
+
+    private string StatusVariant => (Profile?.Status ?? "").ToLowerInvariant() switch
+    {
+        "approved" or "aprobado" or "active" or "activo" => "success",
+        "pending" or "pendiente" => "warning",
+        "suspended" or "suspendido" or "rejected" or "rechazado" => "neutral",
+        _ => "info"
+    };
+
+    private string StatusLabel => (Profile?.Status ?? "").ToLowerInvariant() switch
+    {
+        "approved" or "aprobado" or "active" or "activo" => "Aprobada",
+        "pending" or "pendiente" => "Pendiente",
+        "suspended" or "suspendido" => "Suspendida",
+        "rejected" or "rechazado" => "Rechazada",
+        _ => string.IsNullOrWhiteSpace(Profile?.Status) ? "Activa" : Profile!.Status
+    };
 
     private string LogoStyle => string.IsNullOrWhiteSpace(Profile?.LogoUrl)
         ? "background: linear-gradient(135deg, #004D40, #00695C);"

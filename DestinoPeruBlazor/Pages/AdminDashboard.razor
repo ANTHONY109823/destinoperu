@@ -1,6 +1,7 @@
 @page "/admin"
 @using DestinoPeruBlazor.Models
 @using DestinoPeruBlazor.Services
+@using DestinoPeruBlazor.Components.UI
 @inject ApiService Api
 @inject AuthStateService Auth
 @inject NavigationManager Nav
@@ -21,10 +22,9 @@
 
     @if (!CanAccess)
     {
-        <div class="panel-access-denied alert alert-warning">
-            Acceso solo para administradores de agencia.
-            <a class="btn btn-primary btn-sm ms-2" href="/login">Ingresar</a>
-        </div>
+        <DestinoPeruBlazor.Components.UI.EmptyState Icon="🔒" Title="Acceso restringido" Message="Esta sección es solo para administradores de agencia.">
+            <Action><AppButton Variant="primary" OnClick="@(() => Nav.NavigateTo("/login"))">Ingresar</AppButton></Action>
+        </DestinoPeruBlazor.Components.UI.EmptyState>
     }
     else if (loading)
     {
@@ -32,50 +32,148 @@
     }
     else
     {
-        <AgencyBrandHeader Profile="profile" Subtitle="Tu agencia publica tours en la categoría Tours del sitio · Hasta 5 vendedores" />
+        <AgencyBrandHeader Profile="profile" Subtitle="Publicas tours en la categoría Tours del sitio · Hasta 5 vendedores" />
 
         @if (!string.IsNullOrEmpty(error))
         {
             <div class="alert alert-warning d-flex flex-wrap gap-2 align-items-center">
                 @error
-                <button class="btn btn-outline-primary btn-sm" @onclick="Load">Reintentar</button>
+                <AppButton Variant="secondary" OnClick="Load">Reintentar</AppButton>
             </div>
         }
 
-        @if (dashboard is not null)
-        {
-            <div class="metrics-grid">
-                <div class="metric-card"><span class="metric-value">@dashboard.TotalTours</span><span class="metric-label">Tours activos</span></div>
-                <div class="metric-card metric-warn"><span class="metric-value">@dashboard.PendingReservations</span><span class="metric-label">Pendientes</span></div>
-                <div class="metric-card"><span class="metric-value">@dashboard.ConfirmedReservations</span><span class="metric-label">Confirmadas</span></div>
-                <div class="metric-card metric-highlight"><span class="metric-value">S/ @dashboard.TotalRevenue.ToString("N0")</span><span class="metric-label">Recaudado agencia</span></div>
-            </div>
-        }
+        <TabBar Tabs="Tabs" Active="tab" OnTabChange="OnTabChange" />
 
-        <div class="panel-tabs">
-            <button type="button" class="panel-tab @(tab == "team" ? "active" : "")" @onclick='() => tab = "team"'>+ Vendedores</button>
-            <button type="button" class="panel-tab @(tab == "reservations" ? "active" : "")" @onclick='() => tab = "reservations"'>Reservas</button>
-            <button type="button" class="panel-tab @(tab == "tours" ? "active" : "")" @onclick='() => tab = "tours"'>Mis tours</button>
-            <button type="button" class="panel-tab @(tab == "ops" ? "active" : "")" @onclick='() => tab = "ops"'>Operaciones</button>
-            <button type="button" class="panel-tab @(tab == "brand" ? "active" : "")" @onclick='() => tab = "brand"'>Marca</button>
-        </div>
-
-        @if (tab == "team")
+        @if (tab == "home")
         {
-            <section class="dash-panel dash-panel-highlight">
-                <h3>Crear vendedor (máx. 5)</h3>
-                <p class="text-muted small">Métricas individuales por vendedor en el listado inferior.</p>
-                <div class="admin-form-grid">
-                    <input class="form-control" placeholder="Nombre en operaciones *" @bind="newVendor.DisplayName" />
-                    <input class="form-control" type="email" placeholder="Email del vendedor *" @bind="newVendor.Email" />
-                    <input class="form-control" type="password" placeholder="Contraseña *" @bind="newVendor.Password" />
+            @if (dashboard is not null)
+            {
+                <div class="ds-metrics-grid">
+                    <MetricCard Value="@dashboard.TotalTours.ToString()" Label="Tours activos" Icon="🗺️" />
+                    <MetricCard Value="@dashboard.PendingReservations.ToString()" Label="Reservas pendientes" Icon="⏳" />
+                    <MetricCard Value="@dashboard.ConfirmedReservations.ToString()" Label="Reservas confirmadas" Icon="✅" />
+                    <MetricCard Value="@($"S/ {dashboard.TotalRevenue.ToString("N0")}")" Label="Recaudado por la agencia" Icon="💰" />
                 </div>
-                <button class="btn btn-primary" @onclick="CreateVendor">Crear vendedor</button>
+            }
+            <SectionCard Title="Resumen" Subtitle="Bienvenido a tu panel de agencia">
+                <p class="mb-2">Desde aquí gestionas tus tours, reservas, vendedores y la marca pública de tu agencia.</p>
+                <div class="dash-quick-links">
+                    <AppButton Variant="primary" Icon="➕" OnClick="@(() => { tab = "tours"; creatingTour = true; editingTourId = null; })">Publicar tour nuevo</AppButton>
+                    <AppButton Variant="secondary" Icon="📋" OnClick="@(() => tab = "reservations")">Ver reservas</AppButton>
+                </div>
+            </SectionCard>
+        }
+        else if (tab == "tours")
+        {
+            @if (editingTourId is not null)
+            {
+                <TourEditorForm TourId="editingTourId" Model="editTourModel" Saving="savingTour" OnSave="SaveEditTourFromEditor" OnCancelEdit="CancelEditTour" />
+            }
+            else if (creatingTour)
+            {
+                <TourEditorForm Model="newTour" Saving="savingTour" OnSave="CreateTourFromEditor" OnCancelEdit="CancelCreateTour" />
+            }
+            else
+            {
+                <SectionCard Title="@($"Mis tours ({agencyTours.Count})")" Subtitle="Gestiona tus publicaciones">
+                    <HeaderAction><AppButton Variant="primary" Icon="➕" OnClick="StartCreateTour">Nuevo tour</AppButton></HeaderAction>
+                    <ChildContent>
+                        @if (agencyTours.Count == 0)
+                        {
+                            <DestinoPeruBlazor.Components.UI.EmptyState Icon="🗺️" Title="Aún no tienes tours"
+                                Message="Publica tu primera experiencia para que aparezca en el catálogo.">
+                                <Action><AppButton Variant="primary" Icon="➕" OnClick="StartCreateTour">Publicar tour</AppButton></Action>
+                            </DestinoPeruBlazor.Components.UI.EmptyState>
+                        }
+                        else
+                        {
+                            <div class="ds-tours-manage-grid">
+                                @foreach (var t in agencyTours)
+                                {
+                                    <AppCard Class="ds-card-flush manage-tour-card">
+                                        <div class="manage-tour-img" style="@ThumbStyle(t)">
+                                            @if (!t.IsActive) { <span class="manage-tour-flag">Inactivo</span> }
+                                        </div>
+                                        <div class="manage-tour-body">
+                                            <h4>@t.Title</h4>
+                                            <p class="manage-tour-meta">@t.Department · @t.AdventureType</p>
+                                            <div class="manage-tour-stats">
+                                                <span><strong>S/ @t.Price.ToString("N0")</strong> p/persona</span>
+                                                <span><strong>@t.AvailableCapacity</strong>/@t.Capacity cupos</span>
+                                            </div>
+                                            <div class="manage-tour-actions">
+                                                <AppButton Variant="secondary" Icon="✏️" OnClick="@(() => StartEditTour(t))">Editar</AppButton>
+                                                <AppButton Variant="danger" Icon="🗑️" OnClick="@(() => RequestDeleteTour(t))">Eliminar</AppButton>
+                                            </div>
+                                        </div>
+                                    </AppCard>
+                                }
+                            </div>
+                        }
+                    </ChildContent>
+                </SectionCard>
+            }
 
-                @if (dashboard?.VendorSales.Count > 0)
+            <DoubleDeleteConfirm Visible="deleteTourId.HasValue"
+                                 Title="Eliminar tour"
+                                 Message="¿Estás seguro de eliminar este tour? Esta acción no se puede deshacer."
+                                 Step2Message="Confirmación final. Escribe ELIMINAR para confirmar el borrado."
+                                 ConfirmPlaceholder="ELIMINAR"
+                                 RequiredText="ELIMINAR"
+                                 OnConfirm="ConfirmDeleteTour"
+                                 OnCancel="CancelDeleteTour" />
+        }
+        else if (tab == "reservations")
+        {
+            <SectionCard Title="Reservas" Subtitle="Aprueba o rechaza las solicitudes de tus clientes">
+                @if (reservations.Count == 0)
                 {
-                    <hr />
-                    <h4>Equipo y ventas</h4>
+                    <DestinoPeruBlazor.Components.UI.EmptyState Icon="📭" Title="Sin reservas todavía" Message="Cuando un cliente reserve, aparecerá aquí." />
+                }
+                else
+                {
+                    <div class="partner-table-wrap">
+                        <table class="partner-table">
+                            <thead><tr><th>Tour</th><th>Cliente</th><th>Total</th><th>Estado</th><th></th></tr></thead>
+                            <tbody>
+                                @foreach (var r in reservations)
+                                {
+                                    <tr>
+                                        <td>@r.TourTitle</td>
+                                        <td>@r.UserName</td>
+                                        <td>S/ @r.Total.ToString("N2")</td>
+                                        <td><Badge Variant="@StatusVariant(r.Status)">@StatusLabel(r.Status)</Badge></td>
+                                        <td>
+                                            @if (r.Status == "Pending")
+                                            {
+                                                <div class="d-flex gap-1">
+                                                    <AppButton Variant="primary" OnClick="@(() => Approve(r.Id))">Aprobar</AppButton>
+                                                    <AppButton Variant="danger" OnClick="@(() => Reject(r.Id))">Rechazar</AppButton>
+                                                </div>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </SectionCard>
+        }
+        else if (tab == "team")
+        {
+            <SectionCard Title="Crear vendedor" Subtitle="Hasta 5 vendedores. Cada uno tiene métricas individuales.">
+                <div class="ds-form-grid">
+                    <FormField Label="Nombre en operaciones" Required="true" Placeholder="Nombre visible del vendedor" @bind-Value="newVendor.DisplayName" />
+                    <FormField Label="Email del vendedor" Type="email" Required="true" Placeholder="vendedor@agencia.com" @bind-Value="newVendor.Email" />
+                    <FormField Label="Contraseña" Type="password" Required="true" HelpText="Mínimo 6 caracteres." @bind-Value="newVendor.Password" />
+                </div>
+                <AppButton Variant="primary" Icon="➕" OnClick="CreateVendor">Crear vendedor</AppButton>
+            </SectionCard>
+
+            @if (dashboard?.VendorSales.Count > 0)
+            {
+                <SectionCard Title="Equipo y ventas">
                     <div class="vendor-metrics-grid">
                         @foreach (var v in dashboard!.VendorSales)
                         {
@@ -86,82 +184,8 @@
                             </div>
                         }
                     </div>
-                }
-            </section>
-        }
-        else if (tab == "reservations")
-        {
-            <div class="partner-table-wrap">
-                @if (reservations.Count == 0) { <p class="text-muted">Sin reservas.</p> }
-                else
-                {
-                    <table class="partner-table">
-                        <thead><tr><th>Tour</th><th>Cliente</th><th>Total</th><th>Estado</th><th></th></tr></thead>
-                        <tbody>
-                            @foreach (var r in reservations)
-                            {
-                                <tr>
-                                    <td>@r.TourTitle</td>
-                                    <td>@r.UserName</td>
-                                    <td>S/ @r.Total.ToString("N2")</td>
-                                    <td>@r.Status</td>
-                                    <td>
-                                        @if (r.Status == "Pending")
-                                        {
-                                            <button class="btn btn-primary btn-sm" @onclick="() => Approve(r.Id)">Aprobar</button>
-                                            <button class="btn btn-outline-danger btn-sm" @onclick="() => Reject(r.Id)">Rechazar</button>
-                                        }
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                }
-            </div>
-        }
-        else if (tab == "tours")
-        {
-            @if (editingTourId is null)
-            {
-                <TourEditorForm Model="newTour" Saving="savingTour" OnSave="CreateTourFromEditor" />
+                </SectionCard>
             }
-            else
-            {
-                <TourEditorForm TourId="editingTourId" Model="editTourModel" Saving="savingTour" OnSave="SaveEditTourFromEditor" OnCancelEdit="CancelEditTour" />
-            }
-
-            <section class="dash-panel mt-3">
-                <h3>Mis tours (@agencyTours.Count)</h3>
-                @if (agencyTours.Count == 0)
-                {
-                    <p class="text-muted">Aún no tienes tours. Publica el primero con el formulario superior.</p>
-                }
-                else
-                {
-                    <div class="agency-tour-manage-grid">
-                        @foreach (var t in agencyTours)
-                        {
-                            <article class="agency-tour-manage-card @(t.IsActive ? "" : "inactive")">
-                                <h6>@t.Title @if (!t.IsActive) { <span class="badge bg-secondary">Inactivo</span> }</h6>
-                                <p class="small text-muted mb-1">@t.Department · S/ @t.Price.ToString("N0") · @t.AvailableCapacity/@t.Capacity cupos</p>
-                                <div class="d-flex gap-1 flex-wrap">
-                                    <button type="button" class="btn btn-outline-primary btn-sm" @onclick="() => StartEditTour(t)">Editar completo</button>
-                                    <button type="button" class="btn btn-outline-danger btn-sm" @onclick="() => RequestDeleteTour(t)">Eliminar tour</button>
-                                </div>
-                            </article>
-                        }
-                    </div>
-                }
-            </section>
-
-            <DoubleDeleteConfirm Visible="deleteTourId.HasValue"
-                                 Title="Eliminar tour"
-                                 Message="¿Estás seguro de eliminar este tour? Esta acción no se puede deshacer."
-                                 Step2Message="Confirmación final. Escribe ELIMINAR para confirmar el borrado."
-                                 ConfirmPlaceholder="ELIMINAR"
-                                 RequiredText="ELIMINAR"
-                                 OnConfirm="ConfirmDeleteTour"
-                                 OnCancel="CancelDeleteTour" />
         }
         else if (tab == "ops")
         {
@@ -174,20 +198,21 @@
                                   OnApprove="Approve"
                                   OnToursChanged="Load" />
         }
-        else
+        else if (tab == "brand")
         {
-            <section class="dash-panel">
-                <h3>Perfil público y carrusel</h3>
-                <div class="admin-form-grid">
-                    <input class="form-control" placeholder="Nombre comercial" @bind="profileForm.Name" />
-                    <input class="form-control" placeholder="URL logo" @bind="profileForm.LogoUrl" />
-                    <input class="form-control" placeholder="Departamento operación" @bind="profileForm.OperatingDepartment" />
-                    <input class="form-control" placeholder="Email contacto" @bind="profileForm.ContactEmail" />
-                    <input class="form-control" placeholder="Teléfono" @bind="profileForm.ContactPhone" />
+            <SectionCard Title="Marca y perfil público" Subtitle="Estos datos se muestran a tus clientes.">
+                <div class="ds-form-grid">
+                    <FormField Label="Nombre comercial" Placeholder="Nombre de tu agencia" @bind-Value="profileForm.Name" />
+                    <FormField Label="Departamento de operación" Placeholder="Cusco" @bind-Value="profileForm.OperatingDepartment" />
+                    <FormField Label="Email de contacto" Type="email" Placeholder="contacto@agencia.com" @bind-Value="profileForm.ContactEmail" />
+                    <FormField Label="Teléfono" Placeholder="+51 999 999 999" @bind-Value="profileForm.ContactPhone" />
                 </div>
-                <button class="btn btn-primary" @onclick="SaveProfile">Guardar perfil</button>
-                <a class="btn btn-outline-primary ms-2" href="/partner">Galería fotos / videos</a>
-            </section>
+                <FormField Label="URL del logo" HelpText="Pega el enlace de tu logo (Cloudinary u otra fuente)." Placeholder="https://...logo.png" @bind-Value="profileForm.LogoUrl" />
+                <div class="dash-quick-links">
+                    <AppButton Variant="primary" Icon="💾" OnClick="SaveProfile">Guardar perfil</AppButton>
+                    <AppButton Variant="secondary" Icon="🖼️" OnClick="@(() => Nav.NavigateTo("/partner"))">Galería fotos / videos</AppButton>
+                </div>
+            </SectionCard>
         }
     }
 </div>
@@ -202,16 +227,52 @@
     private List<AgencyTourListItemDto> agencyTours = [];
     private Dictionary<int, int> capacityEdits = new();
     private Dictionary<int, int> totalSeatEdits = new();
-    private string tab = "team";
+    private string tab = "home";
     private bool loading = true;
     private string? error;
     private int? editingTourId;
     private int? deleteTourId;
     private bool savingTour;
+    private bool creatingTour;
     private CreateTourRequest editTourModel = new() { Date = DateTime.Today.AddDays(7), AdventureType = "FullDay", Capacity = 20 };
 
     private List<ReservationDto> PendingReservations => reservations.Where(x => x.Status == "Pending").ToList();
     private bool CanAccess => Auth.IsAuthenticated && Auth.Role is "Admin" or "Agencia";
+
+    private IReadOnlyList<TabBar.TabItem> Tabs =>
+    [
+        new("home", "Inicio", null, "🏠"),
+        new("tours", "Mis tours", agencyTours.Count, "🗺️"),
+        new("reservations", "Reservas", PendingReservations.Count, "📋"),
+        new("team", "Vendedores", dashboard?.VendorSales.Count, "👥"),
+        new("ops", "Operaciones", null, "⚙️"),
+        new("brand", "Marca", null, "🏷️")
+    ];
+
+    private void OnTabChange(string key)
+    {
+        tab = key;
+        if (key != "tours") { editingTourId = null; creatingTour = false; }
+    }
+
+    private string ThumbStyle(AgencyTourListItemDto t) => string.IsNullOrWhiteSpace(t.ImageUrl)
+        ? "background: linear-gradient(135deg, var(--dp-primary), var(--dp-primary-light));"
+        : $"background-image:url('{DestinoPeruBlazor.Helpers.CloudinaryHelper.Optimize(t.ImageUrl, 400)}');";
+
+    private static string StatusVariant(string s) => s switch
+    {
+        "Confirmed" => "success",
+        "Pending" => "warning",
+        "Cancelled" => "neutral",
+        _ => "info"
+    };
+    private static string StatusLabel(string s) => s switch
+    {
+        "Confirmed" => "Confirmada",
+        "Pending" => "Pendiente",
+        "Cancelled" => "Cancelada",
+        _ => s
+    };
 
     protected override async Task OnInitializedAsync()
     {
@@ -268,6 +329,15 @@
         else Toast.ShowError(res.ErrorMessage ?? "Error");
     }
 
+    private void StartCreateTour()
+    {
+        newTour = new() { Date = DateTime.Today.AddDays(7), AdventureType = "FullDay", Capacity = 20 };
+        creatingTour = true;
+        editingTourId = null;
+    }
+
+    private void CancelCreateTour() => creatingTour = false;
+
     private async Task CreateTourFromEditor(CreateTourRequest model)
     {
         if (string.IsNullOrWhiteSpace(model.Title)) { Toast.ShowWarning("Título obligatorio."); return; }
@@ -279,6 +349,7 @@
         {
             Toast.ShowSuccess("Tour publicado.");
             newTour = new() { Date = DateTime.Today.AddDays(7), AdventureType = "FullDay", Capacity = 20 };
+            creatingTour = false;
             await Load();
         }
         else Toast.ShowError(res.ErrorMessage ?? "Error");
@@ -294,6 +365,7 @@
 
     private async Task StartEditTour(AgencyTourListItemDto t)
     {
+        creatingTour = false;
         editingTourId = t.Id;
         var full = await Api.GetTourAsync(t.Id);
         if (full.Success && full.Data is not null)
