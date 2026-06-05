@@ -168,7 +168,7 @@
                                     <Badge Variant="success" Icon="✓">Verificada</Badge>
                                 </div>
                                 <Rating Value="@PseudoRating" Max="5" />
-                                <a class="tour-agency-link" href="/">Ver más experiencias →</a>
+                                <a class="tour-agency-link" href="@AgencyExploreHref">Ver más experiencias en @tour.Department →</a>
                             </div>
                         </div>
                     </SectionCard>
@@ -255,6 +255,10 @@
         (!string.IsNullOrWhiteSpace(tour.PuntoPartida) || !string.IsNullOrWhiteSpace(tour.PuntoRetorno)
          || !string.IsNullOrWhiteSpace(tour.HoraSalida) || !string.IsNullOrWhiteSpace(tour.DuracionAproximada));
     private string AgencyInitial => string.IsNullOrWhiteSpace(tour?.PartnerName) ? "?" : tour!.PartnerName.Trim()[..1].ToUpperInvariant();
+
+    private string AgencyExploreHref => string.IsNullOrWhiteSpace(tour?.Department)
+        ? "/"
+        : $"/?dept={Uri.EscapeDataString(tour!.Department)}";
 
     private string ActiveImage => galleryUrls.Count > 0
         ? CloudinaryHelper.Optimize(galleryUrls[selectedImage], 1200)

@@ -1,4 +1,5 @@
 @page "/solicitud-agencia"
+@using DestinoPeruBlazor.Components.UI
 @inject NavigationManager Nav
 
 <PageTitle>Solicitud de agencia - DestinoPerú</PageTitle>
@@ -6,51 +7,27 @@
 <div class="container py-4">
     <BackToHome />
 
-    <section class="solicitud-card">
-        <h1>Únete a DestinoPerú</h1>
-        <p class="text-muted">Completa los datos de tu agencia. Al enviar se abrirá tu correo con la solicitud lista para mandar a nuestro equipo.</p>
+    <PageHeader Title="Únete a DestinoPerú" Subtitle="Completa los datos de tu agencia. Al enviar se abrirá tu correo con la solicitud lista para mandar a nuestro equipo." />
 
-        <div class="admin-form-grid">
-            <div>
-                <label class="form-label">Nombre de la agencia *</label>
-                <input class="form-control" @bind="model.AgencyName" />
-            </div>
-            <div>
-                <label class="form-label">RUC *</label>
-                <input class="form-control" @bind="model.Ruc" />
-            </div>
-            <div>
-                <label class="form-label">Departamento donde opera *</label>
-                <input class="form-control" @bind="model.Department" placeholder="Ej. Lima, Cusco" />
-            </div>
-            <div>
-                <label class="form-label">Persona de contacto *</label>
-                <input class="form-control" @bind="model.ContactName" />
-            </div>
-            <div>
-                <label class="form-label">Correo *</label>
-                <input type="email" class="form-control" @bind="model.Email" />
-            </div>
-            <div>
-                <label class="form-label">Teléfono / WhatsApp</label>
-                <input class="form-control" @bind="model.Phone" />
-            </div>
+    <SectionCard Title="Datos de tu agencia">
+        <div class="ds-form-grid">
+            <FormField Label="Nombre de la agencia" Required="true" @bind-Value="model.AgencyName" />
+            <FormField Label="RUC" Required="true" @bind-Value="model.Ruc" />
+            <FormField Label="Departamento donde opera" Required="true" Placeholder="Ej. Lima, Cusco" @bind-Value="model.Department" />
+            <FormField Label="Persona de contacto" Required="true" @bind-Value="model.ContactName" />
+            <FormField Label="Correo" Type="email" Required="true" @bind-Value="model.Email" />
+            <FormField Label="Teléfono / WhatsApp" @bind-Value="model.Phone" />
         </div>
-        <div class="mb-3">
-            <label class="form-label">Mensaje adicional</label>
-            <textarea class="form-control" rows="3" @bind="model.Message" placeholder="Cuéntanos qué tipo de tours ofreces..."></textarea>
-        </div>
+        <FormField Label="Mensaje adicional" Type="textarea" Rows="3" Placeholder="Cuéntanos qué tipo de tours ofreces..." @bind-Value="model.Message" />
 
         @if (!string.IsNullOrEmpty(validationError))
         {
             <div class="alert alert-warning">@validationError</div>
         }
 
-        <button type="button" class="btn-cta btn-cta-main" @onclick="SendEmailRequest">
-            Enviar solicitud por correo
-        </button>
+        <AppButton Variant="primary" Icon="✉️" OnClick="SendEmailRequest">Enviar solicitud por correo</AppButton>
         <p class="small text-muted mt-2">Destino: partners@destinoperu.com — revisaremos tu documentación y te contactaremos.</p>
-    </section>
+    </SectionCard>
 </div>
 
 @code {

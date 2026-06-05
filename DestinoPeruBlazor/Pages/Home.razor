@@ -174,7 +174,17 @@
         ("Puno", "https://images.unsplash.com/photo-1476514525535-07fb3b4eae35?w=600&q=80")
     ];
 
-    protected override async Task OnInitializedAsync() => await LoadTours();
+    [Parameter, SupplyParameterFromQuery(Name = "dept")] public string? QueryDept { get; set; }
+    [Parameter, SupplyParameterFromQuery(Name = "type")] public string? QueryType { get; set; }
+    [Parameter, SupplyParameterFromQuery(Name = "q")] public string? QueryLocation { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!string.IsNullOrWhiteSpace(QueryDept)) department = QueryDept;
+        if (!string.IsNullOrWhiteSpace(QueryType)) adventureType = QueryType;
+        if (!string.IsNullOrWhiteSpace(QueryLocation)) location = QueryLocation;
+        await LoadTours();
+    }
 
     private void OnExperienceChanged()
     {

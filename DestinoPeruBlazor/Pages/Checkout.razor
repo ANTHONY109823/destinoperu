@@ -3,6 +3,7 @@
 @using DestinoPeruBlazor.Models
 @using DestinoPeruBlazor.Services
 @using DestinoPeruBlazor.Helpers
+@using DestinoPeruBlazor.Components.UI
 @inject ApiService Api
 @inject AuthStateService Auth
 @inject NavigationManager Nav
@@ -13,7 +14,9 @@
     <BackToHome />
     @if (!Auth.IsAuthenticated)
     {
-        <div class="alert alert-warning">Debes <a href="/login">iniciar sesión</a> para continuar.</div>
+        <DestinoPeruBlazor.Components.UI.EmptyState Icon="🔒" Title="Inicia sesión" Message="Debes iniciar sesión para continuar.">
+            <Action><AppButton Variant="primary" OnClick="@(() => Nav.NavigateTo("/login"))">Ingresar</AppButton></Action>
+        </DestinoPeruBlazor.Components.UI.EmptyState>
     }
     else if (loading) { <p>Cargando...</p> }
     else if (IsReservationsList)
@@ -26,52 +29,56 @@
                 <a href="/carrito">carrito</a>
             </div>
         }
-        <h2>Mis reservas</h2>
-        @if (reservations.Count == 0) { <p class="text-muted">No tienes reservas.</p> }
+        <PageHeader Title="Mis reservas" Subtitle="Revisa el estado de tus reservas y completa los pagos pendientes." />
+        @if (reservations.Count == 0)
+        {
+            <DestinoPeruBlazor.Components.UI.EmptyState Icon="📭" Title="No tienes reservas" Message="Explora el catálogo y reserva tu primera experiencia.">
+                <Action><AppButton Variant="primary" Icon="🔍" OnClick="@(() => Nav.NavigateTo("/"))">Buscar tours</AppButton></Action>
+            </DestinoPeruBlazor.Components.UI.EmptyState>
+        }
         else
         {
-            @foreach (var r in reservations)
-            {
-                <div class="reservation-item">
-                    <div>
-                        <strong>@r.TourTitle</strong>
-                        <p class="mb-0 text-muted">@r.TourLocation · @r.TourDate.ToString("dd/MM/yyyy") · @r.Status</p>
-                        @if (r.LoyaltyPointsEarned > 0) { <small class="text-success">+@r.LoyaltyPointsEarned pts</small> }
+            <SectionCard Title="@($"Tus reservas ({reservations.Count})")">
+                @foreach (var r in reservations)
+                {
+                    <div class="cart-row">
+                        <div>
+                            <strong>@r.TourTitle</strong>
+                            <p class="mb-0 text-muted small">@r.TourLocation · @r.TourDate.ToString("dd/MM/yyyy") · <Badge Variant="@StatusVariant(r.Status)">@StatusLabel(r.Status)</Badge></p>
+                            @if (r.LoyaltyPointsEarned > 0) { <small class="text-success">+@r.LoyaltyPointsEarned pts</small> }
+                        </div>
+                        <div class="cart-row-actions">
+                            <span class="cart-row-price">S/ @r.Total.ToString("N2")</span>
+                            @if (r.Status == "Pending")
+                            {
+                                <AppButton Variant="primary" OnClick="@(() => Nav.NavigateTo($"/checkout/{r.Id}"))">Pagar</AppButton>
+                            }
+                        </div>
                     </div>
-                    <div class="text-end">
-                        <span>S/ @r.Total.ToString("N2")</span>
-                        @if (r.Status == "Pending")
-                        {
-                            <a class="btn btn-primary btn-sm ms-2" href="/checkout/@r.Id">Pagar</a>
-                        }
-                    </div>
-                </div>
-            }
+                }
+            </SectionCard>
         }
     }
     else if (reservation is not null)
     {
-        <h2>Checkout One-Tap</h2>
+        <PageHeader Title="Pago" Subtitle="Completa tu reserva en un par de pasos." ShowBack="true" BackText="Mis reservas" OnBack="@(() => Nav.NavigateTo("/mis-reservas"))" />
         <div class="checkout-card">
             <h4>@reservation.TourTitle</h4>
-            <p>@reservation.TourLocation · @reservation.Quantity persona(s)</p>
+            <p class="text-muted">@reservation.TourLocation · @reservation.Quantity persona(s)</p>
             <p class="checkout-total">Total: <strong>S/ @reservation.Total.ToString("N2")</strong></p>
 
-            <div class="mb-3">
-                <label class="form-label">Metodo de pago</label>
-                <select class="form-select" @bind="paymentMethod" disabled="@awaitingVoucher">
-                    <option value="Tarjeta">Tarjeta (simulado)</option>
-                    <option value="Yape">Yape QR</option>
-                    <option value="Plin">Plin QR</option>
-                </select>
-            </div>
+            <FormField Label="Método de pago" Type="select" @bind-Value="paymentMethod" Disabled="awaitingVoucher">
+                <option value="Tarjeta">Tarjeta (simulado)</option>
+                <option value="Yape">Yape QR</option>
+                <option value="Plin">Plin QR</option>
+            </FormField>
 
             @if (IsWallet && !paid && !awaitingVoucher)
             {
                 <div class="qr-box">
                     <div class="qr-placeholder">QR @paymentMethod</div>
                     <p class="small text-muted">Escanea y paga. Luego sube tu voucher.</p>
-                    <input class="form-control mb-2" placeholder="Referencia / numero operacion" @bind="qrReference" />
+                    <FormField Label="Referencia / N° de operación" Placeholder="Ej. 0123456789" @bind-Value="qrReference" />
                 </div>
             }
 
@@ -84,9 +91,9 @@
                     {
                         <img src="@voucherPreview" class="upload-preview mt-2" alt="Voucher" />
                     }
-                    <button class="btn btn-primary mt-3" disabled="@uploadingVoucher" @onclick="SubmitVoucher">
-                        @(uploadingVoucher ? "Enviando..." : "Enviar voucher a la agencia")
-                    </button>
+                    <div class="mt-3">
+                        <AppButton Variant="primary" Loading="uploadingVoucher" OnClick="SubmitVoucher">Enviar voucher a la agencia</AppButton>
+                    </div>
                 </div>
             }
 
@@ -97,13 +104,15 @@
 
             @if (!paid && !awaitingVoucher)
             {
-                <button class="btn btn-primary btn-lg" disabled="@paying" @onclick="Pay">
-                    @(paying ? "Procesando..." : IsWallet ? "Generar pago QR" : "Pagar ahora")
-                </button>
+                <div class="mt-2">
+                    <AppButton Variant="primary" Block="true" Loading="paying" OnClick="Pay">@(IsWallet ? "Generar pago QR" : "Pagar ahora")</AppButton>
+                </div>
             }
             else if (paid || voucherSent)
             {
-                <a class="btn btn-outline-primary" href="/">Volver a tours</a>
+                <div class="mt-2">
+                    <AppButton Variant="secondary" OnClick="@(() => Nav.NavigateTo("/"))">Volver a tours</AppButton>
+                </div>
             }
         </div>
     }
@@ -131,6 +140,22 @@
 
     private bool IsReservationsList => Nav.Uri.Contains("mis-reservas", StringComparison.OrdinalIgnoreCase);
     private bool IsWallet => paymentMethod is "Yape" or "Plin";
+
+    private static string StatusVariant(string s) => s switch
+    {
+        "Confirmed" or "Paid" => "success",
+        "Pending" => "warning",
+        "Cancelled" => "neutral",
+        _ => "info"
+    };
+    private static string StatusLabel(string s) => s switch
+    {
+        "Confirmed" => "Confirmada",
+        "Paid" => "Pagada",
+        "Pending" => "Pendiente",
+        "Cancelled" => "Cancelada",
+        _ => s
+    };
 
     protected override async Task OnInitializedAsync()
     {

@@ -1,8 +1,10 @@
 @page "/partner"
 @using DestinoPeruBlazor.Services
+@using DestinoPeruBlazor.Components.UI
 @inject AuthStateService Auth
 @inject ApiService Api
 @inject IJSRuntime JS
+@inject NavigationManager Nav
 
 <PageTitle>Panel Partner - Destino Peru</PageTitle>
 
@@ -10,22 +12,21 @@
     <BackToHome />
     @if (!Auth.IsAuthenticated || Auth.Role is not ("Agencia" or "Admin" or "Vendedor" or "SuperAdmin"))
     {
-        <div class="alert alert-warning">Acceso para partners (Agencia).</div>
+        <DestinoPeruBlazor.Components.UI.EmptyState Icon="🔒" Title="Acceso para partners" Message="Esta sección es para agencias asociadas.">
+            <Action><AppButton Variant="primary" OnClick="@(() => Nav.NavigateTo("/login"))">Ingresar</AppButton></Action>
+        </DestinoPeruBlazor.Components.UI.EmptyState>
     }
     else
     {
-        <h1 class="dashboard-title">Panel Partner</h1>
-        <p class="text-muted">Inventario, fotos y manifiesto de pasajeros</p>
+        <PageHeader Title="Panel Partner" Subtitle="Inventario, fotos y manifiesto de pasajeros." />
 
         <div class="dashboard-panels">
-            <section class="dash-panel">
-                <h3>Inventario Pro</h3>
-                <p>Gestiona cupos en tiempo real desde la API. Los full-days bloquean sobreventa automaticamente.</p>
-            </section>
-            <section class="dash-panel">
-                <h3>Subir fotos (Drag & Drop)</h3>
+            <SectionCard Title="Inventario Pro">
+                <p class="mb-0">Gestiona cupos en tiempo real desde la API. Los full-days bloquean la sobreventa automáticamente.</p>
+            </SectionCard>
+            <SectionCard Title="Subir fotos">
                 <div class="upload-zone" @ondragover:preventDefault @ondrop="OnDrop">
-                    <p>Arrastra una imagen o selecciona archivo</p>
+                    <p>Arrastra una imagen o selecciona un archivo</p>
                     <InputFile OnChange="OnFileSelected" accept="image/*" />
                     @if (!string.IsNullOrEmpty(uploadStatus)) { <p class="mt-2 small">@uploadStatus</p> }
                     @if (!string.IsNullOrEmpty(uploadedUrl))
@@ -33,11 +34,10 @@
                         <img src="@uploadedUrl" alt="Preview" class="upload-preview mt-2" />
                     }
                 </div>
-            </section>
-            <section class="dash-panel">
-                <h3>Manifiesto de pasajeros</h3>
-                <p>Lista de paraderos y DNIs visible en reservas del partner via API <code>/api/reservations/partner/{{id}}</code>.</p>
-            </section>
+            </SectionCard>
+            <SectionCard Title="Manifiesto de pasajeros">
+                <p class="mb-0">Lista de paraderos y DNIs visible en las reservas del partner.</p>
+            </SectionCard>
         </div>
     }
 </div>

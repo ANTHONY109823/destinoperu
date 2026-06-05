@@ -1,15 +1,16 @@
 @page "/comparar"
 @using DestinoPeruBlazor.Models
 @using DestinoPeruBlazor.Services
+@using DestinoPeruBlazor.Components.UI
 @inject CompareService Compare
 @inject ApiService Api
+@inject NavigationManager Nav
 
 <PageTitle>Comparar tours - DestinoPerú</PageTitle>
 
 <div class="container py-4">
     <BackToHome />
-    <h1>Comparación de tours</h1>
-    <p class="text-muted">Hasta 3 experiencias lado a lado (departamento, precio, cupos).</p>
+    <PageHeader Title="Comparación de tours" Subtitle="Hasta 3 experiencias lado a lado: departamento, precio y cupos." />
 
     @if (loading)
     {
@@ -17,23 +18,24 @@
     }
     else if (tours.Count == 0)
     {
-        <p class="text-muted">Selecciona «Comparar» en el detalle de un tour para añadirlo aquí.</p>
-        <a class="btn btn-primary" href="/">Explorar tours</a>
+        <DestinoPeruBlazor.Components.UI.EmptyState Icon="⚖️" Title="Aún no comparas nada" Message="Selecciona «Comparar» en el detalle de un tour para añadirlo aquí.">
+            <Action><AppButton Variant="primary" Icon="🔍" OnClick="@(() => Nav.NavigateTo("/"))">Explorar tours</AppButton></Action>
+        </DestinoPeruBlazor.Components.UI.EmptyState>
     }
     else
     {
         <div class="compare-grid">
             @foreach (var t in tours)
             {
-                <div class="compare-card">
+                <AppCard Class="compare-card">
+                    <span class="compare-card-dept">@t.Department · @t.AdventureType</span>
                     <h3>@t.Title</h3>
-                    <p><strong>@t.Department</strong> · @t.AdventureType</p>
-                    <p>@t.Location</p>
+                    <p class="text-muted small mb-2">📍 @t.Location</p>
                     <p class="compare-price">S/ @t.Price.ToString("N2")</p>
-                    <p>Cupos: @t.AvailableCapacity / @t.Capacity</p>
-                    <p class="small">@t.Date.ToString("dd/MM/yyyy")</p>
-                    <a class="btn btn-primary btn-sm" href="/tour/@t.Slug">Reservar</a>
-                </div>
+                    <p class="small mb-1">Cupos: @t.AvailableCapacity / @t.Capacity</p>
+                    <p class="small text-muted">@t.Date.ToString("dd/MM/yyyy")</p>
+                    <AppButton Variant="primary" Block="true" OnClick="@(() => Nav.NavigateTo($"/tour/{t.Slug}"))">Reservar</AppButton>
+                </AppCard>
             }
         </div>
     }

@@ -1,6 +1,7 @@
 @page "/carrito"
 @using DestinoPeruBlazor.Models
 @using DestinoPeruBlazor.Services
+@using DestinoPeruBlazor.Components.UI
 @inject CartService Cart
 @inject AuthStateService Auth
 @inject ApiService Api
@@ -12,45 +13,48 @@
 
 <div class="container py-4">
     <BackToHome />
-    <h1>Carrito multidestino</h1>
-    <p class="text-muted">Reserva varios tours de distintos departamentos en un solo flujo.</p>
+    <PageHeader Title="Carrito multidestino" Subtitle="Reserva varios tours de distintos departamentos en un solo flujo." />
 
     @if (Cart.Items.Count == 0)
     {
-        <p class="text-muted">Tu carrito está vacío. Explora tours en el inicio.</p>
-        <a class="btn btn-primary" href="/">Buscar tours</a>
+        <DestinoPeruBlazor.Components.UI.EmptyState Icon="🛒" Title="Tu carrito está vacío" Message="Explora experiencias y agrégalas para reservarlas juntas.">
+            <Action><AppButton Variant="primary" Icon="🔍" OnClick="@(() => Nav.NavigateTo("/"))">Buscar tours</AppButton></Action>
+        </DestinoPeruBlazor.Components.UI.EmptyState>
     }
     else
     {
-        @foreach (var item in Cart.Items)
-        {
-            <div class="reservation-item">
-                <div>
-                    <strong>@item.Title</strong>
-                    <p class="mb-0 text-muted">@item.Department · @item.Quantity pax · S/ @((item.Price * item.Quantity).ToString("N2"))</p>
+        <SectionCard Title="@($"Tus experiencias ({Cart.Items.Count})")">
+            @foreach (var item in Cart.Items)
+            {
+                <div class="cart-row">
+                    <div>
+                        <strong>@item.Title</strong>
+                        <p class="mb-0 text-muted small">@item.Department · @item.Quantity pax · S/ @((item.Price * item.Quantity).ToString("N2"))</p>
+                    </div>
+                    <div class="cart-row-actions">
+                        <AppButton Variant="secondary" OnClick="@(() => Nav.NavigateTo($"/tour/{item.Slug}"))">Ver</AppButton>
+                        <AppButton Variant="ghost" Icon="🗑️" OnClick="@(() => Remove(item.TourId))">Quitar</AppButton>
+                    </div>
                 </div>
-                <div>
-                    <a class="btn btn-outline-primary btn-sm" href="/tour/@item.Slug">Ver</a>
-                    <button class="btn btn-outline-danger btn-sm" @onclick="() => Remove(item.TourId)">Quitar</button>
-                </div>
+            }
+            <div class="cart-total-row">
+                <span>Total estimado</span>
+                <strong>S/ @total.ToString("N2")</strong>
             </div>
-        }
-        <p class="lead mt-3">Total estimado: <strong>S/ @total.ToString("N2")</strong></p>
 
-        @if (!Auth.IsAuthenticated)
-        {
-            <a class="btn btn-primary" href="/login">Ingresar para reservar</a>
-        }
-        else if (Auth.Role != "Cliente")
-        {
-            <p class="alert alert-warning">El carrito es para clientes. Usa el panel de agencia para operaciones.</p>
-        }
-        else
-        {
-            <button class="btn btn-primary" disabled="@checkingOut" @onclick="CheckoutAll">
-                @(checkingOut ? "Reservando..." : "Reservar todos")
-            </button>
-        }
+            @if (!Auth.IsAuthenticated)
+            {
+                <AppButton Variant="primary" Block="true" OnClick="@(() => Nav.NavigateTo("/login"))">Ingresar para reservar</AppButton>
+            }
+            else if (Auth.Role != "Cliente")
+            {
+                <div class="alert alert-warning mb-0">El carrito es para clientes. Usa el panel de agencia para operaciones.</div>
+            }
+            else
+            {
+                <AppButton Variant="primary" Block="true" Loading="checkingOut" OnClick="CheckoutAll">Reservar todos</AppButton>
+            }
+        </SectionCard>
     }
 </div>
 
