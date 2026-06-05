@@ -22,13 +22,7 @@
         <nav id="dp-nav-menu" class="dp-nav-links @(menuOpen ? "open" : "")">
             @if (IsSuperAdmin)
             {
-                <div class="sa-nav-ring">
-                    <NavLink class="dp-link dp-link-super" href="/superadmin/inicio" @onclick="CloseMenu">Inicio</NavLink>
-                    @foreach (var c in SuperAdminCategories.All)
-                    {
-                        <NavLink class="dp-link dp-link-sa-cat" href="@c.Route" @onclick="CloseMenu">@c.Label</NavLink>
-                    }
-                </div>
+                <NavLink class="dp-link dp-link-super" href="/superadmin/inicio" @onclick="CloseMenu">Panel Super Admin</NavLink>
             }
             else
             {

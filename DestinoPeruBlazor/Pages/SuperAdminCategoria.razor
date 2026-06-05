@@ -5,6 +5,7 @@
 @using DestinoPeruBlazor.Helpers
 @using DestinoPeruBlazor.Models
 @using DestinoPeruBlazor.Services
+@using DestinoPeruBlazor.Components.UI
 @inject ApiService Api
 @inject AuthStateService Auth
 @inject NavigationManager Nav
@@ -49,52 +50,59 @@
                                OnEdit="@EditPartner"
                                OnSuspend="@Suspend"
                                OnReactivate="@Reactivate"
-                               OnDelete="@RequestDeletePartner">
+                               OnDelete="@RequestDeletePartner"
+                               OnGoInicio="@(() => Nav.NavigateTo("/superadmin/inicio"))">
             <CreateForm>
-                <div class="admin-form-grid">
-                    <input class="form-control" placeholder="Nombre comercial *" @bind="newAgency.AgencyName" />
-                    <input class="form-control" placeholder="RUC *" @bind="newAgency.RUC" />
-                    <input class="form-control" placeholder="Departamento *" @bind="newAgency.OperatingDepartment" />
-                    <input class="form-control" placeholder="URL logo" @bind="newAgency.LogoUrl" />
-                    <input class="form-control" placeholder="Nombre admin *" @bind="newAgency.AdminName" />
-                    <input class="form-control" type="email" placeholder="Email admin *" @bind="newAgency.AdminEmail" />
-                    <input class="form-control" type="password" placeholder="Contraseña admin *" @bind="newAgency.AdminPassword" />
+                <div class="ds-form-grid">
+                    <FormField Label="Nombre comercial" Required="true" Placeholder="Nombre del socio" @bind-Value="newAgency.AgencyName" />
+                    <FormField Label="RUC" Required="true" Placeholder="20XXXXXXXXX" @bind-Value="newAgency.RUC" />
+                    <FormField Label="Departamento" Required="true" Placeholder="Cusco" @bind-Value="newAgency.OperatingDepartment" />
+                    <FormField Label="URL del logo" Placeholder="https://...logo.png" @bind-Value="newAgency.LogoUrl" />
+                    <FormField Label="Nombre del administrador" Required="true" Placeholder="Nombre y apellido" @bind-Value="newAgency.AdminName" />
+                    <FormField Label="Email del administrador" Type="email" Required="true" Placeholder="admin@socio.com" @bind-Value="newAgency.AdminEmail" />
+                    <FormField Label="Contraseña del administrador" Type="password" Required="true" HelpText="El admin podrá cambiarla luego." @bind-Value="newAgency.AdminPassword" />
                 </div>
-                <button type="button" class="btn btn-primary mt-2" @onclick="CreateAgency" disabled="@saving">Crear @_category.Label</button>
+                <AppButton Variant="primary" Icon="➕" Loading="saving" OnClick="CreateAgency">@($"Crear {_category.PartnerNoun}")</AppButton>
             </CreateForm>
             <ChildContent>
                 @if (staffPartner is not null)
                 {
-                    <section class="dash-panel mt-3">
-                        <h4>Equipo — @staffPartner.Name</h4>
-                        @if (staffLoading) { <p>Cargando...</p> }
-                        else if (staffList.Count == 0) { <p class="text-muted">Sin vendedores.</p> }
-                        else
-                        {
-                            @foreach (var s in staffList)
-                            {
-                                <div class="reservation-row">
-                                    <span>@s.DisplayName — @s.Email</span>
-                                    <button type="button" class="btn btn-primary btn-sm" @onclick="() => ImpersonateUser(s.UserId)">Suplantar</button>
-                                </div>
-                            }
-                        }
-                        <button type="button" class="btn btn-link btn-sm" @onclick="() => staffPartner = null">Cerrar</button>
-                    </section>
+                    <div class="mt-3">
+                        <SectionCard Title="@($"Equipo — {staffPartner.Name}")">
+                            <HeaderAction><AppButton Variant="ghost" OnClick="@(() => staffPartner = null)">Cerrar</AppButton></HeaderAction>
+                            <ChildContent>
+                                @if (staffLoading) { <p class="text-muted mb-0">Cargando...</p> }
+                                else if (staffList.Count == 0) { <p class="text-muted mb-0">Sin vendedores.</p> }
+                                else
+                                {
+                                    @foreach (var s in staffList)
+                                    {
+                                        <div class="sa-staff-row">
+                                            <span>@s.DisplayName <small class="text-muted">· @s.Email</small></span>
+                                            <AppButton Variant="primary" Icon="🚪" OnClick="@(() => ImpersonateUser(s.UserId))">Entrar como vendedor</AppButton>
+                                        </div>
+                                    }
+                                }
+                            </ChildContent>
+                        </SectionCard>
+                    </div>
                 }
                 @if (editPartner is not null)
                 {
-                    <section class="dash-panel mt-3">
-                        <h4>Editar @editPartner.Name</h4>
-                        <div class="admin-form-grid">
-                            <input class="form-control" @bind="editForm.Name" placeholder="Nombre" />
-                            <input class="form-control" @bind="editForm.RUC" placeholder="RUC" />
-                            <input class="form-control" @bind="editForm.OperatingDepartment" placeholder="Depto." />
-                            <input class="form-control" @bind="editForm.LogoUrl" placeholder="Logo" />
-                        </div>
-                        <button type="button" class="btn btn-primary btn-sm" @onclick="SaveEdit">Guardar</button>
-                        <button type="button" class="btn btn-link btn-sm" @onclick="() => editPartner = null">Cancelar</button>
-                    </section>
+                    <div class="mt-3">
+                        <SectionCard Title="@($"Editar {editPartner.Name}")">
+                            <div class="ds-form-grid">
+                                <FormField Label="Nombre" @bind-Value="editForm.Name" />
+                                <FormField Label="RUC" @bind-Value="editForm.RUC" />
+                                <FormField Label="Departamento" @bind-Value="editForm.OperatingDepartment" />
+                                <FormField Label="URL del logo" @bind-Value="editForm.LogoUrl" />
+                            </div>
+                            <div class="dash-quick-links">
+                                <AppButton Variant="primary" Icon="💾" OnClick="SaveEdit">Guardar</AppButton>
+                                <AppButton Variant="ghost" OnClick="@(() => editPartner = null)">Cancelar</AppButton>
+                            </div>
+                        </SectionCard>
+                    </div>
                 }
             </ChildContent>
         </SuperAdminCategoryPanel>

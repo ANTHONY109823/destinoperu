@@ -2,6 +2,7 @@
 @using DestinoPeruBlazor.Helpers
 @using DestinoPeruBlazor.Models
 @using DestinoPeruBlazor.Services
+@using DestinoPeruBlazor.Components.UI
 @inject ApiService Api
 @inject AuthStateService Auth
 @inject NavigationManager Nav
@@ -12,9 +13,9 @@
 <div class="container py-4 dashboard-page superadmin-page">
     @if (!Auth.IsAuthenticated || Auth.Role != "SuperAdmin")
     {
-        <div class="panel-access-denied alert alert-warning">
-            Acceso restringido. <a class="btn btn-primary btn-sm ms-2" href="/login">Ingresar</a>
-        </div>
+        <DestinoPeruBlazor.Components.UI.EmptyState Icon="🔒" Title="Acceso restringido" Message="Esta sección es solo para el Super Admin.">
+            <Action><AppButton Variant="primary" OnClick="@(() => Nav.NavigateTo("/login"))">Ingresar</AppButton></Action>
+        </DestinoPeruBlazor.Components.UI.EmptyState>
     }
     else if (loading)
     {
@@ -24,88 +25,91 @@
     {
         <SuperAdminNav />
 
-        <header class="sa-header d-flex flex-wrap justify-content-between align-items-start gap-2">
-            <div>
-                <h1 class="dashboard-title mb-1">Vista Inicio — Panel de control global</h1>
-                <p class="text-muted mb-0">Métricas y socios · Las <strong>agencias</strong> publican tours; <strong>Tours</strong> es la categoría del sitio público</p>
-            </div>
-            <a class="btn btn-outline-primary btn-sm" href="/superadmin/comparar-tours">Comparar tours por destino</a>
-        </header>
+        <PageHeader Title="Panel de control global"
+                    Subtitle="Métricas y socios · Las agencias publican tours; «Tours» es la categoría del sitio público.">
+            <Actions>
+                <AppButton Variant="secondary" Icon="📊" OnClick="@(() => Nav.NavigateTo("/superadmin/comparar-tours"))">Comparar tours</AppButton>
+            </Actions>
+        </PageHeader>
 
         @if (!string.IsNullOrEmpty(apiWarning))
         {
-            <div class="alert alert-warning">@apiWarning <button type="button" class="btn btn-sm btn-outline-primary" @onclick="LoadAsync">Reintentar</button></div>
+            <div class="alert alert-warning d-flex flex-wrap gap-2 align-items-center">
+                @apiWarning
+                <AppButton Variant="secondary" OnClick="LoadAsync">Reintentar</AppButton>
+            </div>
         }
 
         @if (metrics is not null)
         {
-            <div class="sa-charts-row">
-                <div class="sa-chart-card">
-                    <MetricDonutChart Percent="@ReservationsPct" CenterValue="@metrics.TotalReservations.ToString()" CenterLabel="Reservas" Title="Actividad reservas" Color="#00695c" />
-                </div>
-                <div class="sa-chart-card">
-                    <MetricDonutChart Percent="@PartnersActivePct" CenterValue="@metrics.TotalPartners.ToString()" CenterLabel="Socios" Title="Red de socios" Color="#2e7d32" />
-                </div>
-                <div class="sa-chart-card">
-                    <MetricDonutChart Percent="10" CenterValue="@($"S/ {metrics.TotalCommissions:N0}")" CenterLabel="Comisión" Title="Comisión 10%" Color="#f9a825" />
-                </div>
-                <div class="sa-chart-card sa-chart-card-wide">
-                    <MetricBarChart Title="Socios por categoría" Items="CategoryBarItems" />
-                </div>
+            <div class="ds-metrics-grid sa-metrics-6">
+                <MetricCard Value="@metrics.TotalUsers.ToString()" Label="Usuarios" Icon="👥" />
+                <MetricCard Value="@metrics.TotalPartners.ToString()" Label="Socios totales" Icon="🤝" />
+                <MetricCard Value="@metrics.PendingPartners.ToString()" Label="Socios pendientes" Icon="⏳" />
+                <MetricCard Value="@metrics.TotalReservations.ToString()" Label="Reservas" Icon="📋" />
+                <MetricCard Value="@($"S/ {metrics.TotalRevenue.ToString("N0")}")" Label="Recaudado global" Icon="💰" />
+                <MetricCard Value="@($"S/ {metrics.TotalCommissions.ToString("N0")}")" Label="Comisión plataforma (10%)" Icon="🏦" />
             </div>
 
-            <div class="metrics-grid sa-global-metrics">
-                <div class="metric-card"><span class="metric-value">@metrics.TotalUsers</span><span class="metric-label">Usuarios</span></div>
-                <div class="metric-card"><span class="metric-value">@metrics.TotalPartners</span><span class="metric-label">Socios totales</span></div>
-                <div class="metric-card metric-warn"><span class="metric-value">@metrics.PendingPartners</span><span class="metric-label">Pendientes</span></div>
-                <div class="metric-card"><span class="metric-value">@metrics.TotalTours</span><span class="metric-label">Publicaciones</span></div>
-                <div class="metric-card"><span class="metric-value">@metrics.TotalReservations</span><span class="metric-label">Reservas</span></div>
-                <div class="metric-card metric-highlight"><span class="metric-value">S/ @metrics.TotalRevenue.ToString("N0")</span><span class="metric-label">Recaudado global</span></div>
-                <div class="metric-card"><span class="metric-value">S/ @metrics.TotalCommissions.ToString("N0")</span><span class="metric-label">Comisiones 10%</span></div>
-            </div>
+            <SectionCard Title="Visión general" Subtitle="Actividad de reservas, red de socios y comisión.">
+                <div class="sa-charts-row">
+                    <div class="sa-chart-card">
+                        <MetricDonutChart Percent="@ReservationsPct" CenterValue="@metrics.TotalReservations.ToString()" CenterLabel="Reservas" Title="Actividad reservas" Color="#00695c" />
+                    </div>
+                    <div class="sa-chart-card">
+                        <MetricDonutChart Percent="@PartnersActivePct" CenterValue="@metrics.TotalPartners.ToString()" CenterLabel="Socios" Title="Red de socios" Color="#2e7d32" />
+                    </div>
+                    <div class="sa-chart-card">
+                        <MetricDonutChart Percent="10" CenterValue="@($"S/ {metrics.TotalCommissions:N0}")" CenterLabel="Comisión" Title="Comisión 10%" Color="#B8860B" />
+                    </div>
+                    <div class="sa-chart-card sa-chart-card-wide">
+                        <MetricBarChart Title="Socios por categoría" Items="CategoryBarItems" />
+                    </div>
+                </div>
+            </SectionCard>
         }
 
-        <h2 class="sa-section-title">Administración por categoría</h2>
-        <p class="text-muted small mb-3">Entra al panel de cada rubro: socios, crear perfiles, suplantar admin, ranking y suspender.</p>
-
-        <div class="category-hub-grid">
-            @foreach (var cat in SuperAdminCategories.All)
-            {
-                var m = dashboard?.Categories.FirstOrDefault(c => c.Key == cat.Key);
-                var isTours = cat.Key == SuperAdminCategories.Tours;
-                <article class="category-hub-card-v2 @(isTours ? "hub-tours-active" : "hub-coming-soon")">
-                    <div class="hub-card-head">
-                        <span class="category-hub-icon">@cat.Icon</span>
-                        <div>
-                            <h3>@cat.Label</h3>
-                            @if (!isTours)
-                            {
-                                <span class="hub-badge-soon">Socios listo · operación full próximo</span>
-                            }
-                            else
-                            {
-                                <span class="hub-badge-live">Operativo ahora</span>
-                            }
+        <SectionCard Title="Administración por categoría"
+                     Subtitle="Entra a cada rubro para gestionar socios, crear perfiles, suplantar admin, ranking y suspender.">
+            <div class="sa-cat-grid">
+                @foreach (var cat in SuperAdminCategories.All)
+                {
+                    var m = dashboard?.Categories.FirstOrDefault(c => c.Key == cat.Key);
+                    var isTours = cat.Key == SuperAdminCategories.Tours;
+                    <AppCard Class="sa-cat-card">
+                        <div class="sa-cat-card-head">
+                            <span class="sa-cat-card-icon">@cat.Icon</span>
+                            <div class="sa-cat-card-titles">
+                                <h3>@cat.Label</h3>
+                                @if (isTours)
+                                {
+                                    <Badge Variant="success">Operativo</Badge>
+                                }
+                                else
+                                {
+                                    <Badge Variant="info">Próximamente</Badge>
+                                }
+                            </div>
                         </div>
-                    </div>
-                    <p class="category-hub-desc">@cat.Description</p>
-                    @if (m is not null)
-                    {
-                        <div class="hub-mini-metrics">
-                            <div class="hub-mini-m"><strong>@m.Partners</strong><span>socios</span></div>
-                            <div class="hub-mini-m"><strong>@m.ActiveItems</strong><span>activos</span></div>
-                            <div class="hub-mini-m"><strong>@m.Reservations</strong><span>reservas</span></div>
-                            <div class="hub-mini-m hub-rev"><strong>S/ @m.Revenue.ToString("N0")</strong></div>
+                        <p class="sa-cat-card-desc">@cat.Description</p>
+                        @if (m is not null)
+                        {
+                            <div class="sa-cat-card-metrics">
+                                <div><strong>@m.Partners</strong><span>socios</span></div>
+                                <div><strong>@m.ActiveItems</strong><span>activos</span></div>
+                                <div><strong>@m.Reservations</strong><span>reservas</span></div>
+                                <div class="sa-cat-rev"><strong>S/ @m.Revenue.ToString("N0")</strong><span>recaudado</span></div>
+                            </div>
+                        }
+                        <div class="sa-cat-card-actions">
+                            <AppButton Variant="primary" OnClick="@(() => GoPanel(cat, "partners"))">Administrar</AppButton>
+                            <AppButton Variant="secondary" Icon="➕" OnClick="@(() => GoPanel(cat, "create"))">@cat.PartnerNoun</AppButton>
+                            <AppButton Variant="ghost" OnClick="@(() => GoPanel(cat, "ranking"))">Ranking</AppButton>
                         </div>
-                    }
-                    <div class="hub-card-actions">
-                        <button type="button" class="btn btn-primary btn-sm" @onclick='() => GoPanel(cat, "partners")'>Administrar</button>
-                        <button type="button" class="btn btn-outline-primary btn-sm" @onclick='() => GoPanel(cat, "create")'>+ Socio</button>
-                        <button type="button" class="btn btn-outline-secondary btn-sm" @onclick='() => GoPanel(cat, "ranking")'>Ranking</button>
-                    </div>
-                </article>
-            }
-        </div>
+                    </AppCard>
+                }
+            </div>
+        </SectionCard>
     }
 </div>
 

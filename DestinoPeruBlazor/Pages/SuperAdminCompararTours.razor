@@ -1,6 +1,7 @@
 @page "/superadmin/comparar-tours"
 @using DestinoPeruBlazor.Models
 @using DestinoPeruBlazor.Services
+@using DestinoPeruBlazor.Components.UI
 @inject ApiService Api
 @inject AuthStateService Auth
 @inject NavigationManager Nav
@@ -10,29 +11,26 @@
 <div class="container py-4 dashboard-page superadmin-page">
     @if (!Auth.IsAuthenticated || Auth.Role != "SuperAdmin")
     {
-        <div class="panel-access-denied alert alert-warning">
-            Acceso restringido. <a class="btn btn-primary btn-sm ms-2" href="/login">Ingresar</a>
-        </div>
+        <DestinoPeruBlazor.Components.UI.EmptyState Icon="🔒" Title="Acceso restringido" Message="Esta sección es solo para el Super Admin.">
+            <Action><AppButton Variant="primary" OnClick="@(() => Nav.NavigateTo("/login"))">Ingresar</AppButton></Action>
+        </DestinoPeruBlazor.Components.UI.EmptyState>
     }
     else
     {
         <SuperAdminNav />
-        <header class="sa-header">
-            <div>
-                <h1 class="dashboard-title mb-1">Comparar tours por destino</h1>
-                <p class="text-muted mb-0">Solo lectura · Compara precios y oferta de distintas agencias en el mismo lugar</p>
-            </div>
-            <a class="btn btn-outline-secondary btn-sm" href="/superadmin/inicio">← Inicio</a>
-        </header>
+        <PageHeader Title="Comparar tours por destino"
+                    Subtitle="Solo lectura · Compara precios y oferta de distintas agencias en el mismo lugar."
+                    ShowBack="true" BackText="Inicio" OnBack="@(() => Nav.NavigateTo("/superadmin/inicio"))" />
 
-        <div class="dash-panel mb-3">
-            <label class="form-label">Filtrar por departamento o ciudad</label>
-            <div class="d-flex gap-2 flex-wrap">
-                <input class="form-control" style="max-width:280px" placeholder="Ej: Cusco, Lima, Ica" @bind="filter" @bind:event="oninput" />
-                <button type="button" class="btn btn-primary" @onclick="LoadAsync">Buscar</button>
-                <button type="button" class="btn btn-outline-secondary" @onclick="ClearFilter">Ver todos</button>
+        <SectionCard Title="Filtrar">
+            <div class="sa-compare-filter">
+                <FormField Label="Departamento o ciudad" Placeholder="Ej: Cusco, Lima, Ica" @bind-Value="filter" />
+                <div class="sa-compare-filter-actions">
+                    <AppButton Variant="primary" Icon="🔍" OnClick="LoadAsync">Buscar</AppButton>
+                    <AppButton Variant="ghost" OnClick="ClearFilter">Ver todos</AppButton>
+                </div>
             </div>
-        </div>
+        </SectionCard>
 
         @if (loading)
         {
@@ -40,14 +38,13 @@
         }
         else if (!groups.Any())
         {
-            <p class="text-muted">No hay tours activos para este filtro.</p>
+            <DestinoPeruBlazor.Components.UI.EmptyState Icon="🗺️" Title="Sin tours" Message="No hay tours activos para este filtro." />
         }
         else
         {
             @foreach (var g in groups)
             {
-                <section class="dash-panel mb-3">
-                    <h3 class="h5 mb-3">@g.Key <span class="text-muted small">(@g.Count() opciones)</span></h3>
+                <SectionCard Title="@g.Key" Subtitle="@($"{g.Count()} opción{(g.Count() == 1 ? "" : "es")}")">
                     <div class="partner-table-wrap">
                         <table class="partner-table">
                             <thead>
@@ -75,7 +72,7 @@
                             </tbody>
                         </table>
                     </div>
-                </section>
+                </SectionCard>
             }
         }
     }

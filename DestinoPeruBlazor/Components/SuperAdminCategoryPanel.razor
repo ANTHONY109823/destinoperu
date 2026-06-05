@@ -1,6 +1,7 @@
 @using DestinoPeruBlazor.Helpers
 @using DestinoPeruBlazor.Models
 @using DestinoPeruBlazor.Services
+@using DestinoPeruBlazor.Components.UI
 @inject IJSRuntime JS
 @inject ToastService Toast
 
@@ -10,79 +11,66 @@
 }
 else
 {
-    <header class="sa-header sa-header-category">
-        <div>
-            <span class="sa-cat-pill">@Category.Icon @Category.Label</span>
-            <h1 class="dashboard-title mb-1">Administración — @Category.Label</h1>
-            <p class="text-muted mb-0">@Category.AdminHint</p>
-        </div>
-        <a class="btn btn-outline-secondary btn-sm" href="/superadmin/inicio">← Panel de control Inicio</a>
-    </header>
+    <PageHeader Title="@($"Administración — {Category.Label}")" Subtitle="@Category.AdminHint" ShowBack="true" BackText="Panel de control" OnBack="GoInicio" />
 
     @if (CategoryMetrics is not null)
     {
-        <div class="metrics-grid metrics-grid-compact">
-            <div class="metric-card"><span class="metric-value">@CategoryMetrics.Partners</span><span class="metric-label">Socios @Category.Label</span></div>
-            <div class="metric-card"><span class="metric-value">@CategoryMetrics.ActiveItems</span><span class="metric-label">Activos</span></div>
-            <div class="metric-card metric-warn"><span class="metric-value">@CategoryMetrics.PendingPartners</span><span class="metric-label">Pendientes</span></div>
-            <div class="metric-card"><span class="metric-value">@CategoryMetrics.Reservations</span><span class="metric-label">Reservas</span></div>
-            <div class="metric-card metric-highlight"><span class="metric-value">S/ @CategoryMetrics.Revenue.ToString("N0")</span><span class="metric-label">Recaudado</span></div>
+        <div class="ds-metrics-grid sa-metrics-5">
+            <MetricCard Value="@CategoryMetrics.Partners.ToString()" Label="@($"{Category.PartnerNounPlural}")" Icon="@Category.Icon" />
+            <MetricCard Value="@CategoryMetrics.ActiveItems.ToString()" Label="Publicaciones activas" Icon="✅" />
+            <MetricCard Value="@CategoryMetrics.PendingPartners.ToString()" Label="Pendientes" Icon="⏳" />
+            <MetricCard Value="@CategoryMetrics.Reservations.ToString()" Label="Reservas" Icon="📋" />
+            <MetricCard Value="@($"S/ {CategoryMetrics.Revenue.ToString("N0")}")" Label="Recaudado" Icon="💰" />
         </div>
     }
 
-    <div class="panel-tabs sa-tabs" role="tablist">
-        <button type="button" role="tab" class="panel-tab @(ActiveTab == "partners" ? "active" : "")" @onclick='() => SelectTabAsync("partners")'>Socios (@Partners.Count())</button>
-        <button type="button" role="tab" class="panel-tab @(ActiveTab == "ranking" ? "active" : "")" @onclick='() => SelectTabAsync("ranking")'>Ranking</button>
-        <button type="button" role="tab" class="panel-tab @(ActiveTab == "create" ? "active" : "")" @onclick='() => SelectTabAsync("create")'>+ Nuevo @Category.Label</button>
-        <button type="button" role="tab" class="panel-tab @(ActiveTab == "config" ? "active" : "")" @onclick='() => SelectTabAsync("config")'>Configuración rubro</button>
-    </div>
+    <TabBar Tabs="Tabs" Active="ActiveTab" OnTabChange="SelectTabAsync" />
 
     @if (ActiveTab == "partners")
     {
         @if (!Partners.Any())
         {
-            <div class="dash-panel text-center py-4">
-                <p class="text-muted">No hay socios de @Category.Label registrados.</p>
-                <button type="button" class="btn btn-primary" @onclick='() => SelectTabAsync("create")'>Crear primer perfil / agencia</button>
-            </div>
+            <DestinoPeruBlazor.Components.UI.EmptyState Icon="@Category.Icon"
+                Title="@($"Sin {Category.PartnerNounPlural.ToLower()} registrados")"
+                Message="@($"Crea el primer perfil de {Category.PartnerNoun} para empezar.")">
+                <Action><AppButton Variant="primary" Icon="➕" OnClick='@(() => SelectTabAsync("create"))'>@($"Crear {Category.PartnerNoun}")</AppButton></Action>
+            </DestinoPeruBlazor.Components.UI.EmptyState>
         }
         else
         {
-            <div class="partner-cards-grid">
+            <div class="sa-partner-grid">
                 @foreach (var p in Partners)
                 {
-                    <article class="partner-card">
-                        <div class="partner-card-top">
-                            <span class="partner-cat-badge">@(Category?.Icon) @(Category?.Label)</span>
-                            <span class="badge-status @(p.Status == "Approved" ? "ok" : "")">@p.Status</span>
+                    <AppCard Class="sa-partner-card">
+                        <div class="sa-partner-top">
+                            <h3>@p.Name</h3>
+                            <Badge Variant="@StatusVariant(p.Status)">@StatusLabel(p.Status)</Badge>
                         </div>
-                        <h3>@p.Name</h3>
-                        <p class="partner-card-meta">RUC @p.RUC · @(string.IsNullOrWhiteSpace(p.OperatingDepartment) ? "—" : p.OperatingDepartment)</p>
-                        <p class="partner-card-admin">👤 @p.AdminName<br /><small>@p.AdminEmail</small></p>
-                        <div class="partner-card-stats">
-                            <span>@p.StaffCount/5 vendedores</span>
-                            <span>@p.ItemCount publicaciones</span>
-                            <span class="partner-revenue">S/ @p.Revenue.ToString("N0")</span>
+                        <p class="sa-partner-meta">RUC @p.RUC · @(string.IsNullOrWhiteSpace(p.OperatingDepartment) ? "—" : p.OperatingDepartment)</p>
+                        <p class="sa-partner-admin">👤 @p.AdminName <span>· @p.AdminEmail</span></p>
+                        <div class="sa-partner-stats">
+                            <span><strong>@p.StaffCount</strong>/5 vendedores</span>
+                            <span><strong>@p.ItemCount</strong> publicaciones</span>
+                            <span class="sa-partner-rev">S/ @p.Revenue.ToString("N0")</span>
                         </div>
-                        <div class="partner-card-actions">
-                            <button type="button" class="btn btn-primary btn-sm" disabled="@(p.AdminUserId <= 0)"
-                                    @onclick="() => ClickImpersonate(p.AdminUserId)">Entrar al panel</button>
-                            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="() => ClickStaff(p)">Equipo</button>
-                            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="() => ClickEdit(p)">Editar</button>
+                        <div class="sa-partner-actions">
+                            <AppButton Variant="primary" Icon="🚪" Disabled="@(p.AdminUserId <= 0)" OnClick="@(() => ClickImpersonate(p.AdminUserId))">Entrar al panel</AppButton>
+                            <AppButton Variant="secondary" Icon="👥" OnClick="@(() => ClickStaff(p))">Equipo</AppButton>
+                            <AppButton Variant="secondary" Icon="✏️" OnClick="@(() => ClickEdit(p))">Editar</AppButton>
                             @if (p.Status != "Suspended")
                             {
-                                <button type="button" class="btn btn-outline-danger btn-sm" @onclick="() => ClickSuspend(p)">Suspender</button>
+                                <AppButton Variant="ghost" OnClick="@(() => ClickSuspend(p))">Suspender</AppButton>
                             }
                             else
                             {
-                                <button type="button" class="btn btn-outline-success btn-sm" @onclick="() => ClickReactivate(p)">Reactivar</button>
+                                <AppButton Variant="ghost" OnClick="@(() => ClickReactivate(p))">Reactivar</AppButton>
                             }
                             @if (Category?.Key == SuperAdminCategories.Tours)
                             {
-                                <button type="button" class="btn btn-danger btn-sm" @onclick="() => ClickDelete(p)">Eliminar agencia</button>
+                                <AppButton Variant="danger" Icon="🗑️" OnClick="@(() => ClickDelete(p))">Eliminar agencia</AppButton>
                             }
                         </div>
-                    </article>
+                    </AppCard>
                 }
             </div>
         }
@@ -90,46 +78,52 @@ else
     }
     else if (ActiveTab == "ranking")
     {
-        <div class="partner-table-wrap mt-2">
-            @if (!RankingRows.Any()) { <p class="text-muted">Sin ranking en @Category.Label.</p> }
-            else
-            {
-                <div class="d-flex justify-content-end mb-2">
-                    <button type="button" class="btn btn-outline-primary btn-sm" @onclick="DownloadRankingCsv">
-                        ⬇ Descargar ranking (CSV)
-                    </button>
-                </div>
-                <table class="partner-table">
-                    <thead><tr><th>#</th><th>Socio</th><th>Recaudado</th><th>Reservas</th><th>Publicaciones</th></tr></thead>
-                    <tbody>
-                        @{ var n = 0; }
-                        @foreach (var row in RankingRows)
-                        {
-                            n++;
-                            <tr><td>@n</td><td>@row.Name</td><td>S/ @row.Revenue.ToString("N0")</td><td>@row.Reservations</td><td>@row.TourCount</td></tr>
-                        }
-                    </tbody>
-                </table>
-            }
-        </div>
+        <SectionCard Title="@($"Ranking de {Category.PartnerNounPlural.ToLower()}")" Subtitle="Ordenado por recaudación.">
+            <HeaderAction>
+                @if (RankingRows.Any())
+                {
+                    <AppButton Variant="secondary" Icon="⬇️" OnClick="DownloadRankingCsv">Descargar ranking CSV</AppButton>
+                }
+            </HeaderAction>
+            <ChildContent>
+                @if (!RankingRows.Any())
+                {
+                    <p class="text-muted mb-0">Sin ranking en @Category.Label.</p>
+                }
+                else
+                {
+                    <div class="partner-table-wrap">
+                        <table class="partner-table">
+                            <thead><tr><th>#</th><th>Socio</th><th>Recaudado</th><th>Reservas</th><th>Publicaciones</th></tr></thead>
+                            <tbody>
+                                @{ var n = 0; }
+                                @foreach (var row in RankingRows)
+                                {
+                                    n++;
+                                    <tr><td>@n</td><td>@row.Name</td><td>S/ @row.Revenue.ToString("N0")</td><td>@row.Reservations</td><td>@row.TourCount</td></tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </ChildContent>
+        </SectionCard>
     }
     else if (ActiveTab == "create")
     {
-        <section class="dash-panel create-profile-panel">
-            <h3>Crear agencia / socio — @Category.Label</h3>
-            <p class="text-muted small">Registra un nuevo perfil de @Category.Label con su administrador (máx. 5 vendedores por socio).</p>
+        <SectionCard Title="@($"Crear {Category.PartnerNoun}")"
+                     Subtitle="@($"Registra un nuevo perfil de {Category.PartnerNoun} con su administrador (hasta 5 vendedores).")">
             @CreateForm
-        </section>
+        </SectionCard>
     }
     else if (ActiveTab == "config")
     {
-        <section class="dash-panel">
-            <h3>Configuración — @Category.Label</h3>
-            <ul>
-                <li>Comisión plataforma: <strong>10%</strong></li>
+        <SectionCard Title="@($"Configuración — {Category.Label}")">
+            <ul class="sa-config-list">
+                <li>Comisión de la plataforma: <strong>10%</strong></li>
                 <li>@Category.ConfigNote</li>
             </ul>
-        </section>
+        </SectionCard>
     }
 }
 
@@ -148,8 +142,33 @@ else
     [Parameter] public EventCallback<PartnerListItemDto> OnSuspend { get; set; }
     [Parameter] public EventCallback<PartnerListItemDto> OnReactivate { get; set; }
     [Parameter] public EventCallback<PartnerListItemDto> OnDelete { get; set; }
+    [Parameter] public EventCallback OnGoInicio { get; set; }
 
     private string ActiveTab => NormalizeTab(Tab);
+
+    private IReadOnlyList<TabBar.TabItem> Tabs =>
+    [
+        new("partners", Category?.PartnerNounPlural ?? "Socios", Partners.Count(), "🤝"),
+        new("ranking", "Ranking", null, "🏆"),
+        new("create", $"Crear {Category?.PartnerNoun ?? "socio"}", null, "➕"),
+        new("config", "Configuración", null, "⚙️")
+    ];
+
+    private static string StatusVariant(string s) => s switch
+    {
+        "Approved" or "Active" => "success",
+        "Pending" => "warning",
+        "Suspended" => "neutral",
+        _ => "info"
+    };
+    private static string StatusLabel(string s) => s switch
+    {
+        "Approved" => "Aprobada",
+        "Active" => "Activa",
+        "Pending" => "Pendiente",
+        "Suspended" => "Suspendida",
+        _ => s
+    };
 
     private static string NormalizeTab(string? tab) => tab switch
     {
@@ -164,6 +183,7 @@ else
         await TabChanged.InvokeAsync(tab);
     }
 
+    private async Task GoInicio() => await OnGoInicio.InvokeAsync();
     private async Task ClickImpersonate(int userId) => await OnImpersonate.InvokeAsync(userId);
     private async Task ClickStaff(PartnerListItemDto p) => await OnShowStaff.InvokeAsync(p);
     private async Task ClickEdit(PartnerListItemDto p) => await OnEdit.InvokeAsync(p);

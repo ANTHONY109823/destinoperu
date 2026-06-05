@@ -11,20 +11,24 @@ public static class SuperAdminCategories
     [
         new(Tours, "Tours", "🗺️", "/superadmin/tours", 0,
             "Categoría pública del sitio: experiencias que publican las agencias.",
-            "Gestiona socios agencia (no crea tours aquí; cada agencia los publica en su panel).",
-            "Tours = categoría del catálogo. Agencias = operadores que crean tours."),
+            "Gestiona las agencias operadoras (cada agencia publica sus propios tours desde su panel).",
+            "Tours es la categoría del catálogo. Las agencias son los operadores que crean tours.",
+            "agencia", "Agencias"),
         new(Hoteles, "Hoteles", "🏨", "/superadmin/hoteles", 1,
             "Alojamiento y hospedaje.",
             "Socios hoteleros: habitaciones y tarifas (perfil hotel).",
-            "Hoteles: socios tipo alojamiento — sin mezclar con tours."),
+            "Hoteles: socios tipo alojamiento — sin mezclar con tours.",
+            "hotel", "Hoteles"),
         new(Restaurantes, "Restaurantes", "🍽️", "/superadmin/restaurantes", 2,
             "Gastronomía y reservas de mesa.",
             "Restaurantes asociados: menús y reservas.",
-            "Restaurantes: solo socios gastronómicos."),
+            "Restaurantes: solo socios gastronómicos.",
+            "restaurante", "Restaurantes"),
         new(CafesBar, "Cafés / Bar", "☕", "/superadmin/cafes-bar", 3,
             "Rutas café, bares y nightlife.",
             "Locales café/bar: rutas y cupos (tazas).",
-            "Cafés/Bar: experiencias café y bar nocturno.")
+            "Cafés/Bar: experiencias café y bar nocturno.",
+            "local", "Locales")
     ];
 
     /// <summary>Resuelve categoría desde URI absoluta, relativa o path (ignora ?query y #hash).</summary>
@@ -68,4 +72,6 @@ public record SuperAdminCategory(
     int PartnerType,
     string Description,
     string AdminHint,
-    string ConfigNote);
+    string ConfigNote,
+    string PartnerNoun = "socio",
+    string PartnerNounPlural = "Socios");
