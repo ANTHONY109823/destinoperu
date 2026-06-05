@@ -2,55 +2,57 @@
 @using DestinoPeruBlazor.Models
 @using DestinoPeruBlazor.Services
 @using DestinoPeruBlazor.Components
+@using DestinoPeruBlazor.Components.UI
 @inject ApiService Api
 
 <PageTitle>DestinoPerú — Tours y experiencias en Perú</PageTitle>
 
-<section class="home-hero" style="background-image: url('https://images.unsplash.com/photo-1587595431973-160d0d94add1?w=1600&q=80');">
+<section class="home-hero" style="background-image: url('https://images.unsplash.com/photo-1526392060635-9d601b837dd0?w=1600&q=80');">
     <div class="home-hero-overlay"></div>
     <div class="container home-hero-stack">
         <div class="home-hero-head">
             <h1 class="home-hero-title" tabindex="-1">Descubre el Perú con agencias verificadas</h1>
-            <p class="home-hero-sub">Reserva full days, paquetes y experiencias únicas. Paga con Yape o Plin.</p>
+            <p class="home-hero-sub">Reserva full days, paquetes y experiencias únicas con operadores locales. Paga seguro con Yape o Plin.</p>
         </div>
 
-        <div class="home-search-card home-search-linear">
-            <div class="home-search-linear-grid @GridClass">
-                <div class="hs-field">
-                    <label>Departamento</label>
-                    <select class="form-select" @bind="department">
-                        <option value="">Todos</option>
-                        @foreach (var d in PeruDepartments) { <option value="@d">@d</option> }
-                    </select>
-                </div>
-                <div class="hs-field">
-                    <label>Ciudad</label>
-                    <input class="form-control" placeholder="Cusco, Lima..." @bind="location" />
-                </div>
-                <div class="hs-field">
-                    <label>Experiencia</label>
-                    <select class="form-select" @bind="adventureType" @bind:after="OnExperienceChanged">
-                        <option value="">Todas</option>
-                        <option value="FullDay">Full Days</option>
-                        <option value="Paquete2D1N">Paquetes completos 2D/1N</option>
-                        <option value="Cultural">Cultural</option>
-                        <option value="CafeBar">Café / Bar</option>
-                    </select>
-                </div>
-                <div class="hs-field">
-                    <label>@(IsPackage ? "Fecha ida" : "Fecha")</label>
-                    <input type="date" class="form-control" @bind="fromDate" />
-                </div>
+        <div class="home-hero-metrics">
+            <div class="home-hero-metric">
+                <span class="home-hero-metric-value">@(loading ? "…" : $"{totalCount}+")</span>
+                <span class="home-hero-metric-label">Experiencias disponibles</span>
+            </div>
+            <div class="home-hero-metric">
+                <span class="home-hero-metric-value">@(loading ? "…" : $"{AgencyCount}")</span>
+                <span class="home-hero-metric-label">Agencias verificadas</span>
+            </div>
+            <div class="home-hero-metric">
+                <span class="home-hero-metric-value">Yape · Plin</span>
+                <span class="home-hero-metric-label">Pago 100% seguro</span>
+            </div>
+        </div>
+
+        <div class="home-search-card">
+            <div class="home-search-grid @GridClass">
+                <FormField Label="Departamento" Type="select" @bind-Value="department">
+                    <option value="">Todos</option>
+                    @foreach (var d in PeruDepartments) { <option value="@d">@d</option> }
+                </FormField>
+                <FormField Label="Ciudad / destino" Placeholder="Cusco, Lima..." @bind-Value="location" />
+                <FormField Label="Experiencia" Type="select" @bind-Value="adventureType" @bind-Value:after="OnExperienceChanged">
+                    <option value="">Todas</option>
+                    <option value="FullDay">Full Days</option>
+                    <option value="Paquete2D1N">Paquetes 2D/1N</option>
+                    <option value="Cultural">Cultural</option>
+                    <option value="Trekking">Trekking</option>
+                    <option value="Aventura">Aventura</option>
+                </FormField>
+                <FormField Label="@(IsPackage ? "Fecha ida" : "Fecha")" Type="date" @bind-Value="fromDateStr" />
                 @if (IsPackage)
                 {
-                    <div class="hs-field">
-                        <label>Fecha retorno</label>
-                        <input type="date" class="form-control" @bind="toDate" min="@MinReturnDate" />
-                    </div>
+                    <FormField Label="Fecha retorno" Type="date" @bind-Value="toDateStr" />
                 }
-                <div class="hs-field hs-field-btn">
-                    <label>&nbsp;</label>
-                    <button type="button" class="btn btn-primary btn-search-linear" @onclick="Search" disabled="@loading">Buscar</button>
+                <FormField Label="Precio máx. (S/)" Type="number" Placeholder="Sin límite" @bind-Value="maxPriceStr" />
+                <div class="home-search-btn">
+                    <AppButton Variant="primary" Block="true" Icon="🔍" Loading="loading" OnClick="Search">Buscar experiencias</AppButton>
                 </div>
             </div>
         </div>
@@ -62,7 +64,7 @@
     <div class="destinos-grid">
         @foreach (var d in PopularDestinations)
         {
-            <button type="button" class="destino-card" @onclick="() => FilterByDepartment(d.Name)">
+            <button type="button" class="destino-card @(department == d.Name ? "active" : "")" @onclick="() => FilterByDepartment(d.Name)">
                 <div class="destino-img" style="background-image: url('@d.Image')"></div>
                 <span class="destino-name">@d.Name</span>
             </button>
@@ -71,7 +73,14 @@
 </section>
 
 <section class="container tours-section">
-    <h2 class="section-title">Experiencias disponibles</h2>
+    <div class="tours-section-head">
+        <h2 class="section-title mb-0">Experiencias disponibles</h2>
+        @if (!loading && loadSuccess && tours.Count > 0)
+        {
+            <span class="tours-count">@totalCount experiencia@(totalCount == 1 ? "" : "s") · página @currentPage de @totalPages</span>
+        }
+    </div>
+
     @if (loading)
     {
         <div class="tours-grid" aria-busy="true">
@@ -80,28 +89,27 @@
     }
     else if (!loadSuccess)
     {
-        <EmptyState Icon="⚠️" Title="No pudimos cargar los tours" Message="Revisa tu conexión o intenta de nuevo.">
-            <button class="btn btn-primary" @onclick="Search">Reintentar</button>
-        </EmptyState>
+        <DestinoPeruBlazor.Components.UI.EmptyState Icon="⚠️" Title="No pudimos cargar los tours" Message="Revisa tu conexión o intenta de nuevo.">
+            <Action><AppButton Variant="primary" OnClick="Search">Reintentar</AppButton></Action>
+        </DestinoPeruBlazor.Components.UI.EmptyState>
     }
     else if (tours.Count == 0)
     {
-        <EmptyState Icon="🏔️" Title="Sin resultados" Message="Prueba otros filtros o departamento.">
-            <button class="btn btn-outline-primary" @onclick="ClearFilters">Ver todos</button>
-        </EmptyState>
+        <DestinoPeruBlazor.Components.UI.EmptyState Icon="🏔️" Title="Sin resultados" Message="Prueba otros filtros o cambia de departamento.">
+            <Action><AppButton Variant="secondary" OnClick="ClearFilters">Ver todos los tours</AppButton></Action>
+        </DestinoPeruBlazor.Components.UI.EmptyState>
     }
     else
     {
-        <p class="tours-count">@totalCount experiencia@(totalCount == 1 ? "" : "s") · página @currentPage de @totalPages</p>
         <div class="tours-grid">
             @foreach (var tour in tours) { <TourCard Tour="tour" /> }
         </div>
         @if (totalPages > 1)
         {
             <div class="pagination-bar">
-                <button class="btn btn-outline-primary btn-sm" disabled="@(currentPage <= 1)" @onclick="PrevPage">Anterior</button>
+                <AppButton Variant="secondary" Disabled="@(currentPage <= 1)" OnClick="PrevPage">Anterior</AppButton>
                 <span>Página @currentPage de @totalPages</span>
-                <button class="btn btn-outline-primary btn-sm" disabled="@(currentPage >= totalPages)" @onclick="NextPage">Siguiente</button>
+                <AppButton Variant="secondary" Disabled="@(currentPage >= totalPages)" OnClick="NextPage">Siguiente</AppButton>
             </div>
         }
     }
@@ -109,9 +117,9 @@
 
 <section class="home-trust-strip">
     <div class="container trust-strip">
-        <div class="trust-strip-item"><span class="trust-strip-icon">📱</span><div><strong>Yape y Plin</strong><span>Pago seguro.</span></div></div>
-        <div class="trust-strip-item"><span class="trust-strip-icon">✓</span><div><strong>Agencias verificadas</strong><span>Partners revisados.</span></div></div>
-        <div class="trust-strip-item"><span class="trust-strip-icon">💬</span><div><strong>Soporte cercano</strong><span>En español.</span></div></div>
+        <div class="trust-strip-item"><span class="trust-strip-icon">📱</span><div><strong>Pago seguro Yape / Plin</strong><span>Confirmación inmediata.</span></div></div>
+        <div class="trust-strip-item"><span class="trust-strip-icon">✓</span><div><strong>Agencias verificadas</strong><span>Operadores revisados.</span></div></div>
+        <div class="trust-strip-item"><span class="trust-strip-icon">💬</span><div><strong>Soporte cercano</strong><span>Atención en español.</span></div></div>
     </div>
 </section>
 
@@ -133,8 +141,9 @@
     private string? department;
     private string? location;
     private string? adventureType;
-    private DateTime? fromDate;
-    private DateTime? toDate;
+    private string? fromDateStr;
+    private string? toDateStr;
+    private string? maxPriceStr;
     private int currentPage = 1;
     private int totalCount;
     private int totalPages = 1;
@@ -143,7 +152,10 @@
 
     private bool IsPackage => adventureType == "Paquete2D1N";
     private string GridClass => IsPackage ? "has-return" : "";
-    private string? MinReturnDate => fromDate?.ToString("yyyy-MM-dd");
+
+    private int AgencyCount => tours.Select(t => t.PartnerName)
+        .Where(n => !string.IsNullOrWhiteSpace(n))
+        .Distinct(StringComparer.OrdinalIgnoreCase).Count();
 
     private static readonly string[] PeruDepartments =
     [
@@ -166,12 +178,16 @@
 
     private void OnExperienceChanged()
     {
-        if (!IsPackage) toDate = null;
-        else if (fromDate.HasValue && (!toDate.HasValue || toDate < fromDate))
-            toDate = fromDate.Value.AddDays(1);
+        if (!IsPackage) toDateStr = null;
     }
 
-    private async Task FilterByDepartment(string dept) { department = dept; currentPage = 1; await LoadTours(); }
+    private async Task FilterByDepartment(string dept)
+    {
+        department = department == dept ? null : dept;
+        currentPage = 1;
+        await LoadTours();
+    }
+
     private async Task Search() { currentPage = 1; await LoadTours(); }
     private async Task PrevPage() { if (currentPage > 1) { currentPage--; await LoadTours(); } }
     private async Task NextPage() { if (currentPage < totalPages) { currentPage++; await LoadTours(); } }
@@ -179,7 +195,8 @@
     private async Task ClearFilters()
     {
         department = location = adventureType = null;
-        fromDate = toDate = null; currentPage = 1;
+        fromDateStr = toDateStr = maxPriceStr = null;
+        currentPage = 1;
         await LoadTours();
     }
 
@@ -187,7 +204,12 @@
     {
         loading = true; loadSuccess = true;
         StateHasChanged();
-        var result = await Api.SearchToursAsync(department, location, adventureType, fromDate, toDate, currentPage);
+
+        DateTime? fromDate = DateTime.TryParse(fromDateStr, out var f) ? f : null;
+        DateTime? toDate = DateTime.TryParse(toDateStr, out var t) ? t : null;
+        decimal? maxPrice = decimal.TryParse(maxPriceStr, out var p) && p > 0 ? p : null;
+
+        var result = await Api.SearchToursAsync(department, location, adventureType, fromDate, toDate, currentPage, maxPrice);
         if (result.Success && result.Data is not null)
         {
             tours = result.Data.Items;

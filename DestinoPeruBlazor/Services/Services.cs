@@ -141,7 +141,7 @@ public class ApiService
 
     public async Task<ApiResult<PagedResult<TourDto>>> SearchToursAsync(
         string? department = null, string? location = null, string? adventureType = null,
-        DateTime? fromDate = null, DateTime? toDate = null, int page = 1)
+        DateTime? fromDate = null, DateTime? toDate = null, int page = 1, decimal? maxPrice = null)
     {
         try
         {
@@ -152,6 +152,7 @@ public class ApiService
             if (!string.IsNullOrWhiteSpace(adventureType)) q.Add($"adventureType={Uri.EscapeDataString(adventureType)}");
             if (fromDate.HasValue) q.Add($"fromDate={fromDate.Value:O}");
             if (toDate.HasValue) q.Add($"toDate={toDate.Value:O}");
+            if (maxPrice.HasValue) q.Add($"maxPrice={maxPrice.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)}");
             var response = await _http.GetAsync($"{_baseUrl}/tours?{string.Join("&", q)}");
             if (!response.IsSuccessStatusCode)
                 return Fail<PagedResult<TourDto>>($"Error al cargar tours ({(int)response.StatusCode}).");

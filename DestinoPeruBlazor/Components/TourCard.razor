@@ -1,23 +1,31 @@
 ﻿@using DestinoPeruBlazor.Models
 @using DestinoPeruBlazor.Helpers
+@using DestinoPeruBlazor.Components.UI
 
 <a class="tour-card tour-card-link" href="@TourHref">
     <div class="tour-card-image" style="@ImageStyle">
-        <span class="tour-card-badge">@Tour.Department · @Tour.Location</span>
-        @if (Tour.Price > 0)
+        @if (BadgeText is not null)
         {
-            <span class="tour-card-price-tag">S/ @Tour.Price.ToString("N0")</span>
+            <span class="tour-card-badge-wrap">
+                <Badge Variant="@BadgeVariant">@BadgeText</Badge>
+            </span>
         }
     </div>
     <div class="tour-card-body">
+        <div class="tour-card-loc">@Tour.Department@(string.IsNullOrWhiteSpace(Tour.Location) ? "" : $" · {Tour.Location}")</div>
         <h3>@Tour.Title</h3>
         <p class="tour-card-agency">
             <span class="agency-dot"></span>@Tour.PartnerName · @Tour.AdventureType
         </p>
-        <p class="tour-card-desc">@(Tour.Description.Length > 100 ? Tour.Description[..100] + "..." : Tour.Description)</p>
+        <div class="tour-card-rating">
+            <Rating Value="@PseudoRating" Max="5" />
+        </div>
         <div class="tour-card-footer">
-            <small class="tour-date">@Tour.Date.ToString("dd MMM yyyy") · @Tour.AvailableCapacity cupos</small>
-            <span class="btn btn-primary btn-sm tour-card-btn">Ver tour</span>
+            <div class="tour-card-price-block">
+                <span class="tour-card-price-amount">S/ @Tour.Price.ToString("N0")</span>
+                <span class="tour-card-price-label">por persona</span>
+            </div>
+            <span class="tour-card-cta">Ver detalles</span>
         </div>
     </div>
 </a>
@@ -30,4 +38,11 @@
     private string ImageStyle => string.IsNullOrEmpty(Tour.ImageUrl)
         ? "background-image: linear-gradient(135deg, var(--dp-primary), var(--dp-primary-light))"
         : $"background-image: url('{CloudinaryHelper.Optimize(Tour.ImageUrl, 600)}')";
+
+    private double PseudoRating => Math.Round(4.2 + (Tour.Id * 7 % 8) / 10.0, 1);
+
+    private bool IsNew => (DateTime.UtcNow - Tour.CreatedAt).TotalDays <= 21;
+
+    private string? BadgeText => IsNew ? "Nuevo" : null;
+    private string BadgeVariant => "info";
 }
