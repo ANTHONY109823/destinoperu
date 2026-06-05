@@ -54,6 +54,7 @@ public class TourDto
     public string? ImageUrl { get; set; }
     public bool IsActive { get; set; }
     public DateTime CreatedAt { get; set; }
+    public string? PartnerSlug { get; set; }
     public string? PuntoPartida { get; set; }
     public string? PuntoRetorno { get; set; }
     public string? HoraSalida { get; set; }
@@ -248,6 +249,22 @@ public class AgencyTourListItemDto
     public string? ImageUrl { get; set; }
     public string AdventureType { get; set; } = "FullDay";
     public string UnitLabel { get; set; } = "cupos";
+}
+
+public class AgencyPublicProfileDto
+{
+    public int PartnerId { get; set; }
+    public string Slug { get; set; } = "";
+    public string Name { get; set; } = "";
+    public string? LogoUrl { get; set; }
+    public string? OperatingDepartment { get; set; }
+    public string Status { get; set; } = "";
+    public bool IsVerified { get; set; }
+    public string? ContactPhone { get; set; }
+    public string? ContactEmail { get; set; }
+    public int TourCount { get; set; }
+    public DateTime MemberSince { get; set; }
+    public List<AgencyTourListItemDto> Tours { get; set; } = [];
 }
 
 public class AgencyProfileDto

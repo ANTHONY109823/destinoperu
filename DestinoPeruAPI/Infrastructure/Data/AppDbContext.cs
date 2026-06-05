@@ -45,6 +45,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         {
             e.ToTable("Partners");
             e.HasIndex(p => p.RUC).IsUnique();
+            e.HasIndex(p => p.Slug).IsUnique();
             e.Property(p => p.Status).HasDefaultValue("Pending");
             e.Property(p => p.VerificationStatus).HasDefaultValue("Pending");
             e.Property(p => p.CommissionRate).HasPrecision(5, 4);

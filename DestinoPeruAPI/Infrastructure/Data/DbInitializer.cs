@@ -32,7 +32,29 @@ public static class DbInitializer
         await EnsureUserIfMissingAsync(db, DemoClienteEmail, "Usuario Demo", RoleNames.Cliente, "Demo123!", logger);
         await EnsureUserIfMissingAsync(db, AgencyAdminEmail, "Admin Agencia Demo", RoleNames.Admin, SystemPassword, logger);
         await EnsurePopularDestinationsAsync(db, logger);
+        await EnsurePartnerSlugsAsync(db, logger);
         logger.LogInformation("Seed: cuentas de sistema verificadas (sin agencias ni tours demo).");
+    }
+
+    private static async Task EnsurePartnerSlugsAsync(AppDbContext db, ILogger logger)
+    {
+        var partners = await db.Partners.ToListAsync();
+        var taken = partners
+            .Where(p => !string.IsNullOrWhiteSpace(p.Slug))
+            .Select(p => p.Slug)
+            .ToList();
+        var changed = 0;
+        foreach (var p in partners.Where(p => string.IsNullOrWhiteSpace(p.Slug)))
+        {
+            p.Slug = SlugHelper.GenerateUnique(p.Name, taken);
+            taken.Add(p.Slug);
+            changed++;
+        }
+        if (changed > 0)
+        {
+            await db.SaveChangesAsync();
+            logger.LogInformation("Seed: {Count} agencias recibieron slug público.", changed);
+        }
     }
 
     private static async Task EnsurePopularDestinationsAsync(AppDbContext db, ILogger logger)

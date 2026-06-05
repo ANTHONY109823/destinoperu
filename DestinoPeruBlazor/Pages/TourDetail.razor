@@ -164,11 +164,24 @@
                             <div class="tour-agency-avatar" aria-hidden="true">@AgencyInitial</div>
                             <div class="tour-agency-info">
                                 <div class="tour-agency-name">
-                                    @tour.PartnerName
+                                    @if (HasAgencyProfile)
+                                    {
+                                        <a class="tour-agency-name-link" href="@AgencyProfileHref">@tour.PartnerName</a>
+                                    }
+                                    else
+                                    {
+                                        @tour.PartnerName
+                                    }
                                     <Badge Variant="success" Icon="✓">Verificada</Badge>
                                 </div>
                                 <Rating Value="@PseudoRating" Max="5" />
-                                <a class="tour-agency-link" href="@AgencyExploreHref">Ver más experiencias en @tour.Department →</a>
+                                <div class="tour-agency-links">
+                                    @if (HasAgencyProfile)
+                                    {
+                                        <a class="tour-agency-link" href="@AgencyProfileHref">Ver perfil de la agencia →</a>
+                                    }
+                                    <a class="tour-agency-link" href="@AgencyExploreHref">Más experiencias en @tour.Department →</a>
+                                </div>
                             </div>
                         </div>
                     </SectionCard>
@@ -259,6 +272,9 @@
     private string AgencyExploreHref => string.IsNullOrWhiteSpace(tour?.Department)
         ? "/"
         : $"/?dept={Uri.EscapeDataString(tour!.Department)}";
+
+    private bool HasAgencyProfile => !string.IsNullOrWhiteSpace(tour?.PartnerSlug);
+    private string AgencyProfileHref => HasAgencyProfile ? $"/agencia/{tour!.PartnerSlug}" : "/";
 
     private string ActiveImage => galleryUrls.Count > 0
         ? CloudinaryHelper.Optimize(galleryUrls[selectedImage], 1200)

@@ -9,7 +9,7 @@ namespace DestinoPeruAPI.Infrastructure.Dapper;
 public class TourQueryRepository(IDbConnectionFactory connectionFactory) : ITourQueryRepository
 {
     private const string TourSelect = """
-        SELECT t."Id", t."PartnerId", p."Name" AS "PartnerName", t."Slug", t."Title", t."Description",
+        SELECT t."Id", t."PartnerId", p."Name" AS "PartnerName", p."Slug" AS "PartnerSlug", t."Slug", t."Title", t."Description",
                t."MetaTitle", t."MetaDescription", t."Price", t."Location", t."Department",
                t."AdventureType", t."Date", t."Capacity", t."AvailableCapacity",
                t."ImageUrl", t."IsActive", t."CreatedAt",
@@ -24,6 +24,7 @@ public class TourQueryRepository(IDbConnectionFactory connectionFactory) : ITour
         public int Id { get; set; }
         public int PartnerId { get; set; }
         public string PartnerName { get; set; } = "";
+        public string? PartnerSlug { get; set; }
         public string Slug { get; set; } = "";
         public string Title { get; set; } = "";
         public string Description { get; set; } = "";
@@ -60,7 +61,8 @@ public class TourQueryRepository(IDbConnectionFactory connectionFactory) : ITour
         TourContentMapper.DeserializeStrings(r.QueIncluyeJson),
         TourContentMapper.DeserializeStrings(r.QueNoIncluyeJson),
         TourContentMapper.DeserializeStrings(r.QueLlevarJson),
-        TourContentMapper.DeserializeStrings(r.GaleriaJson));
+        TourContentMapper.DeserializeStrings(r.GaleriaJson),
+        r.PartnerSlug);
 
     public async Task<PagedResult<TourDto>> SearchPagedAsync(TourSearchQuery query)
     {

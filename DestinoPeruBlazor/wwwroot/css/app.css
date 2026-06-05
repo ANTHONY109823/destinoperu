@@ -1858,3 +1858,47 @@ a:hover { color: var(--dp-primary-light); }
 }
 .dest-order-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 .dest-order-btn:not(:disabled):hover { background: #f0f0f0; }
+
+/* ===== Perfil público de agencia ===== */
+.tour-agency-name-link { color: var(--dp-primary, #004D40); font-weight: 700; text-decoration: none; }
+.tour-agency-name-link:hover { text-decoration: underline; }
+.tour-agency-links { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; margin-top: 0.35rem; }
+
+.agency-hero {
+    display: flex; gap: 1.25rem; align-items: center; flex-wrap: wrap;
+    background: linear-gradient(135deg, #004D40 0%, #00695C 100%);
+    color: #fff; border-radius: 18px; padding: 1.5rem 1.75rem; margin-bottom: 1.5rem;
+}
+.agency-hero-logo {
+    width: 84px; height: 84px; border-radius: 16px; flex-shrink: 0;
+    background-size: cover; background-position: center;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2.1rem; font-weight: 700; color: #fff;
+    border: 2px solid rgba(255,255,255,0.35);
+}
+.agency-hero-info { flex: 1; min-width: 220px; }
+.agency-hero-name-row { display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap; }
+.agency-hero-name { margin: 0; font-size: 1.6rem; font-weight: 800; }
+.agency-hero-meta { display: flex; flex-wrap: wrap; gap: 0.4rem 1.1rem; margin-top: 0.5rem; font-size: 0.92rem; opacity: 0.95; }
+.agency-hero-contact { display: flex; flex-wrap: wrap; gap: 0.4rem 1.1rem; margin-top: 0.4rem; font-size: 0.9rem; opacity: 0.9; }
+
+.agency-tours-section { margin-top: 0.5rem; }
+.agency-tours-grid {
+    display: grid; gap: 1.1rem; margin-top: 1rem;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+}
+.agency-tour-card {
+    display: flex; flex-direction: column; overflow: hidden;
+    border: 1px solid var(--dp-border, #e0e0e0); border-radius: 14px;
+    background: var(--dp-surface, #fff); text-decoration: none; color: inherit;
+    transition: transform .15s ease, box-shadow .15s ease;
+}
+.agency-tour-card:hover { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(0,0,0,0.1); }
+.agency-tour-img { height: 150px; background-size: cover; background-position: center; background-color: #eee; }
+.agency-tour-body { display: flex; flex-direction: column; gap: 0.3rem; padding: 0.8rem 0.9rem 1rem; }
+.agency-tour-dept { font-size: 0.78rem; color: var(--dp-text-muted, #6b6b6b); text-transform: uppercase; letter-spacing: .02em; }
+.agency-tour-title { font-size: 1rem; line-height: 1.3; color: var(--dp-text, #1a1a1a); }
+.agency-tour-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 0.35rem; }
+.agency-tour-price { font-size: 1.15rem; font-weight: 800; color: #1b7a3e; }
+.agency-tour-cupos { font-size: 0.82rem; color: var(--dp-text-muted, #6b6b6b); }
+.agency-tour-cupos.out { color: #b00020; }

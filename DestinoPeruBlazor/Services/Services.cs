@@ -175,6 +175,21 @@ public class ApiService
         catch (Exception ex) { return Fail<TourDto>("Error al cargar tour.", ex); }
     }
 
+    public async Task<ApiResult<AgencyPublicProfileDto>> GetAgencyBySlugAsync(string slug)
+    {
+        try
+        {
+            PrepareRequest();
+            var response = await _http.GetAsync($"{_baseUrl}/agencies/{Uri.EscapeDataString(slug)}");
+            if (!response.IsSuccessStatusCode) return Fail<AgencyPublicProfileDto>("Agencia no encontrada.", showToast: false);
+            var wrapper = await response.Content.ReadFromJsonAsync<ApiResponse<AgencyPublicProfileDto>>(JsonOptions);
+            return wrapper?.Data is not null
+                ? ApiResult<AgencyPublicProfileDto>.Ok(wrapper.Data)
+                : Fail<AgencyPublicProfileDto>(wrapper?.Message ?? "Agencia no encontrada.", showToast: false);
+        }
+        catch (Exception ex) { return Fail<AgencyPublicProfileDto>("No se pudo cargar la agencia.", ex, showToast: false); }
+    }
+
     public async Task<ApiResult<List<PopularDestinationDto>>> GetPublicDestinationsAsync() =>
         await GetJsonAsync<List<PopularDestinationDto>>($"{_baseUrl}/destinations", "Destinos no disponibles.", showToast: false);
 

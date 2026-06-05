@@ -20,4 +20,17 @@ public static class SlugHelper
         slug = Regex.Replace(slug, @"\s+", "-").Trim('-');
         return string.IsNullOrEmpty(slug) ? "tour" : slug;
     }
+
+    /// <summary>Genera un slug único respecto a los ya existentes (insensible a mayúsculas).</summary>
+    public static string GenerateUnique(string title, IEnumerable<string?> existing)
+    {
+        var baseSlug = Generate(title);
+        var taken = new HashSet<string>(
+            existing.Where(s => !string.IsNullOrWhiteSpace(s))!,
+            StringComparer.OrdinalIgnoreCase);
+        if (!taken.Contains(baseSlug)) return baseSlug;
+        var i = 2;
+        while (taken.Contains($"{baseSlug}-{i}")) i++;
+        return $"{baseSlug}-{i}";
+    }
 }

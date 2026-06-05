@@ -16,7 +16,8 @@ public record TourDto(
     string? PuntoPartida = null, string? PuntoRetorno = null, string? HoraSalida = null, string? DuracionAproximada = null,
     IReadOnlyList<TourItineraryStepDto>? Itinerario = null,
     IReadOnlyList<string>? QueIncluye = null, IReadOnlyList<string>? QueNoIncluye = null, IReadOnlyList<string>? QueLlevar = null,
-    IReadOnlyList<string>? Galeria = null);
+    IReadOnlyList<string>? Galeria = null,
+    string? PartnerSlug = null);
 
 public record TourCompareItemDto(
     int Id, string Title, string PartnerName, string Department, string Location,
@@ -139,6 +140,12 @@ public record SubmitVoucherRequest(int PaymentId, string VoucherUrl);
 public record AdminMetricsDto(
     int TotalPartners, int PendingPartners, int TotalTours, int TotalReservations,
     decimal TotalCommissions, int ActiveUsers);
+
+public record AgencyPublicProfileDto(
+    int PartnerId, string Slug, string Name, string? LogoUrl, string? OperatingDepartment,
+    string Status, bool IsVerified, string? ContactPhone, string? ContactEmail,
+    int TourCount, DateTime MemberSince,
+    IReadOnlyList<AgencyTourListItemDto> Tours);
 
 public record PopularDestinationDto(
     int Id, string Name, string ImageUrl, string Department, int DisplayOrder, bool IsActive);

@@ -104,10 +104,12 @@ public class SuperAdminService(
         };
         await userRepository.AddAsync(admin);
 
+        var existingSlugs = await appDb.Partners.Select(p => p.Slug).ToListAsync();
         var partner = new Partner
         {
             UserId = admin.Id,
             Name = request.AgencyName.Trim(),
+            Slug = SlugHelper.GenerateUnique(request.AgencyName.Trim(), existingSlugs),
             RUC = request.RUC.Trim(),
             PartnerType = request.PartnerType,
             Status = "Approved",

@@ -99,8 +99,18 @@ public class PartnersController(PartnerService partnerService) : ControllerBase
 }
 
 [ApiController][Route("api/agencies")]
-public class AgenciesController(SuperAdminService superAdminService, PartnerService partnerService) : ControllerBase
+public class AgenciesController(
+    SuperAdminService superAdminService,
+    PartnerService partnerService,
+    PublicAgencyService publicAgencyService) : ControllerBase
 {
+    [HttpGet("{slug}")][AllowAnonymous]
+    public async Task<IActionResult> GetBySlug(string slug)
+    {
+        var r = await publicAgencyService.GetBySlugAsync(slug);
+        return r.Success ? Ok(r) : NotFound(r);
+    }
+
     [HttpPost][Authorize]
     public async Task<IActionResult> Create([FromBody] CreatePartnerRequest request)
     {

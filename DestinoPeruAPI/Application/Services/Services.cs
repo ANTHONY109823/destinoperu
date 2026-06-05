@@ -171,10 +171,12 @@ public class PartnerService(IPartnerRepository partnerRepository, IPartnerQueryR
     {
         var existing = await partnerRepository.GetByUserIdAsync(userId);
         if (existing != null) return new ApiResponse<PartnerDto>(false, "Ya tienes un partner registrado.", null);
+        var existingSlugs = (await partnerRepository.GetAllAsync()).Select(p => p.Slug);
         var partner = new Partner
         {
             UserId = userId,
             Name = request.Name,
+            Slug = SlugHelper.GenerateUnique(request.Name, existingSlugs),
             RUC = request.RUC,
             PartnerType = request.PartnerType
         };

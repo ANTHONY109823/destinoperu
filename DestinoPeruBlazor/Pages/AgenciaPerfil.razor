@@ -1,0 +1,129 @@
+@page "/agencia/{Slug}"
+@using DestinoPeruBlazor.Models
+@using DestinoPeruBlazor.Services
+@using DestinoPeruBlazor.Helpers
+@using DestinoPeruBlazor.Components.UI
+@inject ApiService Api
+@inject NavigationManager Nav
+
+<PageTitle>@(agency?.Name ?? "Agencia") - DestinoPerú</PageTitle>
+
+@if (agency is not null)
+{
+    <MetaTags Title="@($"{agency.Name} — Agencia verificada en DestinoPerú")"
+              Description="@($"Descubre {agency.TourCount} experiencias de {agency.Name}. Agencia verificada, pago seguro Yape/Plin.")"
+              ImageUrl="@(agency.LogoUrl ?? "")" />
+}
+
+<div class="container py-4 agency-profile-page">
+    <div class="tour-detail-back">
+        <AppButton Variant="ghost" Icon="←" OnClick="@(() => Nav.NavigateTo("/"))">Volver al inicio</AppButton>
+    </div>
+
+    @if (loading)
+    {
+        <div class="agency-hero skeleton-block" style="height: 160px; border-radius: 18px;"></div>
+    }
+    else if (agency is null)
+    {
+        <DestinoPeruBlazor.Components.UI.EmptyState Icon="🏢" Title="Agencia no encontrada"
+            Message="@(error ?? "Esta agencia no existe o no está disponible.")">
+            <Action><AppButton Variant="primary" OnClick="@(() => Nav.NavigateTo("/"))">Ver todas las experiencias</AppButton></Action>
+        </DestinoPeruBlazor.Components.UI.EmptyState>
+    }
+    else
+    {
+        <header class="agency-hero">
+            <div class="agency-hero-logo" style="@LogoStyle">@(string.IsNullOrWhiteSpace(agency.LogoUrl) ? AgencyInitial : "")</div>
+            <div class="agency-hero-info">
+                <div class="agency-hero-name-row">
+                    <h1 class="agency-hero-name">@agency.Name</h1>
+                    @if (agency.IsVerified)
+                    {
+                        <Badge Variant="success" Icon="✓">Verificada</Badge>
+                    }
+                </div>
+                <div class="agency-hero-meta">
+                    @if (!string.IsNullOrWhiteSpace(agency.OperatingDepartment))
+                    {
+                        <span>📍 Opera en @agency.OperatingDepartment</span>
+                    }
+                    <span>🗓️ En DestinoPerú desde @agency.MemberSince.ToString("MMMM yyyy", EsPe)</span>
+                    <span>🎒 @agency.TourCount experiencia@(agency.TourCount == 1 ? "" : "s")</span>
+                </div>
+                @if (!string.IsNullOrWhiteSpace(agency.ContactPhone) || !string.IsNullOrWhiteSpace(agency.ContactEmail))
+                {
+                    <div class="agency-hero-contact">
+                        @if (!string.IsNullOrWhiteSpace(agency.ContactPhone)) { <span>📞 @agency.ContactPhone</span> }
+                        @if (!string.IsNullOrWhiteSpace(agency.ContactEmail)) { <span>✉️ @agency.ContactEmail</span> }
+                    </div>
+                }
+            </div>
+        </header>
+
+        <section class="agency-tours-section">
+            <h2 class="section-title">Experiencias de @agency.Name</h2>
+            @if (agency.Tours.Count == 0)
+            {
+                <DestinoPeruBlazor.Components.UI.EmptyState Icon="🏔️" Title="Sin experiencias activas"
+                    Message="Esta agencia aún no tiene tours publicados. Vuelve pronto." />
+            }
+            else
+            {
+                <div class="agency-tours-grid">
+                    @foreach (var t in agency.Tours)
+                    {
+                        <a class="agency-tour-card" href="@($"/tour/{t.Slug}")">
+                            <div class="agency-tour-img" style="@TourImageStyle(t)"></div>
+                            <div class="agency-tour-body">
+                                <span class="agency-tour-dept">@t.Department · @t.AdventureType</span>
+                                <strong class="agency-tour-title">@t.Title</strong>
+                                <div class="agency-tour-foot">
+                                    <span class="agency-tour-price">S/ @t.Price.ToString("N0")</span>
+                                    @if (t.AvailableCapacity > 0)
+                                    {
+                                        <span class="agency-tour-cupos">@t.AvailableCapacity cupos</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="agency-tour-cupos out">Sin cupos</span>
+                                    }
+                                </div>
+                            </div>
+                        </a>
+                    }
+                </div>
+            }
+        </section>
+    }
+</div>
+
+@code {
+    [Parameter] public string Slug { get; set; } = "";
+
+    private AgencyPublicProfileDto? agency;
+    private bool loading = true;
+    private string? error;
+
+    private static readonly System.Globalization.CultureInfo EsPe = new("es-PE");
+
+    private string AgencyInitial => string.IsNullOrWhiteSpace(agency?.Name) ? "?" : agency!.Name.Trim()[..1].ToUpperInvariant();
+
+    private string LogoStyle => string.IsNullOrWhiteSpace(agency?.LogoUrl)
+        ? "background: linear-gradient(135deg, #004D40, #00695C);"
+        : $"background-image: url('{CloudinaryHelper.Optimize(agency!.LogoUrl!, 200)}');";
+
+    private static string TourImageStyle(AgencyTourListItemDto t) => string.IsNullOrWhiteSpace(t.ImageUrl)
+        ? "background: linear-gradient(135deg, #004D40, #00695C);"
+        : $"background-image: url('{CloudinaryHelper.Optimize(t.ImageUrl!, 500)}');";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        loading = true;
+        error = null;
+        var result = await Api.GetAgencyBySlugAsync(Slug);
+        if (result.Success && result.Data is not null) agency = result.Data;
+        else { agency = null; error = result.ErrorMessage; }
+        loading = false;
+    }
+}
