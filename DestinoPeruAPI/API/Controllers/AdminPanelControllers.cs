@@ -75,6 +75,43 @@ public class SuperAdminController(SuperAdminService superAdminService) : Control
 }
 
 [ApiController]
+[Route("api/superadmin/destinations")]
+[Authorize(Roles = RoleNames.SuperAdmin)]
+public class SuperAdminDestinationsController(PopularDestinationService destinationService) : ControllerBase
+{
+    [HttpGet]
+    public async Task<IActionResult> GetAll() => Ok(await destinationService.GetAllAsync());
+
+    [HttpPost]
+    public async Task<IActionResult> Create([FromBody] UpsertPopularDestinationRequest request)
+    {
+        var r = await destinationService.CreateAsync(request);
+        return r.Success ? Ok(r) : BadRequest(r);
+    }
+
+    [HttpPut("{id:int}")]
+    public async Task<IActionResult> Update(int id, [FromBody] UpsertPopularDestinationRequest request)
+    {
+        var r = await destinationService.UpdateAsync(id, request);
+        return r.Success ? Ok(r) : BadRequest(r);
+    }
+
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var r = await destinationService.DeleteAsync(id);
+        return r.Success ? Ok(r) : BadRequest(r);
+    }
+
+    [HttpPut("{id:int}/move")]
+    public async Task<IActionResult> Move(int id, [FromQuery] int direction)
+    {
+        var r = await destinationService.MoveAsync(id, direction);
+        return r.Success ? Ok(r) : BadRequest(r);
+    }
+}
+
+[ApiController]
 [Route("api/agency")]
 [Authorize(Roles = $"{RoleNames.Admin},{RoleNames.Vendedor},{RoleNames.Agencia},{RoleNames.SuperAdmin}")]
 public class AgencyController(AgencyAdminService agencyService) : ControllerBase

@@ -140,4 +140,10 @@ public record AdminMetricsDto(
     int TotalPartners, int PendingPartners, int TotalTours, int TotalReservations,
     decimal TotalCommissions, int ActiveUsers);
 
+public record PopularDestinationDto(
+    int Id, string Name, string ImageUrl, string Department, int DisplayOrder, bool IsActive);
+
+public record UpsertPopularDestinationRequest(
+    string Name, string ImageUrl, string? Department = null, int DisplayOrder = 0, bool IsActive = true);
+
 public record ApiResponse<T>(bool Success, string? Message, T? Data);

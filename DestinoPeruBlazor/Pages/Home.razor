@@ -62,10 +62,10 @@
 <section class="container home-destinos">
     <h2 class="section-title">Destinos populares</h2>
     <div class="destinos-grid">
-        @foreach (var d in PopularDestinations)
+        @foreach (var d in destinos)
         {
-            <button type="button" class="destino-card @(department == d.Name ? "active" : "")" @onclick="() => FilterByDepartment(d.Name)">
-                <div class="destino-img" style="background-image: url('@d.Image')"></div>
+            <button type="button" class="destino-card @(department == d.Department ? "active" : "")" @onclick="() => FilterByDepartment(d.Department)">
+                <div class="destino-img" style="background-image: url('@d.ImageUrl')"></div>
                 <span class="destino-name">@d.Name</span>
             </button>
         }
@@ -165,13 +165,15 @@
         "San Martín", "Tacna", "Tumbes", "Ucayali"
     ];
 
-    private static readonly (string Name, string Image)[] PopularDestinations =
+    private List<PopularDestinationDto> destinos = [];
+
+    private static readonly List<PopularDestinationDto> FallbackDestinations =
     [
-        ("Cusco", "https://images.unsplash.com/photo-1526392060635-9d601b837dd0?w=600&q=80"),
-        ("Ica", "https://images.unsplash.com/photo-1587595431973-160d0d94add1?w=600&q=80"),
-        ("Arequipa", "https://images.unsplash.com/photo-1516026679272-898a54700f3f?w=600&q=80"),
-        ("Lima", "https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=600&q=80"),
-        ("Puno", "https://images.unsplash.com/photo-1476514525535-07fb3b4eae35?w=600&q=80")
+        new() { Name = "Cusco", Department = "Cusco", ImageUrl = "https://images.unsplash.com/photo-1526392060635-9d601b837dd0?w=600&q=80" },
+        new() { Name = "Ica", Department = "Ica", ImageUrl = "https://images.unsplash.com/photo-1587595431973-160d0d94add1?w=600&q=80" },
+        new() { Name = "Arequipa", Department = "Arequipa", ImageUrl = "https://images.unsplash.com/photo-1516026679272-898a54700f3f?w=600&q=80" },
+        new() { Name = "Lima", Department = "Lima", ImageUrl = "https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=600&q=80" },
+        new() { Name = "Puno", Department = "Puno", ImageUrl = "https://images.unsplash.com/photo-1476514525535-07fb3b4eae35?w=600&q=80" }
     ];
 
     [Parameter, SupplyParameterFromQuery(Name = "dept")] public string? QueryDept { get; set; }
@@ -183,7 +185,14 @@
         if (!string.IsNullOrWhiteSpace(QueryDept)) department = QueryDept;
         if (!string.IsNullOrWhiteSpace(QueryType)) adventureType = QueryType;
         if (!string.IsNullOrWhiteSpace(QueryLocation)) location = QueryLocation;
+        await LoadDestinations();
         await LoadTours();
+    }
+
+    private async Task LoadDestinations()
+    {
+        var result = await Api.GetPublicDestinationsAsync();
+        destinos = result.Success && result.Data is { Count: > 0 } ? result.Data : FallbackDestinations;
     }
 
     private void OnExperienceChanged()

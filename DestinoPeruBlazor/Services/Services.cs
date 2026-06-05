@@ -175,6 +175,56 @@ public class ApiService
         catch (Exception ex) { return Fail<TourDto>("Error al cargar tour.", ex); }
     }
 
+    public async Task<ApiResult<List<PopularDestinationDto>>> GetPublicDestinationsAsync() =>
+        await GetJsonAsync<List<PopularDestinationDto>>($"{_baseUrl}/destinations", "Destinos no disponibles.", showToast: false);
+
+    public async Task<ApiResult<List<PopularDestinationDto>>> GetAdminDestinationsAsync() =>
+        await GetJsonAsync<List<PopularDestinationDto>>($"{_baseUrl}/superadmin/destinations", "No se pudieron cargar destinos.", showToast: false);
+
+    public async Task<ApiResult<bool>> CreateDestinationAsync(UpsertPopularDestinationRequest request)
+    {
+        try
+        {
+            PrepareRequest();
+            var response = await _http.PostAsJsonAsync($"{_baseUrl}/superadmin/destinations", request);
+            return response.IsSuccessStatusCode ? ApiResult<bool>.Ok(true) : Fail<bool>("No se pudo crear el destino.");
+        }
+        catch (Exception ex) { return Fail<bool>("Error al crear destino.", ex); }
+    }
+
+    public async Task<ApiResult<bool>> UpdateDestinationAsync(int id, UpsertPopularDestinationRequest request)
+    {
+        try
+        {
+            PrepareRequest();
+            var response = await _http.PutAsJsonAsync($"{_baseUrl}/superadmin/destinations/{id}", request);
+            return response.IsSuccessStatusCode ? ApiResult<bool>.Ok(true) : Fail<bool>("No se pudo actualizar el destino.");
+        }
+        catch (Exception ex) { return Fail<bool>("Error al actualizar destino.", ex); }
+    }
+
+    public async Task<ApiResult<bool>> DeleteDestinationAsync(int id)
+    {
+        try
+        {
+            PrepareRequest();
+            var response = await _http.DeleteAsync($"{_baseUrl}/superadmin/destinations/{id}");
+            return response.IsSuccessStatusCode ? ApiResult<bool>.Ok(true) : Fail<bool>("No se pudo eliminar el destino.");
+        }
+        catch (Exception ex) { return Fail<bool>("Error al eliminar destino.", ex); }
+    }
+
+    public async Task<ApiResult<bool>> MoveDestinationAsync(int id, int direction)
+    {
+        try
+        {
+            PrepareRequest();
+            var response = await _http.PutAsync($"{_baseUrl}/superadmin/destinations/{id}/move?direction={direction}", null);
+            return response.IsSuccessStatusCode ? ApiResult<bool>.Ok(true) : Fail<bool>("No se pudo reordenar.");
+        }
+        catch (Exception ex) { return Fail<bool>("Error al reordenar.", ex); }
+    }
+
     public async Task<ApiResult<string>> UploadImageAsync(Stream stream, string fileName, string folder)
     {
         try

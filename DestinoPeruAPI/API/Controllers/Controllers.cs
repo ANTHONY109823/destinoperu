@@ -53,6 +53,13 @@ public class ToursController(TourService tourService) : ControllerBase
     }
 }
 
+[ApiController][Route("api/destinations")]
+public class DestinationsController(PopularDestinationService destinationService) : ControllerBase
+{
+    [HttpGet]
+    public async Task<IActionResult> GetPublic() => Ok(await destinationService.GetPublicAsync());
+}
+
 [ApiController][Route("api/partners")]
 public class PartnersController(PartnerService partnerService) : ControllerBase
 {

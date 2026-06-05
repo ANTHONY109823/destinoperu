@@ -1,0 +1,203 @@
+@page "/superadmin/destinos"
+@using DestinoPeruBlazor.Models
+@using DestinoPeruBlazor.Services
+@using DestinoPeruBlazor.Components
+@using DestinoPeruBlazor.Components.UI
+@inject ApiService Api
+@inject AuthStateService Auth
+@inject NavigationManager Nav
+@inject ToastService Toast
+
+<PageTitle>Destinos populares - DestinoPerú</PageTitle>
+
+<div class="container py-4 dashboard-page superadmin-page">
+    @if (!Auth.IsAuthenticated || Auth.Role != "SuperAdmin")
+    {
+        <DestinoPeruBlazor.Components.UI.EmptyState Icon="🔒" Title="Acceso restringido" Message="Esta sección es solo para el Super Admin.">
+            <Action><AppButton Variant="primary" OnClick="@(() => Nav.NavigateTo("/login"))">Ingresar</AppButton></Action>
+        </DestinoPeruBlazor.Components.UI.EmptyState>
+    }
+    else
+    {
+        <SuperAdminNav />
+
+        <PageHeader Title="Destinos populares"
+                    Subtitle="Tarjetas que aparecen en la Home. Al pulsarlas, filtran el catálogo por departamento.">
+            <Actions>
+                <AppButton Variant="secondary" Icon="🏠" OnClick="@(() => Nav.NavigateTo("/superadmin/inicio"))">Volver al inicio</AppButton>
+            </Actions>
+        </PageHeader>
+
+        <SectionCard Title="@(editingId is null ? "Agregar destino" : "Editar destino")"
+                     Subtitle="El departamento debe coincidir con el de los tours para que el filtro funcione.">
+            <div class="ds-form-grid">
+                <FormField Label="Nombre visible" Placeholder="Cusco" @bind-Value="form.Name" Required="true" />
+                <FormField Label="Departamento (filtro)" Placeholder="Cusco" HelpText="Igual al departamento del tour." @bind-Value="form.Department" />
+                <FormField Label="URL de la foto" Placeholder="https://..." @bind-Value="form.ImageUrl" />
+            </div>
+
+            <div class="dest-form-row">
+                <label class="ds-btn ds-btn-secondary">
+                    @(uploading ? "Subiendo..." : "📷 Subir foto")
+                    <InputFile OnChange="OnUploadPhoto" accept="image/*" class="ds-file-hidden" disabled="@uploading" />
+                </label>
+                <label class="dest-active-check">
+                    <input type="checkbox" checked="@form.IsActive" @onchange="ToggleActive" />
+                    <span>Visible en la Home</span>
+                </label>
+                @if (!string.IsNullOrWhiteSpace(form.ImageUrl))
+                {
+                    <div class="dest-preview" style="background-image: url('@form.ImageUrl')"></div>
+                }
+            </div>
+
+            <div class="d-flex gap-2 mt-3">
+                <AppButton Variant="primary" Icon="💾" Loading="saving" OnClick="Save">
+                    @(editingId is null ? "Agregar destino" : "Guardar cambios")
+                </AppButton>
+                @if (editingId is not null)
+                {
+                    <AppButton Variant="ghost" OnClick="CancelEdit">Cancelar</AppButton>
+                }
+            </div>
+        </SectionCard>
+
+        <SectionCard Title="@($"Destinos ({destinos.Count})")" Subtitle="Ordena con las flechas, edita o elimina.">
+            @if (loading)
+            {
+                <p class="text-muted">Cargando destinos...</p>
+            }
+            else if (destinos.Count == 0)
+            {
+                <DestinoPeruBlazor.Components.UI.EmptyState Icon="🗺️" Title="Sin destinos" Message="Agrega el primer destino popular arriba." />
+            }
+            else
+            {
+                <div class="dest-manage-grid">
+                    @for (var i = 0; i < destinos.Count; i++)
+                    {
+                        var d = destinos[i];
+                        var index = i;
+                        <div class="dest-manage-card @(d.IsActive ? "" : "is-hidden")">
+                            <div class="dest-manage-img" style="background-image: url('@d.ImageUrl')">
+                                @if (!d.IsActive) { <span class="dest-hidden-tag">Oculto</span> }
+                            </div>
+                            <div class="dest-manage-body">
+                                <strong>@d.Name</strong>
+                                <span class="text-muted small">Filtra: @d.Department</span>
+                            </div>
+                            <div class="dest-manage-actions">
+                                <button type="button" class="dest-order-btn" disabled="@(index == 0)" title="Subir" @onclick="() => Move(d.Id, -1)">▲</button>
+                                <button type="button" class="dest-order-btn" disabled="@(index == destinos.Count - 1)" title="Bajar" @onclick="() => Move(d.Id, 1)">▼</button>
+                                <AppButton Variant="secondary" OnClick="() => StartEdit(d)">Editar</AppButton>
+                                <AppButton Variant="danger" OnClick="() => AskDelete(d)">Eliminar</AppButton>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </SectionCard>
+    }
+</div>
+
+<DoubleDeleteConfirm Visible="@(deleteTarget is not null)"
+                     Title="Eliminar destino"
+                     Message="@($"¿Eliminar el destino «{deleteTarget?.Name}» de la Home?")"
+                     Step2Message="@($"Escribe «{deleteTarget?.Name}» para confirmar.")"
+                     ConfirmPlaceholder="@deleteTarget?.Name"
+                     RequiredText="@(deleteTarget?.Name ?? string.Empty)"
+                     OnConfirm="ConfirmDelete"
+                     OnCancel="@(() => deleteTarget = null)" />
+
+@code {
+    private List<PopularDestinationDto> destinos = [];
+    private UpsertPopularDestinationRequest form = new() { IsActive = true };
+    private int? editingId;
+    private bool loading = true;
+    private bool saving;
+    private bool uploading;
+    private PopularDestinationDto? deleteTarget;
+
+    protected override async Task OnInitializedAsync() => await Load();
+
+    private async Task Load()
+    {
+        loading = true;
+        var result = await Api.GetAdminDestinationsAsync();
+        destinos = result.Success && result.Data is not null ? result.Data : [];
+        loading = false;
+    }
+
+    private void ToggleActive(ChangeEventArgs e) => form.IsActive = e.Value is bool b && b;
+
+    private void StartEdit(PopularDestinationDto d)
+    {
+        editingId = d.Id;
+        form = new UpsertPopularDestinationRequest
+        {
+            Name = d.Name,
+            Department = d.Department,
+            ImageUrl = d.ImageUrl,
+            DisplayOrder = d.DisplayOrder,
+            IsActive = d.IsActive
+        };
+        StateHasChanged();
+    }
+
+    private void CancelEdit()
+    {
+        editingId = null;
+        form = new UpsertPopularDestinationRequest { IsActive = true };
+    }
+
+    private async Task Save()
+    {
+        if (string.IsNullOrWhiteSpace(form.Name)) { Toast.ShowWarning("El nombre es obligatorio."); return; }
+        saving = true;
+        var result = editingId is null
+            ? await Api.CreateDestinationAsync(form)
+            : await Api.UpdateDestinationAsync(editingId.Value, form);
+        saving = false;
+        if (result.Success)
+        {
+            Toast.ShowSuccess(editingId is null ? "Destino agregado." : "Destino actualizado.");
+            CancelEdit();
+            await Load();
+        }
+        else Toast.ShowError(result.ErrorMessage ?? "No se pudo guardar.");
+    }
+
+    private async Task Move(int id, int direction)
+    {
+        var result = await Api.MoveDestinationAsync(id, direction);
+        if (result.Success) await Load();
+        else Toast.ShowError(result.ErrorMessage ?? "No se pudo reordenar.");
+    }
+
+    private void AskDelete(PopularDestinationDto d) => deleteTarget = d;
+
+    private async Task ConfirmDelete()
+    {
+        if (deleteTarget is null) return;
+        var id = deleteTarget.Id;
+        deleteTarget = null;
+        var result = await Api.DeleteDestinationAsync(id);
+        if (result.Success) { Toast.ShowSuccess("Destino eliminado."); await Load(); }
+        else Toast.ShowError(result.ErrorMessage ?? "No se pudo eliminar.");
+    }
+
+    private async Task OnUploadPhoto(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file is null) return;
+        uploading = true;
+        try
+        {
+            await using var stream = file.OpenReadStream(5_000_000);
+            var up = await Api.UploadImageAsync(stream, file.Name, "destinos");
+            if (up.Success && up.Data is not null) { form.ImageUrl = up.Data; Toast.ShowSuccess("Foto subida."); }
+            else Toast.ShowError(up.ErrorMessage ?? "No se pudo subir la foto.");
+        }
+        finally { uploading = false; }
+    }
+}

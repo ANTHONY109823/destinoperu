@@ -15,6 +15,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<PassengerManifest> PassengerManifests => Set<PassengerManifest>();
     public DbSet<PartnerStaff> PartnerStaff => Set<PartnerStaff>();
     public DbSet<AppMaintenanceRun> AppMaintenanceRuns => Set<AppMaintenanceRun>();
+    public DbSet<PopularDestination> PopularDestinations => Set<PopularDestination>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -24,6 +25,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         {
             e.ToTable("AppMaintenanceRuns");
             e.HasKey(r => r.Key);
+        });
+
+        modelBuilder.Entity<PopularDestination>(e =>
+        {
+            e.ToTable("PopularDestinations");
+            e.HasKey(d => d.Id);
+            e.Property(d => d.Name).IsRequired();
+            e.HasIndex(d => new { d.IsActive, d.DisplayOrder });
         });
 
         modelBuilder.Entity<User>(e =>

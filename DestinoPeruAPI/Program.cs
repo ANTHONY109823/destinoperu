@@ -135,6 +135,7 @@ builder.Services.AddScoped<PaymentService>();
 builder.Services.AddScoped<SuperAdminService>();
 builder.Services.AddScoped<AgencyAdminService>();
 builder.Services.AddScoped<UserAccountService>();
+builder.Services.AddScoped<PopularDestinationService>();
 
 builder.Services.AddScoped<IJwtService, JwtService>();
 

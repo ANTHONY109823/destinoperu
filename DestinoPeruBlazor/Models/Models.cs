@@ -110,6 +110,25 @@ public class PaymentDto
     public DateTime CreatedAt { get; set; }
 }
 
+public class PopularDestinationDto
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = "";
+    public string ImageUrl { get; set; } = "";
+    public string Department { get; set; } = "";
+    public int DisplayOrder { get; set; }
+    public bool IsActive { get; set; } = true;
+}
+
+public class UpsertPopularDestinationRequest
+{
+    public string Name { get; set; } = "";
+    public string ImageUrl { get; set; } = "";
+    public string? Department { get; set; }
+    public int DisplayOrder { get; set; }
+    public bool IsActive { get; set; } = true;
+}
+
 public class AdminMetricsDto
 {
     public int TotalPartners { get; set; }

@@ -1818,3 +1818,43 @@ a:hover { color: var(--dp-primary-light); }
 .sa-compare-filter-actions { display: flex; gap: 0.5rem; }
 
 .superadmin-page .ds-section-card { margin-bottom: 1.25rem; }
+
+/* ===== Gestión de destinos populares (Super Admin) ===== */
+.dest-form-row { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; margin-top: 0.75rem; }
+.dest-active-check { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.92rem; color: var(--dp-text); cursor: pointer; }
+.dest-active-check input { width: 1.1rem; height: 1.1rem; accent-color: var(--dp-primary, #004D40); }
+.dest-preview {
+    width: 90px; height: 60px; border-radius: 10px;
+    background-size: cover; background-position: center;
+    border: 1px solid var(--dp-border, #e0e0e0);
+}
+
+.dest-manage-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 1rem;
+}
+.dest-manage-card {
+    display: flex; flex-direction: column;
+    border: 1px solid var(--dp-border, #e0e0e0);
+    border-radius: 14px; overflow: hidden; background: var(--dp-surface, #fff);
+}
+.dest-manage-card.is-hidden { opacity: 0.6; }
+.dest-manage-img {
+    position: relative; height: 130px;
+    background-size: cover; background-position: center; background-color: #eee;
+}
+.dest-hidden-tag {
+    position: absolute; top: 8px; left: 8px;
+    background: rgba(0,0,0,0.65); color: #fff;
+    font-size: 0.72rem; padding: 2px 8px; border-radius: 999px;
+}
+.dest-manage-body { display: flex; flex-direction: column; gap: 0.1rem; padding: 0.7rem 0.85rem 0.3rem; }
+.dest-manage-actions { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; padding: 0.3rem 0.85rem 0.85rem; }
+.dest-order-btn {
+    width: 30px; height: 30px; border-radius: 8px;
+    border: 1px solid var(--dp-border, #e0e0e0); background: #fafafa;
+    color: var(--dp-text); cursor: pointer; line-height: 1;
+}
+.dest-order-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.dest-order-btn:not(:disabled):hover { background: #f0f0f0; }
